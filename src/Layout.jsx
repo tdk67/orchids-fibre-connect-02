@@ -54,13 +54,11 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-slate-200 px-6 pb-4">
           <div className="flex h-20 shrink-0 items-center border-b border-slate-200">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">A1</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">All in 1</h1>
-                <p className="text-xs text-slate-500">Solutions CRM</p>
-              </div>
+              <img 
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+                alt="All in 1 Solutions"
+                className="h-12 w-auto object-contain"
+              />
             </div>
           </div>
           <nav className="flex flex-1 flex-col">
@@ -123,12 +121,11 @@ export default function Layout({ children, currentPageName }) {
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A1</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">All in 1</h1>
-            </div>
+            <img 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+              alt="All in 1 Solutions"
+              className="h-8 w-auto object-contain"
+            />
           </div>
         </div>
       </div>
@@ -139,12 +136,11 @@ export default function Layout({ children, currentPageName }) {
           <div className="fixed inset-0 bg-slate-900/80" onClick={() => setMobileMenuOpen(false)} />
           <div className="fixed inset-y-0 left-0 w-full max-w-xs bg-white">
             <div className="flex h-16 items-center justify-between px-6 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">A1</span>
-                </div>
-                <h1 className="text-lg font-bold text-slate-900">All in 1</h1>
-              </div>
+              <img 
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+                alt="All in 1 Solutions"
+                className="h-8 w-auto object-contain"
+              />
               <button onClick={() => setMobileMenuOpen(false)} className="text-slate-500">
                 <X className="h-6 w-6" />
               </button>
