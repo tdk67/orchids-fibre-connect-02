@@ -214,16 +214,18 @@ export default function Leads() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
-                Excel Import
+                CSV Import
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Leads aus Excel importieren</DialogTitle>
+                <DialogTitle>Leads aus CSV importieren</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-900 font-medium mb-2">Erforderliche Spalten:</p>
+                  <p className="text-sm text-blue-900 font-medium mb-2">Wichtig: Nur CSV-Format!</p>
+                  <p className="text-xs text-blue-800 mb-2">Bitte speichern Sie Ihre Excel-Datei als CSV (Komma-getrennt) bevor Sie sie hochladen.</p>
+                  <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Erforderliche Spalten:</p>
                   <ul className="text-xs text-blue-800 space-y-1">
                     <li>• Firma</li>
                     <li>• Ansprechpartner</li>
@@ -236,10 +238,10 @@ export default function Leads() {
                   </ul>
                 </div>
                 <div className="space-y-2">
-                  <Label>Excel-Datei auswählen</Label>
+                  <Label>CSV-Datei auswählen</Label>
                   <Input
                     type="file"
-                    accept=".xlsx,.xls,.csv"
+                    accept=".csv"
                     onChange={(e) => setImportFile(e.target.files[0])}
                   />
                 </div>
