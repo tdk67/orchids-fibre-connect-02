@@ -22,9 +22,9 @@ export default function Dashboard() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list(),
+  const { data: leads = [] } = useQuery({
+    queryKey: ['leads'],
+    queryFn: () => base44.entities.Lead.list(),
   });
 
   const { data: employees = [] } = useQuery({
@@ -44,11 +44,11 @@ export default function Dashboard() {
 
   const stats = [
     {
-      name: 'Kunden',
-      value: customers.length,
+      name: 'Leads',
+      value: leads.length,
       icon: Users,
       color: 'from-blue-500 to-blue-600',
-      link: 'Customers'
+      link: 'Leads'
     },
     {
       name: 'Mitarbeiter',
@@ -211,12 +211,12 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link to={createPageUrl('Customers')}>
+        <Link to={createPageUrl('Leads')}>
           <Card className="hover:shadow-lg transition-all cursor-pointer border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <CardContent className="p-6">
               <Users className="h-8 w-8 mb-3" />
-              <h3 className="font-semibold text-lg">Neuer Kunde</h3>
-              <p className="text-blue-100 text-sm mt-1">Kunden hinzufügen</p>
+              <h3 className="font-semibold text-lg">Neuer Lead</h3>
+              <p className="text-blue-100 text-sm mt-1">Lead hinzufügen</p>
             </CardContent>
           </Card>
         </Link>
