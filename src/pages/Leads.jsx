@@ -126,49 +126,66 @@ export default function Leads() {
     
     setIsImporting(true);
     
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: importFile });
-    
-    const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
-      file_url,
-      json_schema: {
-        type: "object",
-        properties: {
-          leads: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                firma: { type: "string" },
-                ansprechpartner: { type: "string" },
-                postleitzahl: { type: "string" },
-                strasse_hausnummer: { type: "string" },
-                telefon: { type: "string" },
-                telefon2: { type: "string" },
-                email: { type: "string" },
-                infobox: { type: "string" }
+    try {
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(importFile);
+      
+      await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+      });
+
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: importFile });
+      
+      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: {
+          type: "object",
+          properties: {
+            leads: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  firma: { type: "string" },
+                  ansprechpartner: { type: "string" },
+                  postleitzahl: { type: "string" },
+                  strasse_hausnummer: { type: "string" },
+                  telefon: { type: "string" },
+                  telefon2: { type: "string" },
+                  email: { type: "string" },
+                  infobox: { type: "string" }
+                }
               }
             }
           }
         }
+      });
+
+      if (result.status === 'success' && result.output?.leads) {
+        const leadsToImport = result.output.leads.map(lead => ({
+          ...lead,
+          assigned_to: user?.full_name || '',
+          assigned_to_email: user?.email || '',
+          sparte: 'Telekom',
+          status: leadStatuses[0]?.name || ''
+        }));
+
+        await base44.entities.Lead.bulkCreate(leadsToImport);
+        queryClient.invalidateQueries(['leads']);
+        setIsImportDialogOpen(false);
+        setImportFile(null);
+        alert('Leads erfolgreich importiert!');
+      } else {
+        alert('Fehler beim Importieren: ' + (result.details || 'Unbekannter Fehler'));
       }
-    });
-
-    if (result.status === 'success' && result.output?.leads) {
-      const leadsToImport = result.output.leads.map(lead => ({
-        ...lead,
-        assigned_to: user?.full_name || '',
-        assigned_to_email: user?.email || '',
-        sparte: 'Telekom',
-        status: leadStatuses[0]?.name || ''
-      }));
-
-      await base44.entities.Lead.bulkCreate(leadsToImport);
-      queryClient.invalidateQueries(['leads']);
-      setIsImportDialogOpen(false);
-      setImportFile(null);
+    } catch (error) {
+      alert('Fehler beim Import: ' + error.message + '\n\nBitte stellen Sie sicher, dass die Datei im CSV-Format ist.');
+      console.error('Import error:', error);
+    } finally {
+      setIsImporting(false);
     }
-    
-    setIsImporting(false);
   };
 
   // Filter leads based on user role and selected employee
