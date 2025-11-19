@@ -1,0 +1,244 @@
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '../utils';
+import {
+  Users,
+  UserCircle,
+  ShoppingCart,
+  Euro,
+  TrendingUp,
+  Calendar,
+  ArrowRight
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+export default function Dashboard() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => base44.entities.Customer.list(),
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+  });
+
+  const { data: sales = [] } = useQuery({
+    queryKey: ['sales'],
+    queryFn: () => base44.entities.Sale.list('-sale_date', 100),
+  });
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonthSales = sales.filter(s => s.sale_date?.startsWith(currentMonth));
+  const totalRevenue = currentMonthSales.reduce((sum, s) => sum + (s.contract_value || 0), 0);
+  const totalCommissions = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+
+  const stats = [
+    {
+      name: 'Kunden',
+      value: customers.length,
+      icon: Users,
+      color: 'from-blue-500 to-blue-600',
+      link: 'Customers'
+    },
+    {
+      name: 'Mitarbeiter',
+      value: employees.length,
+      icon: UserCircle,
+      color: 'from-purple-500 to-purple-600',
+      link: 'Employees'
+    },
+    {
+      name: 'Verkäufe (Monat)',
+      value: currentMonthSales.length,
+      icon: ShoppingCart,
+      color: 'from-green-500 to-green-600',
+      link: 'Sales'
+    },
+    {
+      name: 'Umsatz (Monat)',
+      value: `${totalRevenue.toLocaleString('de-DE')} €`,
+      icon: Euro,
+      color: 'from-amber-500 to-amber-600',
+      link: 'Sales'
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">
+          Willkommen zurück{user?.full_name ? `, ${user.full_name}` : ''}
+        </h1>
+        <p className="text-slate-500 mt-2">Hier ist Ihre Übersicht für heute</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Link key={stat.name} to={createPageUrl(stat.link)}>
+              <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white overflow-hidden group cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">{stat.name}</p>
+                      <p className="text-3xl font-bold text-slate-900 mt-2">{stat.value}</p>
+                    </div>
+                    <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} group-hover:scale-110 transition-transform`}>
+                      <Icon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Provisionen Overview */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50 to-purple-50">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-900" />
+              Provisionen aktueller Monat
+            </CardTitle>
+            <Link to={createPageUrl('Commissions')}>
+              <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-700">
+                Alle anzeigen
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100">
+              <p className="text-sm font-medium text-green-700">Gesamtprovisionen</p>
+              <p className="text-3xl font-bold text-green-900 mt-2">
+                {totalCommissions.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-100">
+              <p className="text-sm font-medium text-blue-700">Durchschnitt pro Verkauf</p>
+              <p className="text-3xl font-bold text-blue-900 mt-2">
+                {currentMonthSales.length > 0
+                  ? (totalCommissions / currentMonthSales.length).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+                  : '0 €'}
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-100">
+              <p className="text-sm font-medium text-amber-700">Offene Auszahlungen</p>
+              <p className="text-3xl font-bold text-amber-900 mt-2">
+                {sales.filter(s => !s.commission_paid).length}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Sales */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-blue-900" />
+              Letzte Verkäufe
+            </CardTitle>
+            <Link to={createPageUrl('Sales')}>
+              <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-700">
+                Alle anzeigen
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {sales.slice(0, 5).length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {sales.slice(0, 5).map((sale) => (
+                <div key={sale.id} className="p-6 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          sale.sparte === 'Telekom' 
+                            ? 'bg-pink-100 text-pink-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {sale.sparte}
+                        </div>
+                        <p className="font-semibold text-slate-900">{sale.customer_name}</p>
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                        <span>{sale.employee_name}</span>
+                        <span>•</span>
+                        <span>{new Date(sale.sale_date).toLocaleDateString('de-DE')}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-slate-900">
+                        {(sale.contract_value || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </p>
+                      <p className="text-sm text-green-600 font-medium">
+                        Provision: {(sale.commission_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-12 text-center text-slate-500">
+              <ShoppingCart className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <p>Noch keine Verkäufe vorhanden</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Link to={createPageUrl('Customers')}>
+          <Card className="hover:shadow-lg transition-all cursor-pointer border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-6">
+              <Users className="h-8 w-8 mb-3" />
+              <h3 className="font-semibold text-lg">Neuer Kunde</h3>
+              <p className="text-blue-100 text-sm mt-1">Kunden hinzufügen</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={createPageUrl('Sales')}>
+          <Card className="hover:shadow-lg transition-all cursor-pointer border-0 bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <CardContent className="p-6">
+              <ShoppingCart className="h-8 w-8 mb-3" />
+              <h3 className="font-semibold text-lg">Neuer Verkauf</h3>
+              <p className="text-green-100 text-sm mt-1">Verkauf erfassen</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={createPageUrl('Chat')}>
+          <Card className="hover:shadow-lg transition-all cursor-pointer border-0 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-6">
+              <Calendar className="h-8 w-8 mb-3" />
+              <h3 className="font-semibold text-lg">Team Chat</h3>
+              <p className="text-purple-100 text-sm mt-1">Mit Team kommunizieren</p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+    </div>
+  );
+}
