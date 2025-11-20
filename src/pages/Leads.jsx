@@ -25,6 +25,10 @@ export default function Leads() {
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState('');
   const [pastedData, setPastedData] = useState('');
+  const [importAssignedTo, setImportAssignedTo] = useState('');
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
+  const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
@@ -114,6 +118,45 @@ export default function Leads() {
     setIsDialogOpen(true);
   };
 
+  const handleBulkAssign = async () => {
+    if (!bulkAssignEmployee || selectedLeads.length === 0) return;
+    
+    const employee = employees.find(e => e.full_name === bulkAssignEmployee);
+    
+    for (const leadId of selectedLeads) {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        await base44.entities.Lead.update(leadId, {
+          ...lead,
+          assigned_to: employee.full_name,
+          assigned_to_email: employee.email
+        });
+      }
+    }
+    
+    queryClient.invalidateQueries(['leads']);
+    setSelectedLeads([]);
+    setShowBulkAssign(false);
+    setBulkAssignEmployee('');
+    alert(`${selectedLeads.length} Leads erfolgreich zugewiesen!`);
+  };
+
+  const toggleLeadSelection = (leadId) => {
+    setSelectedLeads(prev => 
+      prev.includes(leadId) 
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+
+  const toggleAllLeads = () => {
+    if (selectedLeads.length === filteredLeads.length) {
+      setSelectedLeads([]);
+    } else {
+      setSelectedLeads(filteredLeads.map(l => l.id));
+    }
+  };
+
   const handleEmployeeChange = (employeeName) => {
     const employee = employees.find(e => e.full_name === employeeName);
     setFormData({
@@ -131,6 +174,7 @@ export default function Leads() {
     try {
       // Parse pasted data (Tab-separated from Excel)
       const lines = pastedData.trim().split('\n');
+      const assignedEmployee = employees.find(e => e.full_name === importAssignedTo);
       const leadsToImport = lines.map(line => {
         const columns = line.split('\t');
         return {
@@ -142,9 +186,9 @@ export default function Leads() {
           telefon2: columns[5] || '',
           email: columns[6] || '',
           infobox: columns[7] || '',
-          assigned_to: user?.full_name || '',
-          assigned_to_email: user?.email || '',
-          sparte: 'Telekom',
+          assigned_to: assignedEmployee?.full_name || '',
+          assigned_to_email: assignedEmployee?.email || '',
+          sparte: '1&1 Versatel',
           status: importStatus
         };
       }).filter(lead => lead.firma); // Only import rows with a company name
@@ -160,7 +204,8 @@ export default function Leads() {
       setIsImportDialogOpen(false);
       setPastedData('');
       setImportStatus('');
-      alert(`${leadsToImport.length} Leads erfolgreich importiert und Ihnen zugewiesen!`);
+      setImportAssignedTo('');
+      alert(`${leadsToImport.length} Leads erfolgreich importiert und ${assignedEmployee?.full_name || 'zugewiesen'}!`);
     } catch (error) {
       alert('Fehler beim Import: ' + error.message);
       console.error('Import error:', error);
@@ -231,22 +276,41 @@ export default function Leads() {
                   <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Spaltenreihenfolge:</p>
                   <p className="text-xs text-blue-800">Firma | Ansprechpartner | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status für importierte Leads</Label>
-                  <Select value={importStatus} onValueChange={setImportStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status wählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {leadStatuses.map((status) => (
-                        <SelectItem key={status.id} value={status.name}>
-                          {status.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-slate-500">Alle importierten Leads werden Ihnen zugewiesen</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Mitarbeiter zuweisen *</Label>
+                    <Select value={importAssignedTo} onValueChange={setImportAssignedTo}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Mitarbeiter wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.full_name}>
+                            {emp.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status für Leads</Label>
+                    <Select value={importStatus} onValueChange={setImportStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Status wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadStatuses.map((status) => (
+                          <SelectItem key={status.id} value={status.name}>
+                            {status.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+                <p className="text-xs text-slate-500 bg-blue-50 p-2 rounded">
+                  Alle importierten Leads werden als <strong>1&1 Versatel</strong> mit dem gewählten Status und Mitarbeiter importiert
+                </p>
                 <div className="space-y-2">
                   <Label>Daten aus Excel einfügen</Label>
                   <Textarea
@@ -270,7 +334,7 @@ export default function Leads() {
                   </Button>
                   <Button 
                     onClick={handlePasteImport}
-                    disabled={!pastedData.trim() || !importStatus || isImporting}
+                    disabled={!pastedData.trim() || !importStatus || !importAssignedTo || isImporting}
                     className="bg-blue-900 hover:bg-blue-800"
                   >
                     {isImporting ? 'Importiere...' : 'Importieren'}
@@ -419,6 +483,43 @@ export default function Leads() {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedLeads.length > 0 && (
+        <Card className="border-0 shadow-md bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <span className="font-semibold text-blue-900">
+                {selectedLeads.length} Lead(s) ausgewählt
+              </span>
+              <div className="flex gap-2 items-center flex-1">
+                <Select value={bulkAssignEmployee} onValueChange={setBulkAssignEmployee}>
+                  <SelectTrigger className="w-48 bg-white">
+                    <SelectValue placeholder="Mitarbeiter wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.full_name}>
+                        {emp.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleBulkAssign}
+                  disabled={!bulkAssignEmployee}
+                  className="bg-blue-900 hover:bg-blue-800"
+                >
+                  Zuweisen
+                </Button>
+              </div>
+              <Button variant="outline" onClick={() => setSelectedLeads([])}>
+                Abbrechen
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
@@ -463,6 +564,14 @@ export default function Leads() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
+                      onChange={toggleAllLeads}
+                      className="w-4 h-4"
+                    />
+                  </TableHead>
                   <TableHead>Firma</TableHead>
                   <TableHead>Ansprechpartner</TableHead>
                   <TableHead>Kontakt</TableHead>
@@ -475,6 +584,14 @@ export default function Leads() {
               <TableBody>
                 {filteredLeads.map((lead) => (
                   <TableRow key={lead.id} className="hover:bg-slate-50">
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedLeads.includes(lead.id)}
+                        onChange={() => toggleLeadSelection(lead.id)}
+                        className="w-4 h-4"
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-slate-400" />
