@@ -24,6 +24,7 @@ export default function Leads() {
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState('');
+  const [pastedData, setPastedData] = useState('');
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
@@ -122,69 +123,46 @@ export default function Leads() {
     });
   };
 
-  const handleImportExcel = async () => {
-    if (!importFile) return;
+  const handlePasteImport = async () => {
+    if (!pastedData.trim() || !importStatus) return;
     
     setIsImporting(true);
     
     try {
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(importFile);
-      
-      await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-      });
-
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: importFile });
-      
-      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
-          type: "object",
-          properties: {
-            leads: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  firma: { type: "string" },
-                  ansprechpartner: { type: "string" },
-                  postleitzahl: { type: "string" },
-                  strasse_hausnummer: { type: "string" },
-                  telefon: { type: "string" },
-                  telefon2: { type: "string" },
-                  email: { type: "string" },
-                  infobox: { type: "string" }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (result.status === 'success' && result.output?.leads) {
-        const neuStatus = leadStatuses.find(s => s.name === 'Neu');
-        const leadsToImport = result.output.leads.map(lead => ({
-          ...lead,
+      // Parse pasted data (Tab-separated from Excel)
+      const lines = pastedData.trim().split('\n');
+      const leadsToImport = lines.map(line => {
+        const columns = line.split('\t');
+        return {
+          firma: columns[0] || '',
+          ansprechpartner: columns[1] || '',
+          postleitzahl: columns[2] || '',
+          strasse_hausnummer: columns[3] || '',
+          telefon: columns[4] || '',
+          telefon2: columns[5] || '',
+          email: columns[6] || '',
+          infobox: columns[7] || '',
           assigned_to: user?.full_name || '',
           assigned_to_email: user?.email || '',
           sparte: 'Telekom',
-          status: importStatus || neuStatus?.name || leadStatuses[0]?.name || ''
-        }));
+          status: importStatus
+        };
+      }).filter(lead => lead.firma); // Only import rows with a company name
 
-        await base44.entities.Lead.bulkCreate(leadsToImport);
-        queryClient.invalidateQueries(['leads']);
-        setIsImportDialogOpen(false);
-        setImportFile(null);
-        setImportStatus('');
-        alert(`${leadsToImport.length} Leads erfolgreich importiert und Ihnen zugewiesen!`);
-      } else {
-        alert('Fehler beim Importieren: ' + (result.details || 'Unbekannter Fehler'));
+      if (leadsToImport.length === 0) {
+        alert('Keine gültigen Daten gefunden');
+        setIsImporting(false);
+        return;
       }
+
+      await base44.entities.Lead.bulkCreate(leadsToImport);
+      queryClient.invalidateQueries(['leads']);
+      setIsImportDialogOpen(false);
+      setPastedData('');
+      setImportStatus('');
+      alert(`${leadsToImport.length} Leads erfolgreich importiert und Ihnen zugewiesen!`);
     } catch (error) {
-      alert('Fehler beim Import: ' + error.message + '\n\nBitte stellen Sie sicher, dass die Datei im CSV-Format ist.');
+      alert('Fehler beim Import: ' + error.message);
       console.error('Import error:', error);
     } finally {
       setIsImporting(false);
@@ -234,28 +212,24 @@ export default function Leads() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
-                CSV Import
+                Leads importieren
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Leads aus CSV importieren</DialogTitle>
+                <DialogTitle>Leads importieren (Copy & Paste)</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-900 font-medium mb-2">Wichtig: Nur CSV-Format!</p>
-                  <p className="text-xs text-blue-800 mb-2">Bitte speichern Sie Ihre Excel-Datei als CSV (Komma-getrennt) bevor Sie sie hochladen.</p>
-                  <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Erforderliche Spalten:</p>
-                  <ul className="text-xs text-blue-800 space-y-1">
-                    <li>• Firma</li>
-                    <li>• Ansprechpartner</li>
-                    <li>• Postleitzahl</li>
-                    <li>• Strasse und Hausnummer</li>
-                    <li>• Telefon</li>
-                    <li>• Telefon2</li>
-                    <li>• Email</li>
-                    <li>• Infobox</li>
-                  </ul>
+                  <p className="text-sm text-blue-900 font-medium mb-2">So funktioniert's:</p>
+                  <ol className="text-xs text-blue-800 space-y-1 list-decimal ml-4">
+                    <li>Kopieren Sie die Zeilen aus Ihrer Excel-Tabelle (ohne Überschrift)</li>
+                    <li>Fügen Sie die Daten unten ein</li>
+                    <li>Wählen Sie den Status für alle Leads</li>
+                    <li>Klicken Sie auf "Importieren"</li>
+                  </ol>
+                  <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Spaltenreihenfolge:</p>
+                  <p className="text-xs text-blue-800">Firma | Ansprechpartner | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Status für importierte Leads</Label>
@@ -274,20 +248,29 @@ export default function Leads() {
                   <p className="text-xs text-slate-500">Alle importierten Leads werden Ihnen zugewiesen</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>CSV-Datei auswählen</Label>
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => setImportFile(e.target.files[0])}
+                  <Label>Daten aus Excel einfügen</Label>
+                  <Textarea
+                    value={pastedData}
+                    onChange={(e) => setPastedData(e.target.value)}
+                    placeholder="Kopieren Sie Zeilen aus Excel und fügen Sie sie hier ein..."
+                    rows={10}
+                    className="font-mono text-sm"
                   />
+                  <p className="text-xs text-slate-500">
+                    {pastedData ? `${pastedData.split('\n').filter(l => l.trim()).length} Zeilen erkannt` : 'Keine Daten eingefügt'}
+                  </p>
                 </div>
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+                  <Button variant="outline" onClick={() => {
+                    setIsImportDialogOpen(false);
+                    setPastedData('');
+                    setImportStatus('');
+                  }}>
                     Abbrechen
                   </Button>
                   <Button 
-                    onClick={handleImportExcel}
-                    disabled={!importFile || !importStatus || isImporting}
+                    onClick={handlePasteImport}
+                    disabled={!pastedData.trim() || !importStatus || isImporting}
                     className="bg-blue-900 hover:bg-blue-800"
                   >
                     {isImporting ? 'Importiere...' : 'Importieren'}
