@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings } from 'lucide-react';
+import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -81,6 +81,13 @@ export default function Leads() {
       queryClient.invalidateQueries(['leads']);
       setIsDialogOpen(false);
       resetForm();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Lead.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['leads']);
     },
   });
 
@@ -157,12 +164,19 @@ export default function Leads() {
     }
   };
 
+  const handleDelete = (lead) => {
+    if (confirm(`Lead "${lead.firma}" wirklich löschen?`)) {
+      deleteMutation.mutate(lead.id);
+    }
+  };
+
   const handleEmployeeChange = (employeeName) => {
     const employee = employees.find(e => e.full_name === employeeName);
     setFormData({
       ...formData,
       assigned_to: employeeName,
-      assigned_to_email: employee?.email || ''
+      assigned_to_email: employee?.email || '',
+      google_calendar_link: employee?.google_calendar_link || ''
     });
   };
 
@@ -459,6 +473,9 @@ export default function Leads() {
                       onChange={(e) => setFormData({ ...formData, google_calendar_link: e.target.value })}
                       placeholder="https://calendar.google.com/..."
                     />
+                    <p className="text-xs text-slate-500">
+                      Wird automatisch vom zugewiesenen Mitarbeiter übernommen, kann aber überschrieben werden
+                    </p>
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Infobox / Notizen</Label>
@@ -607,16 +624,22 @@ export default function Leads() {
                     <TableCell>
                       <div className="space-y-1">
                         {lead.telefon && (
-                          <div className="flex items-center gap-1 text-sm text-slate-600">
+                          <a href={`tel:${lead.telefon}`} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
                             <Phone className="h-3 w-3" />
                             {lead.telefon}
-                          </div>
+                          </a>
+                        )}
+                        {lead.telefon2 && (
+                          <a href={`tel:${lead.telefon2}`} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
+                            <Phone className="h-3 w-3" />
+                            {lead.telefon2}
+                          </a>
                         )}
                         {lead.email && (
-                          <div className="flex items-center gap-1 text-sm text-slate-600">
+                          <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
                             <Mail className="h-3 w-3" />
                             {lead.email}
-                          </div>
+                          </a>
                         )}
                       </div>
                     </TableCell>
@@ -637,9 +660,29 @@ export default function Leads() {
                       <span className="text-sm text-slate-600">{lead.assigned_to || '-'}</span>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(lead)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        {lead.google_calendar_link && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => window.open(lead.google_calendar_link, '_blank')}
+                            title="Google Kalender öffnen"
+                          >
+                            <Calendar className="h-4 w-4 text-green-600" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(lead)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDelete(lead)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

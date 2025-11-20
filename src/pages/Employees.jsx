@@ -207,7 +207,18 @@ export default function Employees() {
                       onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
                     />
                   </div>
-                </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label>Google Kalender Link</Label>
+                    <Input
+                      value={formData.google_calendar_link}
+                      onChange={(e) => setFormData({ ...formData, google_calendar_link: e.target.value })}
+                      placeholder="https://calendar.google.com/calendar/..."
+                    />
+                    <p className="text-xs text-slate-500">
+                      Dieser Kalender wird automatisch mit den Leads des Mitarbeiters verknüpft
+                    </p>
+                  </div>
+                  </div>
               </div>
 
               <div className="flex justify-end gap-3">
