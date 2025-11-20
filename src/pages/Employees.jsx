@@ -25,6 +25,7 @@ export default function Employees() {
     fixed_commission: 0,
     bank_details: '',
     tax_id: '',
+    google_calendar_link: '',
     status: 'Aktiv'
   });
 
@@ -73,6 +74,7 @@ export default function Employees() {
       fixed_commission: 0,
       bank_details: '',
       tax_id: '',
+      google_calendar_link: '',
       status: 'Aktiv'
     });
     setEditingEmployee(null);
