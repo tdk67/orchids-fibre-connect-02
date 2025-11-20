@@ -165,12 +165,13 @@ export default function Leads() {
       });
 
       if (result.status === 'success' && result.output?.leads) {
+        const neuStatus = leadStatuses.find(s => s.name === 'Neu');
         const leadsToImport = result.output.leads.map(lead => ({
           ...lead,
           assigned_to: user?.full_name || '',
           assigned_to_email: user?.email || '',
           sparte: 'Telekom',
-          status: importStatus || leadStatuses[0]?.name || ''
+          status: importStatus || neuStatus?.name || leadStatuses[0]?.name || ''
         }));
 
         await base44.entities.Lead.bulkCreate(leadsToImport);
