@@ -23,6 +23,7 @@ export default function Leads() {
   const [user, setUser] = useState(null);
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
@@ -169,14 +170,15 @@ export default function Leads() {
           assigned_to: user?.full_name || '',
           assigned_to_email: user?.email || '',
           sparte: 'Telekom',
-          status: leadStatuses[0]?.name || ''
+          status: importStatus || leadStatuses[0]?.name || ''
         }));
 
         await base44.entities.Lead.bulkCreate(leadsToImport);
         queryClient.invalidateQueries(['leads']);
         setIsImportDialogOpen(false);
         setImportFile(null);
-        alert('Leads erfolgreich importiert!');
+        setImportStatus('');
+        alert(`${leadsToImport.length} Leads erfolgreich importiert und Ihnen zugewiesen!`);
       } else {
         alert('Fehler beim Importieren: ' + (result.details || 'Unbekannter Fehler'));
       }
@@ -255,6 +257,22 @@ export default function Leads() {
                   </ul>
                 </div>
                 <div className="space-y-2">
+                  <Label>Status für importierte Leads</Label>
+                  <Select value={importStatus} onValueChange={setImportStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {leadStatuses.map((status) => (
+                        <SelectItem key={status.id} value={status.name}>
+                          {status.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">Alle importierten Leads werden Ihnen zugewiesen</p>
+                </div>
+                <div className="space-y-2">
                   <Label>CSV-Datei auswählen</Label>
                   <Input
                     type="file"
@@ -268,7 +286,7 @@ export default function Leads() {
                   </Button>
                   <Button 
                     onClick={handleImportExcel}
-                    disabled={!importFile || isImporting}
+                    disabled={!importFile || !importStatus || isImporting}
                     className="bg-blue-900 hover:bg-blue-800"
                   >
                     {isImporting ? 'Importiere...' : 'Importieren'}
