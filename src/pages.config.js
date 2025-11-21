@@ -8,6 +8,8 @@ import Chat from './pages/Chat';
 import Leads from './pages/Leads';
 import LeadStatusSettings from './pages/LeadStatusSettings';
 import Verkaufschancen from './pages/Verkaufschancen';
+import Postfach from './pages/Postfach';
+import Provisionsregeln from './pages/Provisionsregeln';
 import __Layout from './Layout.jsx';
 
 
@@ -22,6 +24,8 @@ export const PAGES = {
     "Leads": Leads,
     "LeadStatusSettings": LeadStatusSettings,
     "Verkaufschancen": Verkaufschancen,
+    "Postfach": Postfach,
+    "Provisionsregeln": Provisionsregeln,
 }
 
 export const pagesConfig = {
