@@ -27,6 +27,7 @@ export default function Layout({ children, currentPageName }) {
   const navigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
     { name: 'Leads', path: 'Leads', icon: Users },
+    { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart },
     { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle },
     { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart },
     { name: 'Provisionen', path: 'Commissions', icon: Calculator },

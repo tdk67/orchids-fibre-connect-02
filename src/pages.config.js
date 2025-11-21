@@ -7,6 +7,7 @@ import CreditNotes from './pages/CreditNotes';
 import Chat from './pages/Chat';
 import Leads from './pages/Leads';
 import LeadStatusSettings from './pages/LeadStatusSettings';
+import Verkaufschancen from './pages/Verkaufschancen';
 import __Layout from './Layout.jsx';
 
 
@@ -20,6 +21,7 @@ export const PAGES = {
     "Chat": Chat,
     "Leads": Leads,
     "LeadStatusSettings": LeadStatusSettings,
+    "Verkaufschancen": Verkaufschancen,
 }
 
 export const pagesConfig = {
