@@ -32,6 +32,7 @@ export default function Leads() {
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
+    stadt: '',
     postleitzahl: '',
     strasse_hausnummer: '',
     telefon: '',
@@ -39,6 +40,7 @@ export default function Leads() {
     email: '',
     infobox: '',
     status: '',
+    produkt: '',
     assigned_to: '',
     assigned_to_email: '',
     sparte: 'Telekom',
@@ -104,6 +106,7 @@ export default function Leads() {
     setFormData({
       firma: '',
       ansprechpartner: '',
+      stadt: '',
       postleitzahl: '',
       strasse_hausnummer: '',
       telefon: '',
@@ -111,6 +114,7 @@ export default function Leads() {
       email: '',
       infobox: '',
       status: '',
+      produkt: '',
       assigned_to: '',
       assigned_to_email: '',
       sparte: 'Telekom',
@@ -194,12 +198,13 @@ export default function Leads() {
         return {
           firma: columns[0] || '',
           ansprechpartner: columns[1] || '',
-          postleitzahl: columns[2] || '',
-          strasse_hausnummer: columns[3] || '',
-          telefon: columns[4] || '',
-          telefon2: columns[5] || '',
-          email: columns[6] || '',
-          infobox: columns[7] || '',
+          stadt: columns[2] || '',
+          postleitzahl: columns[3] || '',
+          strasse_hausnummer: columns[4] || '',
+          telefon: columns[5] || '',
+          telefon2: columns[6] || '',
+          email: columns[7] || '',
+          infobox: columns[8] || '',
           assigned_to: assignedEmployee?.full_name || '',
           assigned_to_email: assignedEmployee?.email || '',
           sparte: '1&1 Versatel',
@@ -288,7 +293,7 @@ export default function Leads() {
                     <li>Klicken Sie auf "Importieren"</li>
                   </ol>
                   <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Spaltenreihenfolge:</p>
-                  <p className="text-xs text-blue-800">Firma | Ansprechpartner | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox</p>
+                  <p className="text-xs text-blue-800">Firma | Ansprechpartner | Stadt | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -389,6 +394,13 @@ export default function Leads() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label>Stadt</Label>
+                    <Input
+                      value={formData.stadt}
+                      onChange={(e) => setFormData({ ...formData, stadt: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Postleitzahl</Label>
                     <Input
                       value={formData.postleitzahl}
@@ -448,6 +460,21 @@ export default function Leads() {
                             {status.name}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Produkt/Service</Label>
+                    <Select value={formData.produkt} onValueChange={(value) => setFormData({ ...formData, produkt: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Produkt wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Office Fast And Secure">Office Fast And Secure</SelectItem>
+                        <SelectItem value="Connect Basic">Connect Basic</SelectItem>
+                        <SelectItem value="Premium">Premium</SelectItem>
+                        <SelectItem value="Premium Pug 2">Premium Pug 2</SelectItem>
+                        <SelectItem value="Premium Pug 3">Premium Pug 3</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -590,9 +617,11 @@ export default function Leads() {
                     />
                   </TableHead>
                   <TableHead>Firma</TableHead>
+                  <TableHead>Stadt</TableHead>
+                  <TableHead>PLZ / Adresse</TableHead>
                   <TableHead>Ansprechpartner</TableHead>
                   <TableHead>Kontakt</TableHead>
-                  <TableHead>PLZ / Adresse</TableHead>
+                  <TableHead>Produkt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Zugewiesen an</TableHead>
                   <TableHead>Aktionen</TableHead>
@@ -600,8 +629,12 @@ export default function Leads() {
               </TableHeader>
               <TableBody>
                 {filteredLeads.map((lead) => (
-                  <TableRow key={lead.id} className="hover:bg-slate-50">
-                    <TableCell>
+                  <TableRow 
+                    key={lead.id} 
+                    className="hover:bg-slate-50 cursor-pointer"
+                    onClick={() => handleEdit(lead)}
+                  >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedLeads.includes(lead.id)}
@@ -620,8 +653,17 @@ export default function Leads() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{lead.ansprechpartner || '-'}</TableCell>
                     <TableCell>
+                      <span className="text-sm text-slate-700">{lead.stadt || '-'}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {lead.postleitzahl && <div className="font-medium">{lead.postleitzahl}</div>}
+                        {lead.strasse_hausnummer && <div className="text-slate-600">{lead.strasse_hausnummer}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell>{lead.ansprechpartner || '-'}</TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="space-y-1">
                         {lead.telefon && (
                           <a href={`tel:${lead.telefon}`} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
@@ -644,10 +686,11 @@ export default function Leads() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        {lead.postleitzahl && <div className="font-medium">{lead.postleitzahl}</div>}
-                        {lead.strasse_hausnummer && <div className="text-slate-600">{lead.strasse_hausnummer}</div>}
-                      </div>
+                      {lead.produkt && (
+                        <Badge variant="outline" className="text-xs">
+                          {lead.produkt}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {lead.status && (
@@ -659,7 +702,7 @@ export default function Leads() {
                     <TableCell>
                       <span className="text-sm text-slate-600">{lead.assigned_to || '-'}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
                         {lead.google_calendar_link && (
                           <Button 
