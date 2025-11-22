@@ -95,13 +95,13 @@ export default function Verkaufschancen() {
     });
   };
 
-  // Statistiken
+  // Statistiken - nutze berechnete_provision statt erwarteter_wert
   const stats = {
     gesamt: verkaufschancen.length,
-    gesamtwert: verkaufschancen.reduce((sum, v) => sum + (v.erwarteter_wert || 0), 0),
+    gesamtwert: verkaufschancen.reduce((sum, v) => sum + (v.berechnete_provision || v.erwarteter_wert || 0), 0),
     gewonnen: verkaufschancen.filter(v => v.verkaufschance_status === 'Gewonnen').length,
     gewichteterWert: verkaufschancen.reduce((sum, v) => 
-      sum + ((v.erwarteter_wert || 0) * ((v.wahrscheinlichkeit || 0) / 100)), 0
+      sum + ((v.berechnete_provision || v.erwarteter_wert || 0) * ((v.wahrscheinlichkeit || 0) / 100)), 0
     )
   };
 
@@ -249,12 +249,12 @@ export default function Verkaufschancen() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Firma</TableHead>
-                  <TableHead>Produkt</TableHead>
-                  <TableHead>Wert</TableHead>
+                  <TableHead>Produkt / Bandbreite</TableHead>
+                  <TableHead>Provision</TableHead>
+                  <TableHead>Closer</TableHead>
                   <TableHead>Wahrscheinlichkeit</TableHead>
                   <TableHead>Abschlussdatum</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Zugewiesen</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -275,14 +275,25 @@ export default function Verkaufschancen() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {lead.produkt && (
-                        <Badge variant="outline" className="text-xs">
-                          {lead.produkt}
-                        </Badge>
-                      )}
+                      <div className="space-y-1">
+                        {lead.produkt && (
+                          <Badge variant="outline" className="text-xs">
+                            {lead.produkt}
+                          </Badge>
+                        )}
+                        {lead.bandbreite && (
+                          <div className="text-xs text-slate-600">{lead.bandbreite}</div>
+                        )}
+                        {lead.laufzeit_monate && (
+                          <div className="text-xs text-slate-500">{lead.laufzeit_monate} Monate</div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="font-semibold text-green-600">
-                      {(lead.erwarteter_wert || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      {(lead.berechnete_provision || lead.erwarteter_wert || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-slate-600">{lead.closer_name || '-'}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -309,9 +320,6 @@ export default function Verkaufschancen() {
                           {lead.verkaufschance_status}
                         </Badge>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-slate-600">{lead.assigned_to || '-'}</span>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(lead)}>
@@ -341,13 +349,40 @@ export default function Verkaufschancen() {
             <div className="space-y-6">
               {/* Firmeninfo */}
               <div className="bg-slate-50 p-4 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-8 w-8 text-slate-400" />
-                  <div>
-                    <h3 className="font-semibold text-lg text-slate-900">{editingLead.firma}</h3>
-                    <p className="text-sm text-slate-600">{editingLead.ansprechpartner}</p>
-                    <p className="text-xs text-slate-500">{editingLead.stadt} • {editingLead.email}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Building2 className="h-8 w-8 text-slate-400" />
+                    <div>
+                      <h3 className="font-semibold text-lg text-slate-900">{editingLead.firma}</h3>
+                      <p className="text-sm text-slate-600">{editingLead.ansprechpartner}</p>
+                      <p className="text-xs text-slate-500">{editingLead.stadt} • {editingLead.email}</p>
+                    </div>
                   </div>
+                  {editingLead.berechnete_provision > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">Provision</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {editingLead.berechnete_provision.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Provisions-Details */}
+              <div className="grid grid-cols-3 gap-4 bg-blue-50 p-4 rounded-lg">
+                <div>
+                  <Label className="text-xs text-slate-600">Produkt & Bandbreite</Label>
+                  <p className="font-semibold text-slate-900">{editingLead.produkt || '-'}</p>
+                  <p className="text-sm text-slate-600">{editingLead.bandbreite || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-600">Laufzeit</Label>
+                  <p className="font-semibold text-slate-900">{editingLead.laufzeit_monate ? `${editingLead.laufzeit_monate} Monate` : '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-600">Closer</Label>
+                  <p className="font-semibold text-slate-900">{editingLead.closer_name || '-'}</p>
                 </div>
               </div>
 
@@ -372,14 +407,6 @@ export default function Verkaufschancen() {
               {/* Verkaufschancen Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Erwarteter Wert (€)</Label>
-                  <Input
-                    type="number"
-                    value={editingLead.erwarteter_wert || ''}
-                    onChange={(e) => handleUpdateDetails('erwarteter_wert', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label>Wahrscheinlichkeit (%)</Label>
                   <Input
                     type="number"
@@ -396,24 +423,6 @@ export default function Verkaufschancen() {
                     value={editingLead.geplanter_abschluss || ''}
                     onChange={(e) => handleUpdateDetails('geplanter_abschluss', e.target.value)}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Produkt</Label>
-                  <Select 
-                    value={editingLead.produkt || ''} 
-                    onValueChange={(value) => handleUpdateDetails('produkt', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Produkt wählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Office Fast And Secure">Office Fast And Secure</SelectItem>
-                      <SelectItem value="Connect Basic">Connect Basic</SelectItem>
-                      <SelectItem value="Premium">Premium</SelectItem>
-                      <SelectItem value="Premium Pug 2">Premium Pug 2</SelectItem>
-                      <SelectItem value="Premium Pug 3">Premium Pug 3</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 
