@@ -73,8 +73,36 @@ export default function Verkaufschancen() {
     setIsDialogOpen(true);
   };
 
-  const handleUpdateStatus = (newStatus) => {
+  const handleUpdateStatus = async (newStatus) => {
     if (!editingLead) return;
+    
+    // Wenn Status auf "Gewonnen" gesetzt wird, erstelle automatisch einen Verkauf
+    if (newStatus === 'Gewonnen' && editingLead.verkaufschance_status !== 'Gewonnen') {
+      const today = new Date();
+      const saleData = {
+        sale_number: `VK-${Date.now()}`,
+        customer_name: editingLead.firma,
+        employee_name: editingLead.closer_name || editingLead.assigned_to,
+        employee_id: editingLead.closer_email || editingLead.assigned_to_email,
+        sparte: editingLead.sparte,
+        product: `${editingLead.produkt || ''} ${editingLead.bandbreite || ''} (${editingLead.laufzeit_monate || 0} Monate)`.trim(),
+        contract_value: editingLead.berechnete_provision || editingLead.erwarteter_wert || 0,
+        commission_amount: editingLead.berechnete_provision || 0,
+        sale_date: today.toISOString().split('T')[0],
+        commission_paid: false,
+        commission_month: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
+        notes: `Automatisch erstellt aus Verkaufschance: ${editingLead.firma} - Closer: ${editingLead.closer_name || '-'} - Setter: ${editingLead.setter_name || '-'}`
+      };
+      
+      try {
+        await base44.entities.Sale.create(saleData);
+        alert('Verkaufschance gewonnen! Verkauf wurde automatisch erstellt.');
+      } catch (error) {
+        alert('Fehler beim Erstellen des Verkaufs: ' + error.message);
+        return;
+      }
+    }
+    
     updateMutation.mutate({
       id: editingLead.id,
       data: {
