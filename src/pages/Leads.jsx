@@ -41,8 +41,15 @@ export default function Leads() {
     infobox: '',
     status: '',
     produkt: '',
+    bandbreite: '',
+    laufzeit_monate: 36,
     assigned_to: '',
     assigned_to_email: '',
+    closer_name: '',
+    closer_email: '',
+    setter_name: '',
+    setter_email: '',
+    berechnete_provision: 0,
     sparte: 'Telekom',
     google_calendar_link: ''
   });
@@ -66,6 +73,11 @@ export default function Leads() {
   const { data: leadStatuses = [] } = useQuery({
     queryKey: ['leadStatuses'],
     queryFn: () => base44.entities.LeadStatus.list('order'),
+  });
+
+  const { data: provisionsregeln = [] } = useQuery({
+    queryKey: ['provisionsregeln'],
+    queryFn: () => base44.entities.Provisionsregel.list(),
   });
 
   const createMutation = useMutation({
@@ -95,10 +107,17 @@ export default function Leads() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Auto-fill setter if not already set
+    const dataToSubmit = {
+      ...formData,
+      setter_name: formData.setter_name || user?.full_name || '',
+      setter_email: formData.setter_email || user?.email || ''
+    };
+    
     if (editingLead) {
-      updateMutation.mutate({ id: editingLead.id, data: formData });
+      updateMutation.mutate({ id: editingLead.id, data: dataToSubmit });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(dataToSubmit);
     }
   };
 
@@ -115,8 +134,15 @@ export default function Leads() {
       infobox: '',
       status: '',
       produkt: '',
+      bandbreite: '',
+      laufzeit_monate: 36,
       assigned_to: '',
       assigned_to_email: '',
+      closer_name: '',
+      closer_email: '',
+      setter_name: '',
+      setter_email: '',
+      berechnete_provision: 0,
       sparte: 'Telekom',
       google_calendar_link: ''
     });
@@ -125,8 +151,78 @@ export default function Leads() {
 
   const handleEdit = (lead) => {
     setEditingLead(lead);
-    setFormData(lead);
+    setFormData({
+      ...lead,
+      setter_name: lead.setter_name || user?.full_name || '',
+      setter_email: lead.setter_email || user?.email || ''
+    });
     setIsDialogOpen(true);
+  };
+
+  // Calculate provision based on rules
+  const calculateProvision = (produkt, bandbreite, laufzeit) => {
+    if (!produkt || !bandbreite || !laufzeit) return 0;
+    
+    const regel = provisionsregeln.find(r => 
+      r.tarif === produkt && 
+      r.bandbreite === bandbreite && 
+      r.laufzeit_monate === laufzeit
+    );
+    
+    return regel?.closer_provision || 0;
+  };
+
+  // Get available bandwidths for selected product
+  const getAvailableBandwidths = (produkt) => {
+    if (!produkt) return [];
+    const bandwidths = provisionsregeln
+      .filter(r => r.tarif === produkt)
+      .map(r => r.bandbreite);
+    return [...new Set(bandwidths)];
+  };
+
+  // Handle product change
+  const handleProduktChange = (produkt) => {
+    const bandwidths = getAvailableBandwidths(produkt);
+    const newBandbreite = bandwidths.length > 0 ? bandwidths[0] : '';
+    const provision = calculateProvision(produkt, newBandbreite, formData.laufzeit_monate);
+    
+    setFormData({
+      ...formData,
+      produkt,
+      bandbreite: newBandbreite,
+      berechnete_provision: provision
+    });
+  };
+
+  // Handle bandbreite change
+  const handleBandbreiteChange = (bandbreite) => {
+    const provision = calculateProvision(formData.produkt, bandbreite, formData.laufzeit_monate);
+    setFormData({
+      ...formData,
+      bandbreite,
+      berechnete_provision: provision
+    });
+  };
+
+  // Handle laufzeit change
+  const handleLaufzeitChange = (laufzeit) => {
+    const provision = calculateProvision(formData.produkt, formData.bandbreite, laufzeit);
+    setFormData({
+      ...formData,
+      laufzeit_monate: laufzeit,
+      berechnete_provision: provision
+    });
+  };
+
+  // Handle closer change
+  const handleCloserChange = (closerName) => {
+    const closer = employees.find(e => e.full_name === closerName);
+    setFormData({
+      ...formData,
+      closer_name: closerName,
+      closer_email: closer?.email || ''
+    });
   };
 
   const handleBulkAssign = async () => {
@@ -465,7 +561,7 @@ export default function Leads() {
                   </div>
                   <div className="space-y-2">
                     <Label>Produkt/Service</Label>
-                    <Select value={formData.produkt} onValueChange={(value) => setFormData({ ...formData, produkt: value })}>
+                    <Select value={formData.produkt} onValueChange={handleProduktChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Produkt wählen" />
                       </SelectTrigger>
@@ -479,13 +575,73 @@ export default function Leads() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Zugewiesen an</Label>
+                    <Label>Bandbreite</Label>
+                    <Select 
+                      value={formData.bandbreite} 
+                      onValueChange={handleBandbreiteChange}
+                      disabled={!formData.produkt}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Bandbreite wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableBandwidths(formData.produkt).map((bw) => (
+                          <SelectItem key={bw} value={bw}>
+                            {bw}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vertragslaufzeit</Label>
+                    <Select 
+                      value={formData.laufzeit_monate?.toString()} 
+                      onValueChange={(value) => handleLaufzeitChange(parseInt(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="36">36 Monate</SelectItem>
+                        <SelectItem value="48">48 Monate</SelectItem>
+                        <SelectItem value="60">60 Monate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.berechnete_provision > 0 && (
+                    <div className="space-y-2">
+                      <Label>Berechnete Provision</Label>
+                      <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-md">
+                        <span className="text-lg font-bold text-green-700">
+                          {formData.berechnete_provision.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Zugewiesen an (Setter)</Label>
                     <Select value={formData.assigned_to} onValueChange={handleEmployeeChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Mitarbeiter wählen" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((emp) => (
+                        {employees.filter(e => e.rolle === 'Setter' || e.rolle === 'Lead Setter').map((emp) => (
+                          <SelectItem key={emp.id} value={emp.full_name}>
+                            {emp.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Closer/Allrounder</Label>
+                    <Select value={formData.closer_name} onValueChange={handleCloserChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Closer wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.filter(e => e.rolle === 'Closer/Allrounder' || e.rolle === 'Teamleiter').map((emp) => (
                           <SelectItem key={emp.id} value={emp.full_name}>
                             {emp.full_name}
                           </SelectItem>
@@ -494,15 +650,35 @@ export default function Leads() {
                     </Select>
                   </div>
                   <div className="space-y-2 col-span-2">
-                    <Label>Google Kalender Link</Label>
-                    <Input
-                      value={formData.google_calendar_link}
-                      onChange={(e) => setFormData({ ...formData, google_calendar_link: e.target.value })}
-                      placeholder="https://calendar.google.com/..."
-                    />
+                    <Label>Google Kalender</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={formData.google_calendar_link}
+                        onChange={(e) => setFormData({ ...formData, google_calendar_link: e.target.value })}
+                        placeholder="https://calendar.google.com/..."
+                      />
+                      {formData.google_calendar_link && (
+                        <Button 
+                          type="button"
+                          onClick={() => window.open(formData.google_calendar_link, '_blank')}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Termin buchen
+                        </Button>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-500">
-                      Wird automatisch vom zugewiesenen Mitarbeiter übernommen, kann aber überschrieben werden
+                      Wird automatisch vom zugewiesenen Mitarbeiter übernommen. Klicken Sie "Termin buchen" um den Kalender zu öffnen.
                     </p>
+                  </div>
+                  <div className="space-y-2 col-span-2 bg-slate-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-slate-700">Bearbeitet von (Setter)</Label>
+                      <span className="text-sm font-medium text-slate-900">
+                        {formData.setter_name || user?.full_name || 'Automatisch'}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Infobox / Notizen</Label>
