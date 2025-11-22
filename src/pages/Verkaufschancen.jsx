@@ -370,7 +370,7 @@ export default function Verkaufschancen() {
               </div>
 
               {/* Provisions-Details */}
-              <div className="grid grid-cols-3 gap-4 bg-blue-50 p-4 rounded-lg">
+              <div className="grid grid-cols-4 gap-4 bg-blue-50 p-4 rounded-lg">
                 <div>
                   <Label className="text-xs text-slate-600">Produkt & Bandbreite</Label>
                   <p className="font-semibold text-slate-900">{editingLead.produkt || '-'}</p>
@@ -384,6 +384,36 @@ export default function Verkaufschancen() {
                   <Label className="text-xs text-slate-600">Closer</Label>
                   <p className="font-semibold text-slate-900">{editingLead.closer_name || '-'}</p>
                 </div>
+                <div>
+                  <Label className="text-xs text-slate-600">Setter</Label>
+                  <p className="font-semibold text-slate-900">{editingLead.setter_name || '-'}</p>
+                </div>
+              </div>
+
+              {/* Call Qualifizierung */}
+              <div className="space-y-2 bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <Label>Call Qualifizierung</Label>
+                <div className="flex gap-3">
+                  <Button
+                    variant={editingLead.qualifizierter_call === true ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleUpdateDetails('qualifizierter_call', true)}
+                    className={editingLead.qualifizierter_call === true ? 'bg-green-600 hover:bg-green-700' : 'border-green-600 text-green-600'}
+                  >
+                    ✓ Qualifizierter Call
+                  </Button>
+                  <Button
+                    variant={editingLead.qualifizierter_call === false ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleUpdateDetails('qualifizierter_call', false)}
+                    className={editingLead.qualifizierter_call === false ? 'bg-red-600 hover:bg-red-700' : 'border-red-600 text-red-600'}
+                  >
+                    ✗ Nicht qualifiziert
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Nur bei qualifizierten Calls wird die Setter-Provision berechnet
+                </p>
               </div>
 
               {/* Status Buttons */}
