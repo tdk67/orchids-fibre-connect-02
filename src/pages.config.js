@@ -10,6 +10,7 @@ import LeadStatusSettings from './pages/LeadStatusSettings';
 import Verkaufschancen from './pages/Verkaufschancen';
 import Postfach from './pages/Postfach';
 import Provisionsregeln from './pages/Provisionsregeln';
+import PVP from './pages/PVP';
 import __Layout from './Layout.jsx';
 
 
@@ -26,6 +27,7 @@ export const PAGES = {
     "Verkaufschancen": Verkaufschancen,
     "Postfach": Postfach,
     "Provisionsregeln": Provisionsregeln,
+    "PVP": PVP,
 }
 
 export const pagesConfig = {

@@ -30,6 +30,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
     { name: 'Leads', path: 'Leads', icon: Users },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart },
+    { name: 'PVP Portal', path: 'PVP', icon: Settings },
     { name: 'Postfach', path: 'Postfach', icon: Mail },
     { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle },
     { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart },
