@@ -1,48 +1,52 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, X, Maximize2 } from 'lucide-react';
 
 export default function PVP() {
-  const openPVP = () => {
-    window.open('https://pvp.1und1.net/#/avc', '_blank', 'width=1400,height=900');
-  };
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">PVP Portal</h1>
-        <p className="text-slate-500 mt-1">Zugriff auf das 1&1 Versatel PVP System</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">PVP Portal</h1>
+          <p className="text-slate-500 mt-1">Zugriff auf das 1&1 Versatel PVP System</p>
+        </div>
+        <Button
+          onClick={() => setIsOpen(true)}
+          className="bg-blue-900 hover:bg-blue-800"
+        >
+          <Maximize2 className="h-4 w-4 mr-2" />
+          PVP Portal öffnen
+        </Button>
       </div>
 
-      <Card className="border-0 shadow-md">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle>PVP Portal öffnen</CardTitle>
-        </CardHeader>
-        <CardContent className="p-12 text-center">
-          <div className="max-w-md mx-auto space-y-6">
-            <div className="p-6 bg-blue-50 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
-              <ExternalLink className="h-12 w-12 text-blue-600" />
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] bg-white">
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <div className="flex items-center gap-3">
+                <ExternalLink className="h-5 w-5 text-blue-600" />
+                <span className="font-semibold text-slate-900">PVP Portal - 1&1 Versatel</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="hover:bg-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </Button>
             </div>
-            <div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                Öffnen Sie das PVP Portal
-              </h3>
-              <p className="text-slate-600">
-                Klicken Sie auf den Button, um das PVP Portal in einem neuen Fenster zu öffnen.
-              </p>
-            </div>
-            <Button
-              onClick={openPVP}
-              size="lg"
-              className="bg-blue-900 hover:bg-blue-800"
-            >
-              <ExternalLink className="h-5 w-5 mr-2" />
-              PVP Portal öffnen
-            </Button>
+            <iframe
+              src="https://pvp.1und1.net/#/avc"
+              className="flex-1 w-full border-0"
+              title="PVP Portal"
+              allow="fullscreen"
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }
