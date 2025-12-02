@@ -97,7 +97,7 @@ export default function Unternehmenssuche() {
 AUFGABE:
 1. Suche ALLE Firmen/Unternehmen die an dieser EXAKTEN Adresse registriert sind
 2. Viele Gebäude haben MEHRERE Unternehmen - finde sie ALLE
-3. Suche auch auf der gleichen Straßenseite (2er-Schritte: gerade↔gerade, ungerade↔ungerade)
+3. Suche auch auf der gleichen Strassenseite (2er-Schritte: gerade zu gerade, ungerade zu ungerade)
 4. Straße und Stadt müssen übereinstimmen
 
 SUCHE NACH:
