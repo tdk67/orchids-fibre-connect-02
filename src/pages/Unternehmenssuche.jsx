@@ -96,10 +96,10 @@ export default function Unternehmenssuche() {
     }
   };
 
-  const searchAllAddresses = async () => {
-    for (const address of addressList) {
-      await searchCompaniesForAddress(address);
-    }
+  const searchSingleAddress = async (address) => {
+    await searchCompaniesForAddress(address);
+    // Remove address from list after search
+    setAddressList(prev => prev.filter(a => a !== address));
   };
 
   const toggleCompanySelection = (companyId) => {
@@ -176,7 +176,7 @@ export default function Unternehmenssuche() {
         <p className="text-slate-500 mt-1">Finden Sie Unternehmen anhand von Adresspunkten</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Adress-Eingabe */}
         <Card className="border-0 shadow-md">
           <CardHeader className="border-b border-slate-100">
@@ -200,48 +200,68 @@ export default function Unternehmenssuche() {
               </Button>
             </div>
 
-            {addressList.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Adressliste ({addressList.length})</Label>
-                  <Button variant="ghost" size="sm" onClick={() => setAddressList([])}>
-                    Alle löschen
-                  </Button>
-                </div>
-                <div className="max-h-48 overflow-y-auto space-y-1">
-                  {addressList.map((addr, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded text-sm">
-                      <span className="truncate flex-1">{addr}</span>
-                      <Button variant="ghost" size="sm" onClick={() => removeAddress(index)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <Button 
-                  onClick={searchAllAddresses} 
-                  disabled={isSearching}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  {isSearching ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Suche: {searchingAddress.substring(0, 20)}...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4 mr-2" />
-                      Alle Adressen durchsuchen
-                    </>
-                  )}
+            
+          </CardContent>
+        </Card>
+
+        {/* Adressliste zum Anklicken */}
+        <Card className="border-0 shadow-md">
+          <CardHeader className="border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5 text-amber-600" />
+                Zu durchsuchen ({addressList.length})
+              </CardTitle>
+              {addressList.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setAddressList([])}>
+                  Leeren
                 </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            {addressList.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <MapPin className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm">Keine Adressen</p>
+              </div>
+            ) : (
+              <div className="space-y-1 max-h-[500px] overflow-y-auto">
+                {addressList.map((addr, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-2 p-2 bg-slate-50 hover:bg-amber-50 rounded text-sm group"
+                  >
+                    <Button
+                      size="sm"
+                      onClick={() => searchSingleAddress(addr)}
+                      disabled={isSearching}
+                      className="bg-amber-500 hover:bg-amber-600 h-7 px-2"
+                    >
+                      {isSearching && searchingAddress === addr ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Search className="h-3 w-3" />
+                      )}
+                    </Button>
+                    <span className="truncate flex-1 text-slate-700">{addr}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => removeAddress(index)}
+                      className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Gefundene Unternehmen */}
-        <Card className="border-0 shadow-md lg:col-span-2">
+        <Card className="border-0 shadow-md lg:col-span-2 lg:row-span-2">
           <CardHeader className="border-b border-slate-100">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
