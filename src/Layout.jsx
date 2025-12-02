@@ -62,7 +62,7 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-slate-200 px-6 pb-4">
           <div className="flex h-40 shrink-0 items-center justify-center border-b border-slate-200 p-4">
                         <img 
-                              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+                              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/530965a64_Unbenannt.png"
                               alt="All in 1 Solutions"
                               className="h-32 w-full object-contain"
                             />
@@ -128,7 +128,7 @@ export default function Layout({ children, currentPageName }) {
           </button>
           <div className="flex items-center gap-2">
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/530965a64_Unbenannt.png"
               alt="All in 1 Solutions"
               className="h-8 w-auto object-contain"
             />
@@ -143,7 +143,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="fixed inset-y-0 left-0 w-full max-w-xs bg-white">
             <div className="flex h-16 items-center justify-between px-6 border-b border-slate-200">
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/530965a64_Unbenannt.png"
                 alt="All in 1 Solutions"
                 className="h-8 w-auto object-contain"
               />
