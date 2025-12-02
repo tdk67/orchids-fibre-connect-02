@@ -180,6 +180,22 @@ export default function Unternehmenssuche() {
     setSelectedCompanies([]);
   };
 
+  const deleteAllLeads = async () => {
+    if (!confirm('Möchten Sie wirklich ALLE Leads löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
+      return;
+    }
+    try {
+      const allLeads = await base44.entities.Lead.list();
+      for (const lead of allLeads) {
+        await base44.entities.Lead.delete(lead.id);
+      }
+      queryClient.invalidateQueries(['leads']);
+      alert(`${allLeads.length} Leads wurden gelöscht.`);
+    } catch (error) {
+      alert('Fehler beim Löschen: ' + error.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
