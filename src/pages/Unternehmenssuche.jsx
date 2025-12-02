@@ -92,24 +92,23 @@ export default function Unternehmenssuche() {
     
     try {
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Suche im Internet nach ALLEN Unternehmen/Firmen in der gesamten Straße: "${address}"
+        prompt: `Suche nach Unternehmen an dieser EXAKTEN Adresse: "${address}"
 
-AUFGABE:
-1. Extrahiere den Straßennamen und die Stadt aus der Adresse
-2. Suche nach ALLEN Unternehmen die in dieser Straße ansässig sind
-3. Nicht nur an der einen Hausnummer, sondern die GESAMTE Straße durchsuchen
-4. Finde so viele Unternehmen wie möglich in dieser Straße
+WICHTIGE REGELN:
+- Suche NUR nach Unternehmen die GENAU an dieser Adresse oder in direkter Nachbarschaft (±3 Hausnummern) sind
+- Die Straße und Stadt MÜSSEN exakt übereinstimmen
+- Keine Unternehmen aus anderen Straßen oder Städten!
+- Wenn die Adresse "Musterstraße 10, Berlin" ist, suche nur Musterstraße 7-13 in Berlin
 
-FÜR JEDES UNTERNEHMEN:
+FÜR JEDES GEFUNDENE UNTERNEHMEN:
 - Vollständiger Firmenname
-- Exakte Adresse mit Hausnummer
+- Exakte Adresse mit Hausnummer (muss zur Suchadresse passen!)
 - Telefonnummer (Festnetz bevorzugt)
-- E-Mail-Adresse wenn verfügbar
-- Branche/Geschäftsfeld
-- Webseite wenn verfügbar
+- E-Mail-Adresse
+- Branche
 
-Suche intensiv auf Google Maps, Gelbe Seiten, Google My Business, Das Örtliche, Branchenbücher etc.
-Gib ALLE gefundenen Unternehmen zurück, auch wenn es viele sind.`,
+Suche auf Google Maps, Gelbe Seiten, Google My Business.
+Gib NUR Unternehmen zurück die wirklich an dieser Adresse sind!`,
         add_context_from_internet: true,
         response_json_schema: {
           type: "object",
