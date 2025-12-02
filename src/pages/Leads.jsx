@@ -362,12 +362,20 @@ export default function Leads() {
           <p className="text-slate-500 mt-1">Verwalten Sie Ihre Lead-Datenbank</p>
         </div>
         <div className="flex gap-3">
-          <Link to={createPageUrl('LeadStatusSettings')}>
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Status verwalten
-            </Button>
-          </Link>
+                    <Button 
+                      variant="outline" 
+                      onClick={deleteAllLeads}
+                      className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Alle Leads löschen
+                    </Button>
+                    <Link to={createPageUrl('LeadStatusSettings')}>
+                      <Button variant="outline">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Status verwalten
+                      </Button>
+                    </Link>
           <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
