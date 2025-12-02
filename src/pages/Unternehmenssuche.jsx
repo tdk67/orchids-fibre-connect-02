@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, MapPin, Building2, Phone, Mail, Plus, Loader2, Trash2, UserPlus } from 'lucide-react';
+import { Search, MapPin, Building2, Phone, Mail, Plus, Loader2, Trash2, UserPlus, Upload } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function Unternehmenssuche() {
   const [addressInput, setAddressInput] = useState('');
@@ -19,6 +20,7 @@ export default function Unternehmenssuche() {
   const [searchingAddress, setSearchingAddress] = useState('');
   const [assignEmployee, setAssignEmployee] = useState('');
   const [assignStatus, setAssignStatus] = useState('');
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -40,6 +42,7 @@ export default function Unternehmenssuche() {
       .filter(a => a.length > 0);
     setAddressList([...addressList, ...newAddresses]);
     setAddressInput('');
+    setIsAddressDialogOpen(false);
   };
 
   const removeAddress = (index) => {
@@ -180,32 +183,57 @@ export default function Unternehmenssuche() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Adress-Eingabe */}
-        <Card className="border-0 shadow-md">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              Adresspunkte
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Adressen einfügen (eine pro Zeile)</Label>
-              <Textarea
-                value={addressInput}
-                onChange={(e) => setAddressInput(e.target.value)}
-                placeholder="z.B.&#10;Hauptstraße 1, 10115 Berlin&#10;Musterweg 5, 80331 München"
-                rows={5}
-              />
-              <Button onClick={handlePasteAddresses} className="w-full bg-blue-900 hover:bg-blue-800">
-                <Plus className="h-4 w-4 mr-2" />
-                Adressen hinzufügen
-              </Button>
-            </div>
-
-            
-          </CardContent>
-        </Card>
+        {/* Adress-Eingabe Button */}
+                  <Card className="border-0 shadow-md">
+                    <CardHeader className="border-b border-slate-100">
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-blue-600" />
+                        Adresspunkte
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button className="w-full bg-blue-900 hover:bg-blue-800">
+                            <Upload className="h-4 w-4 mr-2" />
+                            Adressen einfügen
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle>Adressen einfügen</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+                              Fügen Sie Adressen ein - eine Adresse pro Zeile
+                            </div>
+                            <Textarea
+                              value={addressInput}
+                              onChange={(e) => setAddressInput(e.target.value)}
+                              placeholder="z.B.&#10;Hauptstraße 1, 10115 Berlin&#10;Musterweg 5, 80331 München&#10;Industriestraße 23, 60329 Frankfurt"
+                              rows={10}
+                            />
+                            <p className="text-xs text-slate-500">
+                              {addressInput ? `${addressInput.split('\n').filter(l => l.trim()).length} Adressen erkannt` : 'Keine Adressen eingefügt'}
+                            </p>
+                            <div className="flex justify-end gap-3">
+                              <Button variant="outline" onClick={() => setIsAddressDialogOpen(false)}>
+                                Abbrechen
+                              </Button>
+                              <Button 
+                                onClick={handlePasteAddresses}
+                                disabled={!addressInput.trim()}
+                                className="bg-blue-900 hover:bg-blue-800"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Hinzufügen
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </CardContent>
+                  </Card>
 
         {/* Adressliste zum Anklicken */}
         <Card className="border-0 shadow-md lg:col-span-2">
