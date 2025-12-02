@@ -91,19 +91,19 @@ export default function Unternehmenssuche() {
     setIsSearching(true);
     
     try {
-      // Google Search für die Adresse
-      const searchResults = await base44.integrations.Core.SearchWeb({
-        query: `Unternehmen Firma "${address}" Kontakt Telefon`
-      });
-
-      // LLM zur Extraktion der strukturierten Daten aus den Suchergebnissen
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Analysiere diese Google-Suchergebnisse und extrahiere Unternehmen die sich an oder nahe der Adresse "${address}" befinden.
+        prompt: `Suche im Internet nach Unternehmen/Firmen an dieser Adresse: "${address}"
 
-Suchergebnisse:
-${JSON.stringify(searchResults, null, 2)}
+WICHTIG:
+- Suche nach dem genauen Firmennamen der an dieser Adresse ansässig ist
+- Finde die Telefonnummer des Unternehmens (Festnetz bevorzugt)
+- Finde die E-Mail-Adresse wenn verfügbar
+- Bestimme die Branche des Unternehmens
+- Wenn mehrere Unternehmen an der Adresse sind, liste alle auf
+- Wenn kein Unternehmen gefunden wird, gib ein leeres Array zurück
 
-Extrahiere nur echte Unternehmen mit möglichst vollständigen Kontaktdaten. Wenn keine relevanten Unternehmen gefunden wurden, gib ein leeres Array zurück.`,
+Suche auf Google Maps, Gelbe Seiten, Google My Business, Firmenwebseiten etc.`,
+        add_context_from_internet: true,
         response_json_schema: {
           type: "object",
           properties: {
@@ -112,13 +112,14 @@ Extrahiere nur echte Unternehmen mit möglichst vollständigen Kontaktdaten. Wen
               items: {
                 type: "object",
                 properties: {
-                  firma: { type: "string" },
-                  strasse_hausnummer: { type: "string" },
-                  postleitzahl: { type: "string" },
-                  stadt: { type: "string" },
-                  telefon: { type: "string" },
-                  email: { type: "string" },
-                  branche: { type: "string" }
+                  firma: { type: "string", description: "Vollständiger Firmenname" },
+                  strasse_hausnummer: { type: "string", description: "Straße und Hausnummer" },
+                  postleitzahl: { type: "string", description: "PLZ" },
+                  stadt: { type: "string", description: "Stadt" },
+                  telefon: { type: "string", description: "Telefonnummer mit Vorwahl" },
+                  email: { type: "string", description: "E-Mail-Adresse" },
+                  branche: { type: "string", description: "Branche/Geschäftsfeld" },
+                  webseite: { type: "string", description: "Webseite URL" }
                 }
               }
             }
@@ -134,6 +135,10 @@ Extrahiere nur echte Unternehmen mit möglichst vollständigen Kontaktdaten. Wen
       }));
       
       setFoundCompanies(prev => [...prev, ...companiesWithSource]);
+      
+      if (companies.length === 0) {
+        alert(`Kein Unternehmen an "${address}" gefunden.`);
+      }
     } catch (error) {
       console.error('Suche fehlgeschlagen:', error);
       alert('Fehler bei der Suche: ' + error.message);
