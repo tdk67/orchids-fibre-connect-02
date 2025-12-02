@@ -60,15 +60,13 @@ export default function Layout({ children, currentPageName }) {
       {/* Sidebar Desktop */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-slate-200 px-6 pb-4">
-          <div className="flex h-20 shrink-0 items-center border-b border-slate-200">
-            <div className="flex items-center gap-3">
-              <img 
-                                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
-                                    alt="All in 1 Solutions"
-                                    className="h-16 w-full object-contain"
-                                  />
-            </div>
-          </div>
+          <div className="flex h-28 shrink-0 items-center justify-center border-b border-slate-200">
+                        <img 
+                              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+                              alt="All in 1 Solutions"
+                              className="h-20 w-full max-w-[220px] object-contain"
+                            />
+                      </div>
           <nav className="flex flex-1 flex-col">
             <ul className="flex flex-1 flex-col gap-y-2">
               {navigation.map((item) => {
