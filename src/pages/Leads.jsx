@@ -99,11 +99,26 @@ export default function Leads() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Lead.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['leads']);
-    },
-  });
+        mutationFn: (id) => base44.entities.Lead.delete(id),
+        onSuccess: () => {
+          queryClient.invalidateQueries(['leads']);
+        },
+      });
+
+      const deleteAllLeads = async () => {
+        if (!confirm('Möchten Sie wirklich ALLE Leads löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
+          return;
+        }
+        try {
+          for (const lead of leads) {
+            await base44.entities.Lead.delete(lead.id);
+          }
+          queryClient.invalidateQueries(['leads']);
+          alert(`${leads.length} Leads wurden gelöscht.`);
+        } catch (error) {
+          alert('Fehler beim Löschen: ' + error.message);
+        }
+      };
 
   const handleSubmit = (e) => {
     e.preventDefault();
