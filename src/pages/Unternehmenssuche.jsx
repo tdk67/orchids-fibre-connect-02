@@ -180,10 +180,50 @@ export default function Unternehmenssuche() {
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Unternehmenssuche</h1>
         <p className="text-slate-500 mt-1">Finden Sie Unternehmen anhand von Adresspunkten</p>
-      </div>
+                    <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-blue-900 hover:bg-blue-800">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Adressen einfügen
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                          <DialogTitle>Adressen einfügen</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+                            Fügen Sie Adressen ein - eine Adresse pro Zeile
+                          </div>
+                          <Textarea
+                            value={addressInput}
+                            onChange={(e) => setAddressInput(e.target.value)}
+                            placeholder="z.B.&#10;Hauptstraße 1, 10115 Berlin&#10;Musterweg 5, 80331 München&#10;Industriestraße 23, 60329 Frankfurt"
+                            rows={10}
+                          />
+                          <p className="text-xs text-slate-500">
+                            {addressInput ? `${addressInput.split('\n').filter(l => l.trim()).length} Adressen erkannt` : 'Keine Adressen eingefügt'}
+                          </p>
+                          <div className="flex justify-end gap-3">
+                            <Button variant="outline" onClick={() => setIsAddressDialogOpen(false)}>
+                              Abbrechen
+                            </Button>
+                            <Button 
+                              onClick={handlePasteAddresses}
+                              disabled={!addressInput.trim()}
+                              className="bg-blue-900 hover:bg-blue-800"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Hinzufügen
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  {/* Adressliste zum Anklicken */}
                     <DialogTrigger asChild>
                       <Button className="bg-blue-900 hover:bg-blue-800">
                         <Upload className="h-4 w-4 mr-2" />
