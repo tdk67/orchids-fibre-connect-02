@@ -91,12 +91,19 @@ export default function Unternehmenssuche() {
     setIsSearching(true);
     
     try {
+      // Google Search für die Adresse
+      const searchResults = await base44.integrations.Core.SearchWeb({
+        query: `Unternehmen Firma "${address}" Kontakt Telefon`
+      });
+
+      // LLM zur Extraktion der strukturierten Daten aus den Suchergebnissen
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Finde das Unternehmen/die Firma die sich EXAKT an dieser Adresse befindet: "${address}".
-        Suche NUR nach dem Unternehmen das genau an dieser Adresse registriert/ansässig ist.
-        Keine Unternehmen in der Nähe, nur exakt diese Adresse.
-        Wenn kein Unternehmen an dieser exakten Adresse gefunden wird, gib ein leeres Array zurück.`,
-        add_context_from_internet: true,
+        prompt: `Analysiere diese Google-Suchergebnisse und extrahiere Unternehmen die sich an oder nahe der Adresse "${address}" befinden.
+
+Suchergebnisse:
+${JSON.stringify(searchResults, null, 2)}
+
+Extrahiere nur echte Unternehmen mit möglichst vollständigen Kontaktdaten. Wenn keine relevanten Unternehmen gefunden wurden, gib ein leeres Array zurück.`,
         response_json_schema: {
           type: "object",
           properties: {
