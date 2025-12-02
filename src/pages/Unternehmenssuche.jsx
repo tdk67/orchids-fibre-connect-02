@@ -13,9 +13,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 export default function Unternehmenssuche() {
   const [addressInput, setAddressInput] = useState('');
-  const [addressList, setAddressList] = useState([]);
+  const [addressList, setAddressList] = useState(() => {
+    const saved = localStorage.getItem('unternehmenssuche_adressen');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [foundCompanies, setFoundCompanies] = useState([]);
   const [selectedCompanies, setSelectedCompanies] = useState([]);
+
+  // Adressen im localStorage speichern wenn sie sich ändern
+  React.useEffect(() => {
+    localStorage.setItem('unternehmenssuche_adressen', JSON.stringify(addressList));
+  }, [addressList]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchingAddress, setSearchingAddress] = useState('');
   const [assignEmployee, setAssignEmployee] = useState('');
