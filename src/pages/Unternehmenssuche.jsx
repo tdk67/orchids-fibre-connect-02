@@ -52,9 +52,10 @@ export default function Unternehmenssuche() {
     
     try {
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Finde Unternehmen/Firmen an oder in der Nähe dieser Adresse in Deutschland: "${address}". 
-        Suche nach lokalen Geschäften, Firmen, Büros etc.
-        Gib mir bis zu 10 Unternehmen mit folgenden Informationen zurück.`,
+        prompt: `Finde das Unternehmen/die Firma die sich EXAKT an dieser Adresse befindet: "${address}".
+        Suche NUR nach dem Unternehmen das genau an dieser Adresse registriert/ansässig ist.
+        Keine Unternehmen in der Nähe, nur exakt diese Adresse.
+        Wenn kein Unternehmen an dieser exakten Adresse gefunden wird, gib ein leeres Array zurück.`,
         add_context_from_internet: true,
         response_json_schema: {
           type: "object",
