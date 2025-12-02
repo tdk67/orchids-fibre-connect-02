@@ -1,0 +1,371 @@
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Search, MapPin, Building2, Phone, Mail, Plus, Loader2, Trash2, UserPlus } from 'lucide-react';
+
+export default function Unternehmenssuche() {
+  const [addressInput, setAddressInput] = useState('');
+  const [addressList, setAddressList] = useState([]);
+  const [foundCompanies, setFoundCompanies] = useState([]);
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchingAddress, setSearchingAddress] = useState('');
+  const [assignEmployee, setAssignEmployee] = useState('');
+  const [assignStatus, setAssignStatus] = useState('');
+
+  const queryClient = useQueryClient();
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => base44.entities.Employee.list(),
+  });
+
+  const { data: leadStatuses = [] } = useQuery({
+    queryKey: ['leadStatuses'],
+    queryFn: () => base44.entities.LeadStatus.list('order'),
+  });
+
+  const handlePasteAddresses = () => {
+    if (!addressInput.trim()) return;
+    const newAddresses = addressInput
+      .split('\n')
+      .map(a => a.trim())
+      .filter(a => a.length > 0);
+    setAddressList([...addressList, ...newAddresses]);
+    setAddressInput('');
+  };
+
+  const removeAddress = (index) => {
+    setAddressList(addressList.filter((_, i) => i !== index));
+  };
+
+  const searchCompaniesForAddress = async (address) => {
+    setSearchingAddress(address);
+    setIsSearching(true);
+    
+    try {
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `Finde Unternehmen/Firmen an oder in der Nähe dieser Adresse in Deutschland: "${address}". 
+        Suche nach lokalen Geschäften, Firmen, Büros etc.
+        Gib mir bis zu 10 Unternehmen mit folgenden Informationen zurück.`,
+        add_context_from_internet: true,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            companies: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  firma: { type: "string" },
+                  strasse_hausnummer: { type: "string" },
+                  postleitzahl: { type: "string" },
+                  stadt: { type: "string" },
+                  telefon: { type: "string" },
+                  email: { type: "string" },
+                  branche: { type: "string" }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const companies = result.companies || [];
+      const companiesWithSource = companies.map(c => ({
+        ...c,
+        source_address: address,
+        id: `${Date.now()}-${Math.random()}`
+      }));
+      
+      setFoundCompanies(prev => [...prev, ...companiesWithSource]);
+    } catch (error) {
+      console.error('Suche fehlgeschlagen:', error);
+      alert('Fehler bei der Suche: ' + error.message);
+    } finally {
+      setIsSearching(false);
+      setSearchingAddress('');
+    }
+  };
+
+  const searchAllAddresses = async () => {
+    for (const address of addressList) {
+      await searchCompaniesForAddress(address);
+    }
+  };
+
+  const toggleCompanySelection = (companyId) => {
+    setSelectedCompanies(prev => 
+      prev.includes(companyId) 
+        ? prev.filter(id => id !== companyId)
+        : [...prev, companyId]
+    );
+  };
+
+  const selectAllCompanies = () => {
+    if (selectedCompanies.length === foundCompanies.length) {
+      setSelectedCompanies([]);
+    } else {
+      setSelectedCompanies(foundCompanies.map(c => c.id));
+    }
+  };
+
+  const addSelectedToLeads = async () => {
+    if (selectedCompanies.length === 0) {
+      alert('Bitte wählen Sie mindestens ein Unternehmen aus');
+      return;
+    }
+    if (!assignEmployee) {
+      alert('Bitte wählen Sie einen Mitarbeiter aus');
+      return;
+    }
+
+    const employee = employees.find(e => e.full_name === assignEmployee);
+    const companiestoAdd = foundCompanies.filter(c => selectedCompanies.includes(c.id));
+
+    const leadsToCreate = companiestoAdd.map(company => ({
+      firma: company.firma || '',
+      strasse_hausnummer: company.strasse_hausnummer || '',
+      postleitzahl: company.postleitzahl || '',
+      stadt: company.stadt || '',
+      telefon: company.telefon || '',
+      email: company.email || '',
+      infobox: `Branche: ${company.branche || '-'}\nGefunden über: ${company.source_address}`,
+      assigned_to: employee?.full_name || '',
+      assigned_to_email: employee?.email || '',
+      status: assignStatus || '',
+      sparte: '1&1 Versatel'
+    }));
+
+    try {
+      await base44.entities.Lead.bulkCreate(leadsToCreate);
+      queryClient.invalidateQueries(['leads']);
+      
+      // Remove added companies from list
+      setFoundCompanies(prev => prev.filter(c => !selectedCompanies.includes(c.id)));
+      setSelectedCompanies([]);
+      
+      alert(`${leadsToCreate.length} Leads erfolgreich erstellt und ${employee?.full_name} zugewiesen!`);
+    } catch (error) {
+      alert('Fehler beim Erstellen: ' + error.message);
+    }
+  };
+
+  const removeCompany = (companyId) => {
+    setFoundCompanies(prev => prev.filter(c => c.id !== companyId));
+    setSelectedCompanies(prev => prev.filter(id => id !== companyId));
+  };
+
+  const clearAllCompanies = () => {
+    setFoundCompanies([]);
+    setSelectedCompanies([]);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Unternehmenssuche</h1>
+        <p className="text-slate-500 mt-1">Finden Sie Unternehmen anhand von Adresspunkten</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Adress-Eingabe */}
+        <Card className="border-0 shadow-md">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-blue-600" />
+              Adresspunkte
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Adressen einfügen (eine pro Zeile)</Label>
+              <Textarea
+                value={addressInput}
+                onChange={(e) => setAddressInput(e.target.value)}
+                placeholder="z.B.&#10;Hauptstraße 1, 10115 Berlin&#10;Musterweg 5, 80331 München"
+                rows={5}
+              />
+              <Button onClick={handlePasteAddresses} className="w-full bg-blue-900 hover:bg-blue-800">
+                <Plus className="h-4 w-4 mr-2" />
+                Adressen hinzufügen
+              </Button>
+            </div>
+
+            {addressList.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Adressliste ({addressList.length})</Label>
+                  <Button variant="ghost" size="sm" onClick={() => setAddressList([])}>
+                    Alle löschen
+                  </Button>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {addressList.map((addr, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded text-sm">
+                      <span className="truncate flex-1">{addr}</span>
+                      <Button variant="ghost" size="sm" onClick={() => removeAddress(index)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button 
+                  onClick={searchAllAddresses} 
+                  disabled={isSearching}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {isSearching ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Suche: {searchingAddress.substring(0, 20)}...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-2" />
+                      Alle Adressen durchsuchen
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Gefundene Unternehmen */}
+        <Card className="border-0 shadow-md lg:col-span-2">
+          <CardHeader className="border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-green-600" />
+                Gefundene Unternehmen ({foundCompanies.length})
+              </CardTitle>
+              {foundCompanies.length > 0 && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllCompanies}>
+                    {selectedCompanies.length === foundCompanies.length ? 'Keine auswählen' : 'Alle auswählen'}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={clearAllCompanies}>
+                    Liste leeren
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            {foundCompanies.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <Building2 className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                <p>Noch keine Unternehmen gefunden</p>
+                <p className="text-sm">Fügen Sie Adressen hinzu und starten Sie die Suche</p>
+              </div>
+            ) : (
+              <>
+                {/* Zuweisung */}
+                <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-200">
+                  <div className="flex flex-wrap gap-4 items-end">
+                    <div className="flex-1 min-w-[200px]">
+                      <Label className="text-blue-900">Mitarbeiter zuweisen</Label>
+                      <Select value={assignEmployee} onValueChange={setAssignEmployee}>
+                        <SelectTrigger className="bg-white mt-1">
+                          <SelectValue placeholder="Mitarbeiter wählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.full_name}>
+                              {emp.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <Label className="text-blue-900">Status</Label>
+                      <Select value={assignStatus} onValueChange={setAssignStatus}>
+                        <SelectTrigger className="bg-white mt-1">
+                          <SelectValue placeholder="Status wählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {leadStatuses.map((status) => (
+                            <SelectItem key={status.id} value={status.name}>
+                              {status.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button 
+                      onClick={addSelectedToLeads}
+                      disabled={selectedCompanies.length === 0}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      {selectedCompanies.length} als Leads hinzufügen
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Unternehmensliste */}
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {foundCompanies.map((company) => (
+                    <div 
+                      key={company.id} 
+                      className={`p-3 rounded-lg border transition-colors ${
+                        selectedCompanies.includes(company.id) 
+                          ? 'bg-green-50 border-green-300' 
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={selectedCompanies.includes(company.id)}
+                          onCheckedChange={() => toggleCompanySelection(company.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-slate-900">{company.firma || 'Unbekannt'}</h4>
+                            <Button variant="ghost" size="sm" onClick={() => removeCompany(company.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="text-sm text-slate-600 mt-1 space-y-0.5">
+                            {company.strasse_hausnummer && (
+                              <p>{company.strasse_hausnummer}, {company.postleitzahl} {company.stadt}</p>
+                            )}
+                            <div className="flex flex-wrap gap-3">
+                              {company.telefon && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" /> {company.telefon}
+                                </span>
+                              )}
+                              {company.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" /> {company.email}
+                                </span>
+                              )}
+                            </div>
+                            {company.branche && (
+                              <Badge variant="outline" className="text-xs mt-1">{company.branche}</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">Gefunden: {company.source_address}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

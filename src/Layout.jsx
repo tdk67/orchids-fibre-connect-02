@@ -14,7 +14,8 @@ import {
   X,
   LogOut,
   Mail,
-  Settings
+  Settings,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +30,7 @@ export default function Layout({ children, currentPageName }) {
   const navigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
     { name: 'Leads', path: 'Leads', icon: Users },
+    { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart },
     { name: 'PVP Portal', path: 'PVP', icon: Settings },
     { name: 'Postfach', path: 'Postfach', icon: Mail },
