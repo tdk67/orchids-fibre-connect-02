@@ -65,7 +65,7 @@ export default function Layout({ children, currentPageName }) {
               <img 
                                     src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
                                     alt="All in 1 Solutions"
-                                    className="h-14 w-full max-w-[200px] object-contain"
+                                    className="h-16 w-full object-contain"
                                   />
             </div>
           </div>
