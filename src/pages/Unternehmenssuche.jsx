@@ -16,6 +16,18 @@ export default function Unternehmenssuche() {
   const [addressList, setAddressList] = useState([]);
   const [foundCompanies, setFoundCompanies] = useState([]);
   const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchingAddress, setSearchingAddress] = useState('');
+  const [assignEmployee, setAssignEmployee] = useState('');
+  const [assignStatus, setAssignStatus] = useState('');
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
+  const [assignAddressEmployee, setAssignAddressEmployee] = useState('');
+  const [user, setUser] = useState(null);
+
+  // User laden
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   // Adressen für aktuellen User aus localStorage laden
   React.useEffect(() => {
@@ -31,18 +43,6 @@ export default function Unternehmenssuche() {
       localStorage.setItem(`unternehmenssuche_adressen_${user.email}`, JSON.stringify(addressList));
     }
   }, [addressList, user]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchingAddress, setSearchingAddress] = useState('');
-  const [assignEmployee, setAssignEmployee] = useState('');
-  const [assignStatus, setAssignStatus] = useState('');
-  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
-  const [assignAddressEmployee, setAssignAddressEmployee] = useState('');
-  const [user, setUser] = useState(null);
-
-  // User laden
-  React.useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
 
   const queryClient = useQueryClient();
 
