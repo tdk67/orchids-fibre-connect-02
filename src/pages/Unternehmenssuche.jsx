@@ -96,15 +96,14 @@ export default function Unternehmenssuche() {
 
 AUFGABE:
 1. Suche ALLE Firmen/Unternehmen die an dieser EXAKTEN Adresse registriert sind
-2. Viele Gebäude haben MEHRERE Unternehmen - finde sie ALLE
-3. Suche auch auf der gleichen Strassenseite (2er-Schritte: gerade zu gerade, ungerade zu ungerade)
-4. Straße und Stadt müssen übereinstimmen
+2. Pruefe auch Unterhausnummern wie 15a, 15b, 15c usw.
+3. Suche maximal eine Hausnummer hoeher und niedriger auf gleicher Strassenseite (z.B. bei 15: auch 13 und 17)
+4. Strasse und Stadt muessen EXAKT uebereinstimmen - keine anderen Strassen!
 
 SUCHE NACH:
-- Büros, Praxen, Kanzleien im Gebäude
-- Geschäfte, Restaurants, Dienstleister
-- Alle Etagen und Hinterhöfe prüfen
-- Gewerbeverzeichnisse durchsuchen
+- Alle Unternehmen im Gebaeude (alle Etagen)
+- Unterhausnummern (a, b, c, usw.)
+- Hinterhaus/Seitenflügel
 
 FÜR JEDES UNTERNEHMEN ANGEBEN:
 - Firmenname
