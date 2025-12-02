@@ -29,6 +29,9 @@ export default function Unternehmenssuche() {
   const [assignEmployee, setAssignEmployee] = useState('');
   const [assignStatus, setAssignStatus] = useState('');
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
+  const [isAssignAddressDialogOpen, setIsAssignAddressDialogOpen] = useState(false);
+  const [assignAddressEmployee, setAssignAddressEmployee] = useState('');
+  const [assignAddressStatus, setAssignAddressStatus] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -54,8 +57,36 @@ export default function Unternehmenssuche() {
   };
 
   const removeAddress = (index) => {
-    setAddressList(addressList.filter((_, i) => i !== index));
-  };
+        setAddressList(addressList.filter((_, i) => i !== index));
+      };
+
+      const assignAddressesToEmployee = async () => {
+        if (addressList.length === 0 || !assignAddressEmployee) return;
+
+        const employee = employees.find(e => e.full_name === assignAddressEmployee);
+
+        const leadsToCreate = addressList.map(address => ({
+          firma: '',
+          strasse_hausnummer: address,
+          infobox: `Adresse zur Überprüfung: ${address}`,
+          assigned_to: employee?.full_name || '',
+          assigned_to_email: employee?.email || '',
+          status: assignAddressStatus || '',
+          sparte: '1&1 Versatel'
+        }));
+
+        try {
+          await base44.entities.Lead.bulkCreate(leadsToCreate);
+          queryClient.invalidateQueries(['leads']);
+          setAddressList([]);
+          setIsAssignAddressDialogOpen(false);
+          setAssignAddressEmployee('');
+          setAssignAddressStatus('');
+          alert(`${leadsToCreate.length} Adressen als Leads erstellt und ${employee?.full_name} zugewiesen!`);
+        } catch (error) {
+          alert('Fehler beim Erstellen: ' + error.message);
+        }
+      };
 
   const searchCompaniesForAddress = async (address) => {
     setSearchingAddress(address);
@@ -256,18 +287,83 @@ export default function Unternehmenssuche() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="border-0 shadow-md">
           <CardHeader className="border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5 text-amber-600" />
-                Zu durchsuchen ({addressList.length})
-              </CardTitle>
-              {addressList.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setAddressList([])}>
-                  Leeren
-                </Button>
-              )}
-            </div>
-          </CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                              <Search className="h-5 w-5 text-amber-600" />
+                              Zu durchsuchen ({addressList.length})
+                            </CardTitle>
+                            <div className="flex gap-2">
+                              {addressList.length > 0 && (
+                                <>
+                                  <Dialog open={isAssignAddressDialogOpen} onOpenChange={setIsAssignAddressDialogOpen}>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" size="sm" className="text-blue-600 border-blue-300">
+                                        <UserPlus className="h-3 w-3 mr-1" />
+                                        Zuweisen
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Adressen als Leads zuweisen</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <p className="text-sm text-slate-600">
+                                          {addressList.length} Adressen werden als Leads erstellt und zugewiesen.
+                                        </p>
+                                        <div className="space-y-2">
+                                          <Label>Mitarbeiter *</Label>
+                                          <Select value={assignAddressEmployee} onValueChange={setAssignAddressEmployee}>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Mitarbeiter wählen" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {employees.map((emp) => (
+                                                <SelectItem key={emp.id} value={emp.full_name}>
+                                                  {emp.full_name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label>Status</Label>
+                                          <Select value={assignAddressStatus} onValueChange={setAssignAddressStatus}>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Status wählen" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {leadStatuses.map((status) => (
+                                                <SelectItem key={status.id} value={status.name}>
+                                                  {status.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="flex justify-end gap-3">
+                                          <Button variant="outline" onClick={() => setIsAssignAddressDialogOpen(false)}>
+                                            Abbrechen
+                                          </Button>
+                                          <Button 
+                                            onClick={assignAddressesToEmployee}
+                                            disabled={!assignAddressEmployee}
+                                            className="bg-blue-900 hover:bg-blue-800"
+                                          >
+                                            <UserPlus className="h-4 w-4 mr-2" />
+                                            Zuweisen
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                  <Button variant="ghost" size="sm" onClick={() => setAddressList([])}>
+                                    Leeren
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
           <CardContent className="p-4">
             {addressList.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
