@@ -63,10 +63,10 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex h-20 shrink-0 items-center border-b border-slate-200">
             <div className="flex items-center gap-3">
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
-                alt="All in 1 Solutions"
-                className="h-12 w-auto object-contain"
-              />
+                                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/14cd1750e_20251119_1050_LogoAllin1_remix_01kadrafmde4rtbk2qhbr6jfe7.png"
+                                    alt="All in 1 Solutions"
+                                    className="h-14 w-full max-w-[200px] object-contain"
+                                  />
             </div>
           </div>
           <nav className="flex flex-1 flex-col">
