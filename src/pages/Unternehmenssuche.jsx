@@ -95,10 +95,12 @@ export default function Unternehmenssuche() {
         prompt: `Suche nach Unternehmen an dieser EXAKTEN Adresse: "${address}"
 
 WICHTIGE REGELN:
-- Suche NUR nach Unternehmen die GENAU an dieser Adresse oder in direkter Nachbarschaft (±3 Hausnummern) sind
+- Suche NUR nach Unternehmen die GENAU an dieser Adresse oder auf der GLEICHEN Strassenseite sind
+- Hausnummern in 2er-Schritten suchen (gerade bleibt gerade, ungerade bleibt ungerade)
+- Beispiel: Bei Hausnummer 10 suche auch 6, 8, 12, 14 (gleiche Straßenseite)
+- Beispiel: Bei Hausnummer 7 suche auch 3, 5, 9, 11 (gleiche Straßenseite)
 - Die Straße und Stadt MÜSSEN exakt übereinstimmen
 - Keine Unternehmen aus anderen Straßen oder Städten!
-- Wenn die Adresse "Musterstraße 10, Berlin" ist, suche nur Musterstraße 7-13 in Berlin
 
 FÜR JEDES GEFUNDENE UNTERNEHMEN:
 - Vollständiger Firmenname
