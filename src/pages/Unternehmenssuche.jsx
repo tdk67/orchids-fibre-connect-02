@@ -103,7 +103,11 @@ AUFGABE:
 SUCHE NACH:
 - Alle Unternehmen im Gebaeude (alle Etagen)
 - Unterhausnummern (a, b, c, usw.)
-- Hinterhaus/Seitenflügel
+- Hinterhaus/Seitenfluegel
+
+WICHTIG - NICHT AUFLISTEN:
+- Keine dauerhaft geschlossenen Unternehmen
+- Keine Unternehmen die nicht mehr existieren
 
 FÜR JEDES UNTERNEHMEN ANGEBEN:
 - Firmenname
