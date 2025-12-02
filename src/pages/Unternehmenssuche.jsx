@@ -203,6 +203,14 @@ export default function Unternehmenssuche() {
           <h1 className="text-3xl font-bold text-slate-900">Unternehmenssuche</h1>
           <p className="text-slate-500 mt-1">Finden Sie Unternehmen anhand von Adresspunkten</p>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={deleteAllLeads}
+          className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Alle Leads löschen
+        </Button>
         <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-blue-900 hover:bg-blue-800">
