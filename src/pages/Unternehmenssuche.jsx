@@ -98,8 +98,7 @@ export default function Unternehmenssuche() {
 
   const searchSingleAddress = async (address) => {
     await searchCompaniesForAddress(address);
-    // Remove address from list after search
-    setAddressList(prev => prev.filter(a => a !== address));
+    // Address stays in list until added as lead
   };
 
   const toggleCompanySelection = (companyId) => {
@@ -148,6 +147,10 @@ export default function Unternehmenssuche() {
     try {
       await base44.entities.Lead.bulkCreate(leadsToCreate);
       queryClient.invalidateQueries(['leads']);
+      
+      // Get source addresses of added companies and remove them from address list
+      const addedSourceAddresses = companiestoAdd.map(c => c.source_address);
+      setAddressList(prev => prev.filter(a => !addedSourceAddresses.includes(a)));
       
       // Remove added companies from list
       setFoundCompanies(prev => prev.filter(c => !selectedCompanies.includes(c.id)));
