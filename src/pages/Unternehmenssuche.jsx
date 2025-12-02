@@ -179,7 +179,7 @@ export default function Unternehmenssuche() {
         <p className="text-slate-500 mt-1">Finden Sie Unternehmen anhand von Adresspunkten</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Adress-Eingabe */}
         <Card className="border-0 shadow-md">
           <CardHeader className="border-b border-slate-100">
@@ -208,7 +208,7 @@ export default function Unternehmenssuche() {
         </Card>
 
         {/* Adressliste zum Anklicken */}
-        <Card className="border-0 shadow-md">
+        <Card className="border-0 shadow-md lg:col-span-2">
           <CardHeader className="border-b border-slate-100">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
