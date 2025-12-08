@@ -615,7 +615,18 @@ export default function Leads() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                    <Select value={formData.status} onValueChange={(value) => {
+                      // Automatisch archiv_kategorie setzen
+                      let archivKategorie = formData.archiv_kategorie;
+                      if (value === 'Nicht erreicht') {
+                        archivKategorie = 'Nicht erreicht';
+                      } else if (value === 'Anderer Provider') {
+                        archivKategorie = 'Anderer Provider';
+                      } else if (value === 'Kein Interesse') {
+                        archivKategorie = 'Kein Interesse';
+                      }
+                      setFormData({ ...formData, status: value, archiv_kategorie: archivKategorie });
+                    }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Status wählen" />
                       </SelectTrigger>
@@ -627,23 +638,9 @@ export default function Leads() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Archiv-Kategorie</Label>
-                    <Select value={formData.archiv_kategorie || ''} onValueChange={(value) => setFormData({ ...formData, archiv_kategorie: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Keine" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={null}>Keine (Aktiv)</SelectItem>
-                        <SelectItem value="Nicht erreicht">Nicht erreicht</SelectItem>
-                        <SelectItem value="Anderer Provider">Anderer Provider</SelectItem>
-                        <SelectItem value="Kein Interesse">Kein Interesse</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {formData.archiviert_am && (
-                      <p className="text-xs text-slate-500">
-                        Archiviert am: {new Date(formData.archiviert_am).toLocaleDateString('de-DE')}
+                    {formData.archiv_kategorie && (
+                      <p className="text-xs text-amber-600 font-medium">
+                        → Wird archiviert als: {formData.archiv_kategorie}
                       </p>
                     )}
                   </div>
