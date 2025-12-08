@@ -14,6 +14,7 @@ import Unternehmenssuche from './pages/Unternehmenssuche';
 import Bestandskunden from './pages/Bestandskunden';
 import Kalender from './pages/Kalender';
 import Outlook from './pages/Outlook';
+import Benutzerverwaltung from './pages/Benutzerverwaltung';
 import __Layout from './Layout.jsx';
 
 
@@ -34,6 +35,7 @@ export const PAGES = {
     "Bestandskunden": Bestandskunden,
     "Kalender": Kalender,
     "Outlook": Outlook,
+    "Benutzerverwaltung": Benutzerverwaltung,
 }
 
 export const pagesConfig = {

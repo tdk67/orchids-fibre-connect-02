@@ -37,6 +37,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'] },
     { name: 'PVP Portal', path: 'PVP', icon: Settings, roles: ['admin'] },
     { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin'] },
+    { name: 'Benutzerverwaltung', path: 'Benutzerverwaltung', icon: Shield, roles: ['admin'] },
     { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart, roles: ['admin', 'user'] },
     { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'] },
     { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin'] },
