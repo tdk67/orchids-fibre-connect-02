@@ -111,43 +111,56 @@ export default function Postfach() {
   });
 
   const handleSendEmail = async () => {
-    if (!currentEmployee?.email_adresse) {
-      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Adresse in den Mitarbeitereinstellungen.');
+    if (!currentEmployee?.email_adresse || !currentEmployee?.email_password) {
+      alert('Bitte konfigurieren Sie zuerst Ihre IONOS-Zugangsdaten in den Mitarbeitereinstellungen.');
       return;
     }
     
     setIsSending(true);
     try {
-      // E-Mail über Base44 Core Integration senden
-      await base44.integrations.Core.SendEmail({
-        from_name: currentEmployee.full_name,
+      const response = await base44.functions.invoke('sendEmailIonos', {
         to: composeData.empfaenger,
         subject: composeData.betreff,
-        body: composeData.nachricht
+        text: composeData.nachricht
       });
 
-      // In Datenbank speichern
-      await base44.entities.Email.create({
-        betreff: composeData.betreff,
-        absender: currentEmployee.email_adresse,
-        empfaenger: composeData.empfaenger,
-        nachricht: composeData.nachricht,
-        mitarbeiter_email: currentEmployee.email_adresse,
-        mitarbeiter_name: user?.full_name || '',
-        sparte: currentEmployee?.sparte || 'Backoffice',
-        typ: 'Ausgang',
-        gelesen: true,
-        timestamp: new Date().toISOString()
-      });
-
-      queryClient.invalidateQueries(['emails']);
-      setIsComposeOpen(false);
-      setComposeData({ empfaenger: '', betreff: '', nachricht: '' });
-      alert('E-Mail erfolgreich versendet!');
+      if (response.data.success) {
+        queryClient.invalidateQueries(['emails']);
+        setIsComposeOpen(false);
+        setComposeData({ empfaenger: '', betreff: '', nachricht: '' });
+        alert('E-Mail erfolgreich über IONOS versendet!');
+      } else {
+        alert(`Fehler: ${response.data.error}`);
+      }
     } catch (error) {
       alert(`Fehler beim Versenden: ${error.message}`);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleFetchEmails = async () => {
+    if (!currentEmployee?.email_adresse || !currentEmployee?.email_password) {
+      alert('Bitte konfigurieren Sie zuerst Ihre IONOS-Zugangsdaten in den Mitarbeitereinstellungen.');
+      return;
+    }
+
+    setIsFetching(true);
+    try {
+      const response = await base44.functions.invoke('fetchEmailsIonos', {
+        limit: 20
+      });
+
+      if (response.data.success) {
+        queryClient.invalidateQueries(['emails']);
+        alert(`Erfolgreich: ${response.data.new} neue E-Mails von IONOS abgerufen (${response.data.fetched} gesamt)`);
+      } else {
+        alert(`Fehler: ${response.data.error}`);
+      }
+    } catch (error) {
+      alert(`Fehler beim Abrufen: ${error.message}`);
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -219,6 +232,15 @@ export default function Postfach() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={handleFetchEmails}
+            disabled={isFetching || !currentEmployee?.email_adresse}
+            className="bg-green-50 hover:bg-green-100 text-green-900"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            {isFetching ? 'Abrufen...' : 'IONOS E-Mails abrufen'}
+          </Button>
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
