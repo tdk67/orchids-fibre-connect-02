@@ -172,12 +172,27 @@ export default function Kalender() {
       }
       
       if (termine.length > 0) {
-        await base44.entities.Termin.bulkCreate(termine);
-        queryClient.invalidateQueries(['termine']);
+        // Filter out duplicates
+        const uniqueTermine = termine.filter(newTermin => {
+          return !filteredTermine.some(existing => 
+            existing.titel === newTermin.titel &&
+            existing.startzeit === newTermin.startzeit &&
+            existing.mitarbeiter_email === newTermin.mitarbeiter_email
+          );
+        });
+        
+        if (uniqueTermine.length > 0) {
+          await base44.entities.Termin.bulkCreate(uniqueTermine);
+          queryClient.invalidateQueries(['termine']);
+          const skipped = termine.length - uniqueTermine.length;
+          alert(`${uniqueTermine.length} Termine importiert${skipped > 0 ? `, ${skipped} Duplikate übersprungen` : ''}`);
+        } else {
+          alert('Alle Termine existieren bereits (Duplikate).');
+        }
+        
         setIsImportDialogOpen(false);
         setImportData('');
         setImportAssignedTo('');
-        alert(`${termine.length} Termine erfolgreich importiert und ${assignedEmployee?.full_name} zugewiesen!`);
       } else {
         alert('Keine gültigen Termine gefunden. Bitte prüfen Sie das Format.');
       }
