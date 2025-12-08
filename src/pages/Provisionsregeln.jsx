@@ -16,12 +16,11 @@ export default function Provisionsregeln() {
   const [formData, setFormData] = useState({
     tarif: '',
     bandbreite: '',
-    laufzeit_monate: 24,
-    closer_provision: 0,
+    laufzeit_monate: 36,
+    mitarbeiter_provision: 0,
     teamleiter_provision: 0,
-    lead_setter_kosten: 50,
-    setter_kosten: 40,
-    sparte: '1&1 Versatel',
+    teamleiter_bonus_provision: 0,
+    sparte: 'Telekom',
     aktiv: true
   });
 
@@ -70,12 +69,11 @@ export default function Provisionsregeln() {
     setFormData({
       tarif: '',
       bandbreite: '',
-      laufzeit_monate: 24,
-      closer_provision: 0,
+      laufzeit_monate: 36,
+      mitarbeiter_provision: 0,
       teamleiter_provision: 0,
-      lead_setter_kosten: 50,
-      setter_kosten: 40,
-      sparte: '1&1 Versatel',
+      teamleiter_bonus_provision: 0,
+      sparte: 'Telekom',
       aktiv: true
     });
     setEditingRule(null);
@@ -167,42 +165,37 @@ export default function Provisionsregeln() {
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-4">Provisionswerte</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Closer Provision (€) *</Label>
+                  <div className="space-y-2 col-span-2">
+                    <Label>Mitarbeiter Provision (€) *</Label>
                     <Input
                       type="number"
                       step="0.01"
-                      value={formData.closer_provision}
-                      onChange={(e) => setFormData({ ...formData, closer_provision: parseFloat(e.target.value) })}
+                      value={formData.mitarbeiter_provision}
+                      onChange={(e) => setFormData({ ...formData, mitarbeiter_provision: parseFloat(e.target.value) || 0 })}
                       required
                     />
+                    <p className="text-xs text-slate-500">Provision die ein Mitarbeiter für einen Abschluss erhält</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Teamleiter Provision (€)</Label>
+                    <Label>Teamleiter Provision (€) *</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={formData.teamleiter_provision}
-                      onChange={(e) => setFormData({ ...formData, teamleiter_provision: parseFloat(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, teamleiter_provision: parseFloat(e.target.value) || 0 })}
+                      required
                     />
+                    <p className="text-xs text-slate-500">Provision für eigene Abschlüsse des Teamleiters</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Lead Setter Kosten (€)</Label>
+                    <Label>Teamleiter Bonus bei Mitarbeiter-Abschluss (€)</Label>
                     <Input
                       type="number"
                       step="0.01"
-                      value={formData.lead_setter_kosten}
-                      onChange={(e) => setFormData({ ...formData, lead_setter_kosten: parseFloat(e.target.value) })}
+                      value={formData.teamleiter_bonus_provision}
+                      onChange={(e) => setFormData({ ...formData, teamleiter_bonus_provision: parseFloat(e.target.value) || 0 })}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Setter Kosten (€)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formData.setter_kosten}
-                      onChange={(e) => setFormData({ ...formData, setter_kosten: parseFloat(e.target.value) })}
-                    />
+                    <p className="text-xs text-slate-500">Zusätzliche Provision wenn ein Mitarbeiter abschließt</p>
                   </div>
                 </div>
               </div>
@@ -224,7 +217,7 @@ export default function Provisionsregeln() {
       <Card className="border-0 shadow-md bg-blue-50">
         <CardContent className="p-4">
           <p className="text-sm text-blue-900">
-            <strong>Provisionslogik:</strong> Closer erhalten die definierte Provision. Falls ein Lead Setter oder Setter involviert ist, werden deren Kosten vom Closer abgezogen. Teamleiter erhalten automatisch ihre Provision (nicht sichtbar für Closer).
+            <strong>Provisionslogik:</strong> Mitarbeiter erhalten ihre Provision für Abschlüsse. Teamleiter erhalten höhere Provisionen für eigene Abschlüsse. Bei Abschlüssen von Mitarbeitern erhält der zugeordnete Teamleiter zusätzlich eine Bonus-Provision.
           </p>
         </CardContent>
       </Card>
@@ -242,9 +235,9 @@ export default function Provisionsregeln() {
                   <TableHead>Tarif</TableHead>
                   <TableHead>Bandbreite</TableHead>
                   <TableHead>Laufzeit</TableHead>
-                  <TableHead>Closer</TableHead>
-                  <TableHead>Teamleiter</TableHead>
-                  <TableHead>Setter Kosten</TableHead>
+                  <TableHead>Mitarbeiter</TableHead>
+                  <TableHead>Teamleiter (eigen)</TableHead>
+                  <TableHead>TL Bonus (MA)</TableHead>
                   <TableHead>Sparte</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
@@ -256,13 +249,13 @@ export default function Provisionsregeln() {
                     <TableCell>{regel.bandbreite}</TableCell>
                     <TableCell>{regel.laufzeit_monate} Monate</TableCell>
                     <TableCell className="text-green-600 font-medium">
-                      {regel.closer_provision?.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      {(regel.mitarbeiter_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                     </TableCell>
                     <TableCell className="text-blue-600 font-medium">
-                      {regel.teamleiter_provision?.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      {(regel.teamleiter_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                     </TableCell>
-                    <TableCell className="text-red-600 text-sm">
-                      Lead: {regel.lead_setter_kosten}€ / Setter: {regel.setter_kosten}€
+                    <TableCell className="text-purple-600 font-medium">
+                      {(regel.teamleiter_bonus_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{regel.sparte}</span>
