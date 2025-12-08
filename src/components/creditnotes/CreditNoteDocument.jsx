@@ -1,11 +1,11 @@
 import React from 'react';
 
 export default function CreditNoteDocument({ creditNote, employee, sales }) {
-  // Berechne Netto (Provision ist bereits Netto)
-  const netto = creditNote.total_commission || 0;
+  // Provision ist Brutto - berechne Netto und MwSt
+  const brutto = creditNote.total_commission || 0;
   const mwstRate = 0.19;
-  const mwst = netto * mwstRate;
-  const brutto = netto + mwst;
+  const netto = brutto / (1 + mwstRate);
+  const mwst = brutto - netto;
 
   return (
     <div id="credit-note-document" className="bg-white p-12 max-w-4xl mx-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
@@ -79,9 +79,9 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
           </thead>
           <tbody>
             {sales.map((sale, index) => {
-              const saleNetto = sale.commission_amount || 0;
-              const saleMwst = saleNetto * mwstRate;
-              const saleBrutto = saleNetto + saleMwst;
+              const saleBrutto = sale.commission_amount || 0;
+              const saleNetto = saleBrutto / (1 + mwstRate);
+              const saleMwst = saleBrutto - saleNetto;
               
               return (
                 <tr key={index} className="text-sm border-b border-slate-200">
