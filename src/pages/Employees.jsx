@@ -34,6 +34,8 @@ export default function Employees() {
     google_calendar_link: '',
     email_login: '',
     email_password: '',
+    smtp_server: 'smtp.gmail.com',
+    smtp_port: 587,
     imap_server: 'imap.gmail.com',
     imap_port: 993,
     status: 'Aktiv'
@@ -93,6 +95,8 @@ export default function Employees() {
       google_calendar_link: '',
       email_login: '',
       email_password: '',
+      smtp_server: 'smtp.gmail.com',
+      smtp_port: 587,
       imap_server: 'imap.gmail.com',
       imap_port: 993,
       status: 'Aktiv'
@@ -314,14 +318,14 @@ export default function Employees() {
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach Zugang (IMAP)</h3>
+                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach (SMTP & IMAP)</h3>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                  <p className="text-xs text-blue-900 font-medium mb-1">Zugangsdaten für automatisches E-Mail-Abrufen via IMAP</p>
+                  <p className="text-xs text-blue-900 font-medium mb-1">Server-Konfiguration für E-Mail-Versand und Empfang</p>
                   <p className="text-xs text-blue-800">
-                    • Gmail: imap.gmail.com (Port 993)<br/>
-                    • IONOS: imap.ionos.de (Port 993)<br/>
-                    • 1&1: imap.1und1.de (Port 993)<br/>
-                    • Outlook: outlook.office365.com (Port 993)
+                    <strong>Gmail:</strong> smtp.gmail.com:587 / imap.gmail.com:993<br/>
+                    <strong>IONOS:</strong> smtp.ionos.de:587 / imap.ionos.de:993<br/>
+                    <strong>1&1:</strong> smtp.1und1.de:587 / imap.1und1.de:993<br/>
+                    <strong>Outlook:</strong> smtp.office365.com:587 / outlook.office365.com:993
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -344,7 +348,24 @@ export default function Employees() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>IMAP-Server</Label>
+                    <Label>SMTP-Server (Versand)</Label>
+                    <Input
+                      value={formData.smtp_server}
+                      onChange={(e) => setFormData({ ...formData, smtp_server: e.target.value })}
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP-Port</Label>
+                    <Input
+                      type="number"
+                      value={formData.smtp_port}
+                      onChange={(e) => setFormData({ ...formData, smtp_port: parseInt(e.target.value) || 587 })}
+                      placeholder="587"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IMAP-Server (Empfang)</Label>
                     <Input
                       value={formData.imap_server}
                       onChange={(e) => setFormData({ ...formData, imap_server: e.target.value })}

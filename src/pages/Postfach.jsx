@@ -101,22 +101,30 @@ export default function Postfach() {
       email.empfaenger?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const handleSendEmail = () => {
-    if (!currentEmployee?.email_login) {
-      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Adresse in den Mitarbeitereinstellungen.');
+  const handleSendEmail = async () => {
+    if (!currentEmployee?.email_login || !currentEmployee?.smtp_server) {
+      alert('Bitte konfigurieren Sie zuerst Ihre SMTP-Zugangsdaten in den Mitarbeitereinstellungen.');
       return;
     }
     
-    sendEmailMutation.mutate({
-      ...composeData,
-      absender: currentEmployee.email_login,
-      mitarbeiter_email: currentEmployee.email_login,
-      mitarbeiter_name: user?.full_name || '',
-      sparte: currentEmployee?.sparte || 'Backoffice',
-      typ: 'Ausgang',
-      gelesen: true,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      const response = await base44.functions.invoke('sendEmail', {
+        to: composeData.empfaenger,
+        subject: composeData.betreff,
+        text: composeData.nachricht
+      });
+
+      if (response.data.success) {
+        queryClient.invalidateQueries(['emails']);
+        setIsComposeOpen(false);
+        setComposeData({ empfaenger: '', betreff: '', nachricht: '' });
+        alert('E-Mail erfolgreich versendet!');
+      } else {
+        alert(`Fehler: ${response.data.error}`);
+      }
+    } catch (error) {
+      alert(`Fehler beim Versenden: ${error.message}`);
+    }
   };
 
   const handleImportEmail = () => {
