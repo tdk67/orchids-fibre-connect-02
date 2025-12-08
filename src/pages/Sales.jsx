@@ -21,6 +21,8 @@ export default function Sales() {
     employee_name: '',
     sparte: 'Telekom',
     product: '',
+    bandwidth: '',
+    contract_duration_months: 36,
     contract_value: 0,
     commission_amount: 0,
     sale_date: new Date().toISOString().split('T')[0],
@@ -95,6 +97,8 @@ export default function Sales() {
       employee_name: '',
       sparte: 'Telekom',
       product: '',
+      bandwidth: '',
+      contract_duration_months: 36,
       contract_value: 0,
       commission_amount: 0,
       sale_date: new Date().toISOString().split('T')[0],
@@ -202,6 +206,30 @@ export default function Sales() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>Bandbreite</Label>
+                  <Input
+                    value={formData.bandwidth}
+                    onChange={(e) => setFormData({ ...formData, bandwidth: e.target.value })}
+                    placeholder="z.B. 150/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Vertragslaufzeit (Monate)</Label>
+                  <Select 
+                    value={formData.contract_duration_months?.toString()} 
+                    onValueChange={(value) => setFormData({ ...formData, contract_duration_months: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="36">36 Monate</SelectItem>
+                      <SelectItem value="48">48 Monate</SelectItem>
+                      <SelectItem value="60">60 Monate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Vertragswert (€) *</Label>
                   <Input
                     type="number"
@@ -212,7 +240,7 @@ export default function Sales() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Provisionsbetrag (€) *</Label>
+                  <Label>Provisionsbetrag (€ Brutto) *</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -220,6 +248,7 @@ export default function Sales() {
                     onChange={(e) => setFormData({ ...formData, commission_amount: parseFloat(e.target.value) || 0 })}
                     required
                   />
+                  <p className="text-xs text-slate-500">Provision inkl. 19% MwSt</p>
                 </div>
               </div>
               <div className="space-y-2">
