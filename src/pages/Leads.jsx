@@ -16,7 +16,6 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,7 +37,9 @@ export default function Leads() {
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
   const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
-  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
+    return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
+  });
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
@@ -68,8 +69,17 @@ export default function Leads() {
   useEffect(() => {
     base44.auth.me().then((u) => {
       setUser(u);
-      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      if (!localStorage.getItem('selectedBenutzertyp')) {
+        setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      }
     }).catch(() => {});
+
+    const handleBenutzertypChange = () => {
+      setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
+    };
+
+    window.addEventListener('benutzertypChanged', handleBenutzertypChange);
+    return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
   }, []);
 
   const { data: leads = [], isLoading } = useQuery({
@@ -533,16 +543,9 @@ export default function Leads() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
-            <p className="text-slate-500 mt-1">Verwalten Sie Ihre Lead-Datenbank</p>
-          </div>
-          <BenutzertypFilter 
-            value={selectedBenutzertyp} 
-            onChange={setSelectedBenutzertyp}
-            userRole={user?.role}
-          />
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
+          <p className="text-slate-500 mt-1">Verwalten Sie Ihre Lead-Datenbank</p>
         </div>
         <div className="flex gap-3">
                     <Button 

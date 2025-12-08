@@ -15,17 +15,27 @@ import {
   Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
+    return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
+  });
 
   useEffect(() => {
     base44.auth.me().then((u) => {
       setUser(u);
-      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      if (!localStorage.getItem('selectedBenutzertyp')) {
+        setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      }
     }).catch(() => {});
+
+    const handleBenutzertypChange = () => {
+      setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
+    };
+
+    window.addEventListener('benutzertypChanged', handleBenutzertypChange);
+    return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
   }, []);
 
   const { data: allLeads = [] } = useQuery({
@@ -161,18 +171,11 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Willkommen zurück{user?.full_name ? `, ${user.full_name}` : ''}
-          </h1>
-          <p className="text-slate-500 mt-2">Hier ist Ihre Übersicht für heute</p>
-        </div>
-        <BenutzertypFilter 
-          value={selectedBenutzertyp} 
-          onChange={setSelectedBenutzertyp}
-          userRole={user?.role}
-        />
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">
+          Willkommen zurück{user?.full_name ? `, ${user.full_name}` : ''}
+        </h1>
+        <p className="text-slate-500 mt-2">Hier ist Ihre Übersicht für heute</p>
       </div>
 
       {/* Heutige Termine */}

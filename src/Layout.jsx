@@ -20,14 +20,24 @@ import {
   Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
+    return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
+  });
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
+
+  const handleBenutzertypChange = (value) => {
+    setSelectedBenutzertyp(value);
+    localStorage.setItem('selectedBenutzertyp', value);
+    window.dispatchEvent(new Event('benutzertypChanged'));
+  };
 
   const navigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
@@ -213,6 +223,21 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main Content */}
       <main className="lg:pl-72">
+        {/* Admin Benutzertyp Tabs */}
+        {user?.role === 'admin' && (
+          <div className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30">
+            <Tabs value={selectedBenutzertyp} onValueChange={handleBenutzertypChange}>
+              <TabsList className="bg-slate-100">
+                <TabsTrigger value="Interner Mitarbeiter">Intern</TabsTrigger>
+                <TabsTrigger value="Partner 1">Partner 1</TabsTrigger>
+                <TabsTrigger value="Partner 2">Partner 2</TabsTrigger>
+                <TabsTrigger value="Partner 3">Partner 3</TabsTrigger>
+                <TabsTrigger value="Partner 4">Partner 4</TabsTrigger>
+                <TabsTrigger value="Partner 5">Partner 5</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
         <div className="px-4 py-8 sm:px-6 lg:px-8">
           {children}
         </div>

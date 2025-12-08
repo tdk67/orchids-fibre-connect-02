@@ -11,13 +11,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Sales() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
   const [user, setUser] = useState(null);
-  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
+    return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
+  });
   const [formData, setFormData] = useState({
     customer_name: '',
     employee_name: '',
@@ -37,8 +38,17 @@ export default function Sales() {
   React.useEffect(() => {
     base44.auth.me().then((u) => {
       setUser(u);
-      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      if (!localStorage.getItem('selectedBenutzertyp')) {
+        setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      }
     }).catch(() => {});
+
+    const handleBenutzertypChange = () => {
+      setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
+    };
+
+    window.addEventListener('benutzertypChanged', handleBenutzertypChange);
+    return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
   }, []);
 
   const { data: allSales = [] } = useQuery({
@@ -131,18 +141,11 @@ export default function Sales() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Verkäufe</h1>
-            <p className="text-slate-500 mt-1">
-              {user?.role === 'admin' ? 'Erfassen und verwalten Sie alle Verkäufe' : 'Meine Verkäufe'}
-            </p>
-          </div>
-          <BenutzertypFilter 
-            value={selectedBenutzertyp} 
-            onChange={setSelectedBenutzertyp}
-            userRole={user?.role}
-          />
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Verkäufe</h1>
+          <p className="text-slate-500 mt-1">
+            {user?.role === 'admin' ? 'Erfassen und verwalten Sie alle Verkäufe' : 'Meine Verkäufe'}
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);

@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Pencil, Building2, Euro, TrendingUp, Target, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Verkaufschancen() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,15 +18,26 @@ export default function Verkaufschancen() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [user, setUser] = useState(null);
-  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
+    return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
+  });
 
   const queryClient = useQueryClient();
 
   useEffect(() => {
     base44.auth.me().then((u) => {
       setUser(u);
-      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      if (!localStorage.getItem('selectedBenutzertyp')) {
+        setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+      }
     }).catch(() => {});
+
+    const handleBenutzertypChange = () => {
+      setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
+    };
+
+    window.addEventListener('benutzertypChanged', handleBenutzertypChange);
+    return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
   }, []);
 
   const { data: leads = [], isLoading } = useQuery({
@@ -190,16 +200,9 @@ export default function Verkaufschancen() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Verkaufschancen</h1>
-          <p className="text-slate-500 mt-1">Verwalten Sie Ihre aktiven Verkaufschancen</p>
-        </div>
-        <BenutzertypFilter 
-          value={selectedBenutzertyp} 
-          onChange={setSelectedBenutzertyp}
-          userRole={user?.role}
-        />
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Verkaufschancen</h1>
+        <p className="text-slate-500 mt-1">Verwalten Sie Ihre aktiven Verkaufschancen</p>
       </div>
 
       {/* Statistiken */}
