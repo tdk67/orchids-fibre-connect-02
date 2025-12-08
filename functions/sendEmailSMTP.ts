@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import nodemailer from 'npm:nodemailer@6.9.8';
 
 Deno.serve(async (req) => {
   try {
@@ -12,66 +12,41 @@ Deno.serve(async (req) => {
 
     const { to, subject, body, signature } = await req.json();
 
-    console.log('User:', user.email);
-    console.log('Payload:', { to, subject, hasBody: !!body });
-
     if (!to || !subject || !body) {
-      return Response.json({ error: 'Missing required fields: to, subject, body' }, { status: 400 });
+      return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Get employee SMTP config
     const employees = await base44.asServiceRole.entities.Employee.list();
     const employee = employees.find(e => e.email === user.email);
 
-    console.log('Employee found:', !!employee);
-    console.log('SMTP Config:', {
-      server: employee?.smtp_server,
-      port: employee?.smtp_port,
-      username: employee?.smtp_username,
-      hasPassword: !!employee?.smtp_password
-    });
-
     if (!employee || !employee.smtp_server || !employee.smtp_username || !employee.smtp_password) {
       return Response.json({ 
-        error: 'SMTP-Konfiguration fehlt. Bitte in Mitarbeiter-Einstellungen hinterlegen.',
-        details: {
-          hasEmployee: !!employee,
-          hasServer: !!employee?.smtp_server,
-          hasUsername: !!employee?.smtp_username,
-          hasPassword: !!employee?.smtp_password
-        }
+        error: 'SMTP-Konfiguration fehlt. Bitte in Mitarbeiter-Einstellungen hinterlegen.'
       }, { status: 400 });
     }
 
     // Prepare email body with signature
     const fullBody = signature ? `${body}\n\n${signature}` : body;
 
-    // Create SMTP client
-    const client = new SMTPClient({
-      connection: {
-        hostname: employee.smtp_server,
-        port: employee.smtp_port || 587,
-        tls: true,
-        auth: {
-          username: employee.smtp_username,
-          password: employee.smtp_password,
-        },
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: employee.smtp_server,
+      port: employee.smtp_port || 587,
+      secure: (employee.smtp_port || 587) === 465,
+      auth: {
+        user: employee.smtp_username,
+        pass: employee.smtp_password,
       },
     });
 
-    console.log('Sending email...');
-
     // Send email
-    await client.send({
-      from: employee.email_adresse || employee.email || employee.smtp_username,
+    await transporter.sendMail({
+      from: `"${employee.full_name || user.full_name}" <${employee.email_adresse || employee.smtp_username}>`,
       to: to,
       subject: subject,
-      content: fullBody,
+      text: fullBody,
     });
-
-    await client.close();
-
-    console.log('Email sent successfully');
 
     // Save to Email entity
     await base44.asServiceRole.entities.Email.create({
@@ -90,10 +65,8 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('SMTP Error:', error);
-    console.error('Error stack:', error.stack);
     return Response.json({ 
-      error: error.message || 'Fehler beim Versenden der E-Mail',
-      details: error.toString()
+      error: error.message || 'Fehler beim Versenden der E-Mail'
     }, { status: 500 });
   }
 });
