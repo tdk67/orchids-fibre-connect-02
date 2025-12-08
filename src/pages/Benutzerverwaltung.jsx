@@ -8,11 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, UserCircle, Mail, Shield, Trash2 } from 'lucide-react';
+import { Plus, UserCircle, Mail, Shield, Trash2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function Benutzerverwaltung() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
@@ -54,6 +56,15 @@ export default function Benutzerverwaltung() {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['users']);
+      setShowEditDialog(false);
+      setEditingUser(null);
+    },
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     inviteUserMutation.mutate(formData);
@@ -76,6 +87,22 @@ export default function Benutzerverwaltung() {
 
   const getUserEmployee = (userEmail) => {
     return employees.find(e => e.email === userEmail);
+  };
+
+  const handleEdit = (user) => {
+    setEditingUser(user);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateUser = (e) => {
+    e.preventDefault();
+    updateUserMutation.mutate({
+      id: editingUser.id,
+      data: {
+        benutzertyp: editingUser.benutzertyp,
+        role: editingUser.role
+      }
+    });
   };
 
   return (
@@ -311,16 +338,25 @@ export default function Benutzerverwaltung() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(user)}
-                          className="text-red-600 hover:text-red-700"
-                          disabled={user.role === 'admin' && users.filter(u => u.role === 'admin').length === 1}
-                          title={user.role === 'admin' && users.filter(u => u.role === 'admin').length === 1 ? 'Letzter Admin kann nicht gelöscht werden' : ''}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(user)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(user)}
+                            className="text-red-600 hover:text-red-700"
+                            disabled={user.role === 'admin' && users.filter(u => u.role === 'admin').length === 1}
+                            title={user.role === 'admin' && users.filter(u => u.role === 'admin').length === 1 ? 'Letzter Admin kann nicht gelöscht werden' : ''}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -336,8 +372,7 @@ export default function Benutzerverwaltung() {
         </CardContent>
       </Card>
 
-      {/* Edit User Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Benutzer bearbeiten</DialogTitle>
@@ -397,7 +432,6 @@ export default function Benutzerverwaltung() {
             </form>
           )}
         </DialogContent>
-      </Dialog>
-      </div>
-      );
-      }
+    </div>
+  );
+}
