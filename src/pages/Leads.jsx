@@ -124,14 +124,16 @@ export default function Leads() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if archiv_kategorie was set or changed
     let dataToSave = { ...formData };
     
-    // Wenn archiv_kategorie gesetzt oder geändert wurde, setze Datum
-    if (formData.archiv_kategorie && formData.archiv_kategorie !== editingLead?.archiv_kategorie) {
-      dataToSave.archiviert_am = new Date().toISOString().split('T')[0];
-    } else if (!formData.archiv_kategorie) {
-      // Wenn archiv_kategorie entfernt wurde, lösche Datum
+    // Automatisch Datum setzen wenn archiv_kategorie vorhanden ist
+    if (dataToSave.archiv_kategorie) {
+      // Nur Datum setzen wenn es noch nicht gesetzt ist ODER wenn die Kategorie sich geändert hat
+      if (!dataToSave.archiviert_am || dataToSave.archiv_kategorie !== editingLead?.archiv_kategorie) {
+        dataToSave.archiviert_am = new Date().toISOString().split('T')[0];
+      }
+    } else {
+      // Keine Archivierung - Datum löschen
       dataToSave.archiviert_am = '';
     }
     
@@ -139,13 +141,11 @@ export default function Leads() {
       // Wenn Status auf "Angebot gesendet" geändert wird, verschiebe zu Verkaufschancen
       if (dataToSave.status === 'Angebot gesendet' && editingLead.status !== 'Angebot gesendet') {
         try {
-          // Erstelle Verkaufschance
           await base44.entities.Lead.update(editingLead.id, {
             ...dataToSave,
             verkaufschance_status: 'Angebot gesendet'
           });
           
-          // Lösche aus Leads nach kurzer Verzögerung
           setTimeout(() => {
             deleteMutation.mutate(editingLead.id);
           }, 500);
