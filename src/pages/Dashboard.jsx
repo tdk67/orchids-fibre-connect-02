@@ -187,41 +187,41 @@ export default function Dashboard() {
                 const endDate = termin.endzeit ? new Date(termin.endzeit) : null;
                 
                 return (
-                <div key={termin.id} className="p-4 hover:bg-blue-50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-blue-900">
-                          {!isNaN(startDate.getTime()) ? startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                        </span>
-                        {endDate && !isNaN(endDate.getTime()) && (
-                          <>
-                            <span className="text-slate-400">-</span>
-                            <span className="text-slate-600">
-                              {endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </>
+                  <div key={termin.id} className="p-4 hover:bg-blue-50 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-blue-900">
+                            {!isNaN(startDate.getTime()) ? startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                          </span>
+                          {endDate && !isNaN(endDate.getTime()) && (
+                            <>
+                              <span className="text-slate-400">-</span>
+                              <span className="text-slate-600">
+                                {endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <p className="font-semibold text-slate-900">{termin.titel}</p>
+                        {termin.kunde_name && (
+                          <p className="text-sm text-slate-600 mt-1">{termin.kunde_name}</p>
+                        )}
+                        {(user?.role === 'admin' || isTeamleiter) && termin.mitarbeiter_name && (
+                          <p className="text-xs text-slate-500 mt-1">Mitarbeiter: {termin.mitarbeiter_name}</p>
                         )}
                       </div>
-                      <p className="font-semibold text-slate-900">{termin.titel}</p>
-                      {termin.kunde_name && (
-                        <p className="text-sm text-slate-600 mt-1">{termin.kunde_name}</p>
-                      )}
-                      {(user?.role === 'admin' || isTeamleiter) && termin.mitarbeiter_name && (
-                        <p className="text-xs text-slate-500 mt-1">Mitarbeiter: {termin.mitarbeiter_name}</p>
-                      )}
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      termin.status === 'Geplant' ? 'bg-blue-100 text-blue-800' :
-                      termin.status === 'Bestätigt' ? 'bg-green-100 text-green-800' :
-                      termin.status === 'Abgeschlossen' ? 'bg-gray-100 text-gray-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {termin.status}
+                      <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        termin.status === 'Geplant' ? 'bg-blue-100 text-blue-800' :
+                        termin.status === 'Bestätigt' ? 'bg-green-100 text-green-800' :
+                        termin.status === 'Abgeschlossen' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {termin.status}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
+                );
               })}
             </div>
           </CardContent>
