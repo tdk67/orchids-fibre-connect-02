@@ -90,7 +90,7 @@ export default function Employees() {
       google_calendar_link: '',
       email_adresse: '',
       smtp_server: '',
-      smtp_port: 587,
+      smtp_port: 465,
       smtp_username: '',
       smtp_password: '',
       imap_server: '',
@@ -319,7 +319,7 @@ export default function Employees() {
                   <h3 className="font-semibold text-slate-900 mb-4">E-Mail Konfiguration (IONOS SMTP/IMAP)</h3>
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
                   <p className="text-xs text-blue-900">
-                    <strong>IONOS Standard:</strong> SMTP: smtp.ionos.de (Port 587), IMAP: imap.ionos.de (Port 993)
+                    <strong>IONOS Standard:</strong> SMTP: smtp.ionos.de (Port 465 mit SSL), IMAP: imap.ionos.de (Port 993)
                   </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -345,8 +345,8 @@ export default function Employees() {
                     <Input
                       type="number"
                       value={formData.smtp_port}
-                      onChange={(e) => setFormData({ ...formData, smtp_port: parseInt(e.target.value) || 587 })}
-                      placeholder="587"
+                      onChange={(e) => setFormData({ ...formData, smtp_port: parseInt(e.target.value) || 465 })}
+                      placeholder="465"
                     />
                   </div>
                   <div className="space-y-2">
