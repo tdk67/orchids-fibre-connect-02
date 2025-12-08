@@ -87,7 +87,11 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
                 <tr key={index} className="text-sm border-b border-slate-200">
                   <td className="py-4">
                     <div className="font-semibold">{sale.customer_name}</div>
-                    <div className="text-xs text-slate-600">{sale.product || 'Tarif'}</div>
+                    <div className="text-xs text-slate-600">
+                      {sale.product || 'Tarif'}
+                      {sale.bandwidth && ` - ${sale.bandwidth}`}
+                      {sale.contract_duration_months && ` - ${sale.contract_duration_months} Monate`}
+                    </div>
                     <div className="text-xs text-slate-500">
                       {new Date(sale.sale_date).toLocaleDateString('de-DE')}
                     </div>
