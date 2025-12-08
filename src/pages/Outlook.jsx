@@ -124,7 +124,17 @@ export default function Outlook() {
   };
 
   const handleReceiveEmails = async () => {
-    alert('E-Mail-Empfang wird in Kürze verfügbar sein.');
+    try {
+      const response = await base44.functions.invoke('receiveEmailsIMAP', {});
+      if (response.data.success) {
+        queryClient.invalidateQueries(['emails']);
+        alert(`${response.data.newEmailsCount} neue E-Mails abgerufen!`);
+      } else {
+        alert('Fehler: ' + response.data.error);
+      }
+    } catch (error) {
+      alert('Fehler beim E-Mail-Abruf: ' + (error.response?.data?.error || error.message));
+    }
   };
 
   const handleSaveSignature = async () => {
