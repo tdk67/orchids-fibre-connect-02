@@ -6,14 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, Plus, Calendar } from 'lucide-react';
+import { FileText, Download, Plus, Calendar, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import CreditNoteDocument from '../components/creditnotes/CreditNoteDocument';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export default function CreditNotes() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [user, setUser] = useState(null);
+  const [previewNote, setPreviewNote] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -164,6 +170,62 @@ export default function CreditNotes() {
     );
     return unpaidSales.length > 0;
   });
+
+  const handleDownloadPDF = async (creditNote) => {
+    setIsGeneratingPDF(true);
+    
+    const employee = employees.find(e => e.full_name === creditNote.employee_name);
+    const noteSales = allSales.filter(s => creditNote.sales_ids?.includes(s.id));
+    
+    // Create temporary container
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = '210mm'; // A4 width
+    document.body.appendChild(tempDiv);
+    
+    // Render document
+    const root = document.createElement('div');
+    tempDiv.appendChild(root);
+    
+    const { createRoot } = await import('react-dom/client');
+    const reactRoot = createRoot(root);
+    
+    await new Promise((resolve) => {
+      reactRoot.render(
+        <CreditNoteDocument 
+          creditNote={creditNote} 
+          employee={employee}
+          sales={noteSales}
+        />
+      );
+      setTimeout(resolve, 500);
+    });
+    
+    // Generate PDF
+    const canvas = await html2canvas(root.firstChild, {
+      scale: 2,
+      useCORS: true,
+      logging: false
+    });
+    
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`Gutschrift_${creditNote.credit_note_number}.pdf`);
+    
+    // Cleanup
+    document.body.removeChild(tempDiv);
+    setIsGeneratingPDF(false);
+  };
+
+  const handlePreview = (creditNote) => {
+    setPreviewNote(creditNote);
+    setIsPreviewOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -326,9 +388,25 @@ export default function CreditNotes() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handlePreview(note)}
+                          title="Vorschau"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDownloadPDF(note)}
+                          disabled={isGeneratingPDF}
+                          title="PDF herunterladen"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -343,6 +421,38 @@ export default function CreditNotes() {
           )}
         </CardContent>
       </Card>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gutschrift Vorschau</DialogTitle>
+          </DialogHeader>
+          {previewNote && (
+            <CreditNoteDocument 
+              creditNote={previewNote}
+              employee={employees.find(e => e.full_name === previewNote.employee_name)}
+              sales={allSales.filter(s => previewNote.sales_ids?.includes(s.id))}
+            />
+          )}
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+              Schließen
+            </Button>
+            <Button 
+              onClick={() => {
+                handleDownloadPDF(previewNote);
+                setIsPreviewOpen(false);
+              }}
+              className="bg-blue-900 hover:bg-blue-800"
+              disabled={isGeneratingPDF}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isGeneratingPDF ? 'Generiere...' : 'PDF herunterladen'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
