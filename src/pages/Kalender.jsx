@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar as CalendarIcon, AlertCircle, Plus, ExternalLink } from 'lucide-react';
 
 export default function Kalender() {
   const [user, setUser] = useState(null);
@@ -24,9 +25,18 @@ export default function Kalender() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Mein Kalender</h1>
-        <p className="text-slate-500 mt-1">Verwalten Sie Ihre Termine</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Mein Kalender</h1>
+          <p className="text-slate-500 mt-1">Verwalten Sie Ihre Termine</p>
+        </div>
+        <Button 
+          onClick={() => window.open('https://calendar.google.com/calendar/u/0/r', '_blank')}
+          className="bg-blue-900 hover:bg-blue-800"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Termin hinzufügen
+        </Button>
       </div>
 
       {/* Calendar Content */}
