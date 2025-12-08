@@ -84,6 +84,21 @@ export default function Kalender() {
     },
   });
 
+  const deleteAllTermine = async () => {
+    if (!confirm('Möchten Sie wirklich ALLE Termine löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
+      return;
+    }
+    try {
+      for (const termin of termine) {
+        await base44.entities.Termin.delete(termin.id);
+      }
+      queryClient.invalidateQueries(['termine']);
+      alert(`${termine.length} Termine wurden gelöscht.`);
+    } catch (error) {
+      alert('Fehler beim Löschen: ' + error.message);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (editingTermin) {
@@ -277,6 +292,14 @@ export default function Kalender() {
           <p className="text-slate-500 mt-1">Verwalten Sie Ihre Termine</p>
         </div>
         <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={deleteAllTermine}
+            className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Alle Termine löschen
+          </Button>
           <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
