@@ -435,18 +435,28 @@ export default function Kalender() {
                     {dayTermine.slice(0, 3).map((termin) => (
                       <div
                         key={termin.id}
-                        className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getTypColor(termin.typ)}`}
-                        onClick={(e) => {
+                        className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${getTypColor(termin.typ)} group relative`}
+                      >
+                        <div onClick={(e) => {
                           e.stopPropagation();
                           handleEdit(termin);
-                        }}
-                      >
-                        <div className="font-semibold truncate">
-                          {format(parseISO(termin.startzeit), 'HH:mm')} {termin.titel}
+                        }}>
+                          <div className="font-semibold truncate">
+                            {format(parseISO(termin.startzeit), 'HH:mm')} {termin.titel}
+                          </div>
+                          {termin.kunde_name && (
+                            <div className="truncate opacity-75">{termin.kunde_name}</div>
+                          )}
                         </div>
-                        {termin.kunde_name && (
-                          <div className="truncate opacity-75">{termin.kunde_name}</div>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(termin);
+                          }}
+                          className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded p-0.5 hover:bg-red-600"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     ))}
                     {dayTermine.length > 3 && (
