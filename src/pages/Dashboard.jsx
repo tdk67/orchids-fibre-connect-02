@@ -91,13 +91,17 @@ export default function Dashboard() {
   });
 
   // Filter für Mitarbeiter - nur eigene Daten + Benutzertyp
-  const leads = user?.role === 'admin' 
+  // Partner-Admins sehen nur ihre eigenen Partner-Daten
+  const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
+  const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
+  
+  const leads = isInternalAdmin
     ? allLeads.filter(l => l.benutzertyp === selectedBenutzertyp)
-    : allLeads.filter(lead => lead.assigned_to_email === user?.email && lead.benutzertyp === (user?.benutzertyp || 'Interner Mitarbeiter'));
+    : allLeads.filter(lead => lead.assigned_to_email === user?.email && lead.benutzertyp === userBenutzertyp);
 
-  const sales = user?.role === 'admin' 
+  const sales = isInternalAdmin
     ? allSales.filter(s => s.benutzertyp === selectedBenutzertyp)
-    : allSales.filter(sale => sale.employee_id === user?.email && sale.benutzertyp === (user?.benutzertyp || 'Interner Mitarbeiter'));
+    : allSales.filter(sale => sale.employee_id === user?.email && sale.benutzertyp === userBenutzertyp);
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthSales = sales.filter(s => s.sale_date?.startsWith(currentMonth));

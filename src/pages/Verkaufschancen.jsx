@@ -60,6 +60,9 @@ export default function Verkaufschancen() {
   });
 
   // Filter nur Leads mit Verkaufschancen-Status + Benutzertyp
+  const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
+  const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
+  
   const verkaufschancen = leads.filter((lead) => {
     const istVerkaufschance = 
       lead.status?.toLowerCase().includes('angebot') ||
@@ -68,10 +71,10 @@ export default function Verkaufschancen() {
     if (!istVerkaufschance) return false;
 
     // Benutzertyp-Filter
-    if (user?.role === 'admin') {
+    if (isInternalAdmin) {
       if (lead.benutzertyp !== selectedBenutzertyp) return false;
     } else {
-      if (lead.benutzertyp !== (user?.benutzertyp || 'Interner Mitarbeiter')) return false;
+      if (lead.benutzertyp !== userBenutzertyp) return false;
     }
 
     const searchMatch = 
@@ -81,9 +84,9 @@ export default function Verkaufschancen() {
     const statusMatch = selectedStatus === 'all' || lead.verkaufschance_status === selectedStatus;
     
     let employeeMatch = true;
-    if (user?.role !== 'admin') {
+    if (!isInternalAdmin && user?.role !== 'admin') {
       employeeMatch = lead.assigned_to_email === user?.email;
-    } else if (selectedEmployee !== 'all') {
+    } else if (isInternalAdmin && selectedEmployee !== 'all') {
       employeeMatch = lead.assigned_to === selectedEmployee;
     }
     

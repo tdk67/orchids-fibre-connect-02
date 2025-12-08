@@ -57,9 +57,12 @@ export default function Sales() {
   });
 
   // Filter für Mitarbeiter - nur eigene Verkäufe + Benutzertyp
-  const sales = user?.role === 'admin' 
+  const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
+  const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
+  
+  const sales = isInternalAdmin
     ? allSales.filter(s => s.benutzertyp === selectedBenutzertyp)
-    : allSales.filter(sale => sale.employee_id === user?.email && sale.benutzertyp === (user?.benutzertyp || 'Interner Mitarbeiter'));
+    : allSales.filter(sale => sale.employee_id === user?.email && sale.benutzertyp === userBenutzertyp);
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],

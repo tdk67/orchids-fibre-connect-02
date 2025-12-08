@@ -500,15 +500,18 @@ export default function Leads() {
   };
 
   // Filter leads based on user role, selected employee, active tab, and benutzertyp
+  const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
+  const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
+  
   const filteredLeads = leads.filter((lead) => {
     // Verstecke Leads die bereits zu Verkaufschancen wurden
     if (lead.verkaufschance_status) return false;
     
     // Benutzertyp-Filter
-    if (user?.role === 'admin') {
+    if (isInternalAdmin) {
       if (lead.benutzertyp !== selectedBenutzertyp) return false;
     } else {
-      if (lead.benutzertyp !== (user?.benutzertyp || 'Interner Mitarbeiter')) return false;
+      if (lead.benutzertyp !== userBenutzertyp) return false;
     }
     
     // Tab-basierte Filterung
@@ -523,11 +526,11 @@ export default function Leads() {
       lead.telefon?.includes(searchTerm) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // If user is not admin, only show their own leads
+    // Employee-Filter: Partner-Admins sehen alle Leads ihres Benutzertyps, interne Admins mit Filter
     let employeeMatch = true;
-    if (user?.role !== 'admin') {
+    if (!isInternalAdmin && user?.role !== 'admin') {
       employeeMatch = lead.assigned_to_email === user?.email;
-    } else if (selectedEmployee !== 'all') {
+    } else if (isInternalAdmin && selectedEmployee !== 'all') {
       employeeMatch = lead.assigned_to === selectedEmployee;
     }
     
