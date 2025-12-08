@@ -10,16 +10,14 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
   return (
     <div id="credit-note-document" className="bg-white p-12 w-full h-full min-h-[297mm]" style={{ fontFamily: 'Arial, sans-serif', width: '210mm', height: '297mm' }}>
       {/* Header with Logo */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="text-center mb-12">
         <img 
           src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/fd4ebd25d_EE-logo-1-1e3f66-1024x576.png"
           alt="Career Agents"
-          className="h-20 object-contain"
+          className="h-32 w-auto mx-auto object-contain mb-6"
         />
-        <div className="text-right">
-          <h1 className="text-2xl font-bold text-slate-800">GUTSCHRIFT</h1>
-          <p className="text-sm text-slate-600 mt-1">Provisionsabrechnung</p>
-        </div>
+        <h1 className="text-3xl font-bold text-slate-800">GUTSCHRIFT</h1>
+        <p className="text-sm text-slate-600 mt-2">Provisionsabrechnung</p>
       </div>
 
       {/* Company Address */}
