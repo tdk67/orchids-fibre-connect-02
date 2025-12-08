@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Mail, Send, Inbox, Search, Plus } from 'lucide-react';
+import { Mail, Send, Inbox, Search, Plus, RefreshCw, Reply, Trash2, Paperclip } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Postfach() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,6 +19,8 @@ export default function Postfach() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [activeFolder, setActiveFolder] = useState('inbox');
   const [composeData, setComposeData] = useState({
     empfaenger: '',
     betreff: '',
@@ -94,51 +97,93 @@ export default function Postfach() {
     },
   });
 
-  // Filter emails by search term
+  // Filter emails by search term and folder
   const filteredEmails = emails.filter((email) => {
-    return email.betreff?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const searchMatch = email.betreff?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.absender?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.empfaenger?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const folderMatch = activeFolder === 'inbox' ? email.typ === 'Eingang' :
+                        activeFolder === 'sent' ? email.typ === 'Ausgang' :
+                        true;
+    
+    return searchMatch && folderMatch;
   });
 
   const handleSendEmail = async () => {
-    if (!currentEmployee?.email_adresse) {
-      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Adresse in den Mitarbeitereinstellungen.');
+    if (!currentEmployee?.email_adresse || !currentEmployee?.email_password || !currentEmployee?.smtp_server) {
+      alert('Bitte konfigurieren Sie zuerst Ihre vollständigen E-Mail-Zugangsdaten in den Mitarbeitereinstellungen.');
       return;
     }
     
     setIsSending(true);
     try {
-      // E-Mail über Base44 Core Integration senden
-      await base44.integrations.Core.SendEmail({
-        from_name: currentEmployee.full_name,
+      const response = await base44.functions.invoke('sendEmail', {
         to: composeData.empfaenger,
         subject: composeData.betreff,
-        body: composeData.nachricht
+        text: composeData.nachricht
       });
 
-      // In Datenbank speichern
-      await base44.entities.Email.create({
-        betreff: composeData.betreff,
-        absender: currentEmployee.email_adresse,
-        empfaenger: composeData.empfaenger,
-        nachricht: composeData.nachricht,
-        mitarbeiter_email: currentEmployee.email_adresse,
-        mitarbeiter_name: user?.full_name || '',
-        sparte: currentEmployee?.sparte || 'Backoffice',
-        typ: 'Ausgang',
-        gelesen: true,
-        timestamp: new Date().toISOString()
-      });
-
-      queryClient.invalidateQueries(['emails']);
-      setIsComposeOpen(false);
-      setComposeData({ empfaenger: '', betreff: '', nachricht: '' });
-      alert('E-Mail erfolgreich versendet!');
+      if (response.data.success) {
+        queryClient.invalidateQueries(['emails']);
+        setIsComposeOpen(false);
+        setComposeData({ empfaenger: '', betreff: '', nachricht: '' });
+        alert('E-Mail erfolgreich versendet!');
+      } else {
+        alert(`Fehler: ${response.data.error}`);
+      }
     } catch (error) {
       alert(`Fehler beim Versenden: ${error.message}`);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleFetchEmails = async () => {
+    if (!currentEmployee?.email_adresse || !currentEmployee?.email_password || !currentEmployee?.imap_server) {
+      alert('Bitte konfigurieren Sie zuerst Ihre vollständigen E-Mail-Zugangsdaten (Adresse, Passwort, IMAP-Server) in den Mitarbeitereinstellungen.');
+      return;
+    }
+
+    setIsFetching(true);
+    try {
+      const response = await base44.functions.invoke('fetchEmails', {
+        limit: 50
+      });
+
+      if (response.data.success) {
+        queryClient.invalidateQueries(['emails']);
+        alert(`Erfolgreich: ${response.data.new} neue E-Mails abgerufen (${response.data.fetched} gesamt gefunden)`);
+      } else {
+        alert(`Fehler: ${response.data.error}`);
+      }
+    } catch (error) {
+      alert(`Fehler beim Abrufen: ${error.message}`);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const handleReply = (email) => {
+    setComposeData({
+      empfaenger: email.absender,
+      betreff: email.betreff.startsWith('Re: ') ? email.betreff : `Re: ${email.betreff}`,
+      nachricht: `\n\n---\nAm ${new Date(email.timestamp).toLocaleString('de-DE')} schrieb ${email.absender}:\n${email.nachricht}`
+    });
+    setIsComposeOpen(true);
+  };
+
+  const deleteEmailMutation = useMutation({
+    mutationFn: (id) => base44.entities.Email.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['emails']);
+      setSelectedEmail(null);
+    },
+  });
+
+  const handleDelete = (email) => {
+    if (confirm(`E-Mail "${email.betreff}" wirklich löschen?`)) {
+      deleteEmailMutation.mutate(email.id);
     }
   };
 
@@ -183,10 +228,19 @@ export default function Postfach() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">E-Mail Postfach</h1>
           <p className="text-slate-500 mt-1">
-            {currentEmployee?.email_adresse ? `Postfach: ${currentEmployee.email_adresse}` : 'Keine E-Mail-Adresse konfiguriert'}
+            {currentEmployee?.email_adresse ? `Verbunden: ${currentEmployee.email_adresse}` : 'Keine E-Mail-Adresse konfiguriert'}
           </p>
         </div>
         <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={handleFetchEmails}
+            disabled={isFetching || !currentEmployee?.email_adresse}
+            className="bg-green-50 hover:bg-green-100 text-green-900"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            {isFetching ? 'Abrufen...' : 'E-Mails abrufen'}
+          </Button>
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -363,8 +417,20 @@ export default function Postfach() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Email List */}
         <Card className="lg:col-span-1 border-0 shadow-md">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle>Posteingang</CardTitle>
+          <CardHeader className="border-b border-slate-100 pb-0">
+            <Tabs value={activeFolder} onValueChange={setActiveFolder}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="inbox">
+                  <Inbox className="h-4 w-4 mr-2" />
+                  Posteingang
+                </TabsTrigger>
+                <TabsTrigger value="sent">
+                  <Send className="h-4 w-4 mr-2" />
+                  Gesendet
+                </TabsTrigger>
+                <TabsTrigger value="all">Alle</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent className="p-0">
             <div className="max-h-[600px] overflow-y-auto">
@@ -442,9 +508,38 @@ export default function Postfach() {
                       <p className="text-sm font-medium">{selectedEmail.empfaenger}</p>
                     </div>
                   </div>
-                  <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="bg-slate-50 rounded-lg p-4 mb-4">
                     <p className="text-sm text-slate-900 whitespace-pre-wrap">{selectedEmail.nachricht}</p>
                   </div>
+                  {selectedEmail.typ === 'Eingang' && (
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={() => handleReply(selectedEmail)}
+                        className="bg-blue-900 hover:bg-blue-800"
+                      >
+                        <Reply className="h-4 w-4 mr-2" />
+                        Antworten
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleDelete(selectedEmail)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Löschen
+                      </Button>
+                    </div>
+                  )}
+                  {selectedEmail.typ === 'Ausgang' && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleDelete(selectedEmail)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Löschen
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
