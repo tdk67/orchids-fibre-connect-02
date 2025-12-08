@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Mail, Send, Inbox, Search, Plus, Paperclip } from 'lucide-react';
+import { Mail, Send, Inbox, Search, Plus, Paperclip, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function Postfach() {
@@ -17,6 +17,7 @@ export default function Postfach() {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [isFetching, setIsFetching] = useState(false);
   const [composeData, setComposeData] = useState({
     empfaenger: '',
     betreff: '',
@@ -146,6 +147,32 @@ export default function Postfach() {
     }
   };
 
+  const handleFetchEmails = async () => {
+    if (!currentEmployee?.email_login || !currentEmployee?.email_password) {
+      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Zugangsdaten (Login, Passwort, IMAP-Server) in den Mitarbeitereinstellungen.');
+      return;
+    }
+
+    setIsFetching(true);
+    try {
+      const response = await base44.functions.invoke('fetchEmails', {
+        employee_email: currentEmployee.email,
+        limit: 50
+      });
+
+      if (response.data.success) {
+        queryClient.invalidateQueries(['emails']);
+        alert(`Erfolgreich: ${response.data.new} neue E-Mails abgerufen (${response.data.fetched} gesamt gefunden)`);
+      } else {
+        alert(`Fehler: ${response.data.error}\n\n${response.data.details || ''}`);
+      }
+    } catch (error) {
+      alert(`Fehler beim Abrufen der E-Mails: ${error.message || error}`);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
   const stats = {
     gesamt: filteredEmails.length,
     ungelesen: filteredEmails.filter(e => !e.gelesen && e.typ === 'Eingang').length,
@@ -163,6 +190,15 @@ export default function Postfach() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={handleFetchEmails}
+            disabled={isFetching || !currentEmployee?.email_login}
+            className="bg-green-50 hover:bg-green-100 text-green-900"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            {isFetching ? 'Abrufen...' : 'E-Mails abrufen (IMAP)'}
+          </Button>
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
