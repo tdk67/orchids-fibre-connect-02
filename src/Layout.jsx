@@ -40,26 +40,34 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const navigation = [
-    { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
-    { name: 'Kalender', path: 'Kalender', icon: CalendarIcon, roles: ['admin', 'user'] },
-    { name: 'E-Mail', path: 'Outlook', icon: Mail, roles: ['admin', 'user'] },
-    { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'] },
-    { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'] },
-    { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'] },
-    { name: 'PVP Portal', path: 'PVP', icon: Settings, roles: ['admin'] },
-    { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin'] },
-    { name: 'Benutzerverwaltung', path: 'Benutzerverwaltung', icon: Shield, roles: ['admin'] },
-    { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart, roles: ['admin', 'user'] },
-    { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'] },
-    { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin'] },
-    { name: 'Gutschriften', path: 'CreditNotes', icon: FileText, roles: ['admin', 'user'] },
-    { name: 'Bestandskunden', path: 'Bestandskunden', icon: Users, roles: ['admin', 'user'] },
-    { name: 'Team Chat', path: 'Chat', icon: MessageSquare, roles: ['admin'] },
+    { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Kalender', path: 'Kalender', icon: CalendarIcon, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'E-Mail', path: 'Outlook', icon: Mail, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'PVP Portal', path: 'PVP', icon: Settings, roles: ['admin'], partnerAccess: false },
+    { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin'], partnerAccess: false },
+    { name: 'Benutzerverwaltung', path: 'Benutzerverwaltung', icon: Shield, roles: ['admin'], partnerAccess: false },
+    { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'], partnerAccess: false },
+    { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin'], partnerAccess: false },
+    { name: 'Gutschriften', path: 'CreditNotes', icon: FileText, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Bestandskunden', path: 'Bestandskunden', icon: Users, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Team Chat', path: 'Chat', icon: MessageSquare, roles: ['admin'], partnerAccess: false },
   ];
 
-  const filteredNavigation = navigation.filter(item => 
-    item.roles.includes(user?.role || 'user')
-  );
+  const isPartner = user?.benutzertyp && user.benutzertyp !== 'Interner Mitarbeiter';
+
+  const filteredNavigation = navigation.filter(item => {
+    // Rolle prüfen
+    if (!item.roles.includes(user?.role || 'user')) return false;
+    
+    // Partner-Zugriff prüfen: Partner sehen nur Seiten mit partnerAccess: true
+    if (isPartner && !item.partnerAccess) return false;
+    
+    return true;
+  });
 
   const handleLogout = () => {
     base44.auth.logout();
