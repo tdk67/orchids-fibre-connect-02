@@ -254,6 +254,22 @@ Liste ALLE gefundenen Unternehmen auf - auch wenn es viele sind!`,
 
   return (
     <div className="space-y-6">
+      {/* FiberConnect Integration */}
+      <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-indigo-50">
+        <CardHeader>
+          <CardTitle className="text-2xl">FiberConnect Lead Generator</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-white rounded-lg overflow-hidden border border-slate-200">
+            <iframe 
+              src="https://fiberconnect-leadgen-353212586118.us-west1.run.app"
+              className="w-full h-[600px]"
+              title="FiberConnect Lead Generator"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Unternehmenssuche</h1>
