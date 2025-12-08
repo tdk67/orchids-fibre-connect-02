@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import nodemailer from 'npm:nodemailer@6.9.8';
 
 Deno.serve(async (req) => {
   try {
@@ -29,24 +28,24 @@ Deno.serve(async (req) => {
     // Prepare email body with signature
     const fullBody = signature ? `${body}\n\n${signature}` : body;
 
-    // Create transporter - use port 465 with SSL for IONOS
-    const transporter = nodemailer.createTransport({
-      host: employee.smtp_server,
-      port: 465, // Force SSL port for Deno Deploy
-      secure: true, // Use SSL
-      auth: {
-        user: employee.smtp_username,
-        pass: employee.smtp_password,
+    // Use native fetch to call an email API
+    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        api_key: Deno.env.get('SMTP2GO_API_KEY'),
+        sender: employee.email_adresse || employee.smtp_username,
+        to: [to],
+        subject: subject,
+        text_body: fullBody,
+      }),
     });
 
-    // Send email
-    await transporter.sendMail({
-      from: `"${employee.full_name || user.full_name}" <${employee.email_adresse || employee.smtp_username}>`,
-      to: to,
-      subject: subject,
-      text: fullBody,
-    });
+    if (!response.ok) {
+      throw new Error('Failed to send email via SMTP2GO');
+    }
 
     // Save to Email entity
     await base44.asServiceRole.entities.Email.create({
@@ -64,7 +63,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('SMTP Error:', error);
+    console.error('Email Error:', error);
     return Response.json({ 
       error: error.message || 'Fehler beim Versenden der E-Mail'
     }, { status: 500 });
