@@ -628,16 +628,7 @@ export default function Leads() {
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <Select value={formData.status} onValueChange={(value) => {
-                      // Automatisch archiv_kategorie setzen basierend auf Status
-                      let archivKategorie = '';
-                      if (value === 'Nicht erreicht') {
-                        archivKategorie = 'Nicht erreicht';
-                      } else if (value === 'Anderer Provider') {
-                        archivKategorie = 'Anderer Provider';
-                      } else if (value === 'Kein Interesse') {
-                        archivKategorie = 'Kein Interesse';
-                      }
-                      setFormData({ ...formData, status: value, archiv_kategorie: archivKategorie });
+                      setFormData({ ...formData, status: value });
                     }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Status wählen" />
@@ -650,9 +641,9 @@ export default function Leads() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {formData.archiv_kategorie && (
+                    {(formData.status === 'Nicht erreicht' || formData.status === 'Anderer Provider' || formData.status === 'Kein Interesse') && (
                       <p className="text-xs text-amber-600 font-medium">
-                        → Wird archiviert als: {formData.archiv_kategorie}
+                        ⚠️ Lead wird archiviert in: {formData.status}
                       </p>
                     )}
                   </div>
