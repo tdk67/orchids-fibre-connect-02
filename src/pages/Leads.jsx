@@ -596,9 +596,9 @@ export default function Leads() {
                   <div className="space-y-2">
                     <Label>E-Mail</Label>
                     <Input
-                      type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="Optional"
                     />
                   </div>
                   <div className="space-y-2">
