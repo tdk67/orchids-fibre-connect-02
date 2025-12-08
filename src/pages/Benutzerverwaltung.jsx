@@ -335,6 +335,69 @@ export default function Benutzerverwaltung() {
           )}
         </CardContent>
       </Card>
-    </div>
-  );
-}
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Benutzer bearbeiten</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <form onSubmit={handleUpdateUser} className="space-y-4">
+              <div className="space-y-2">
+                <Label>E-Mail</Label>
+                <Input value={editingUser.email} disabled className="bg-slate-100" />
+              </div>
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input value={editingUser.full_name || ''} disabled className="bg-slate-100" />
+              </div>
+              <div className="space-y-2">
+                <Label>Benutzertyp</Label>
+                <Select 
+                  value={editingUser.benutzertyp || 'Interner Mitarbeiter'} 
+                  onValueChange={(value) => setEditingUser({ ...editingUser, benutzertyp: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Interner Mitarbeiter">Interner Mitarbeiter</SelectItem>
+                    <SelectItem value="Partner 1">Partner 1</SelectItem>
+                    <SelectItem value="Partner 2">Partner 2</SelectItem>
+                    <SelectItem value="Partner 3">Partner 3</SelectItem>
+                    <SelectItem value="Partner 4">Partner 4</SelectItem>
+                    <SelectItem value="Partner 5">Partner 5</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Rolle</Label>
+                <Select 
+                  value={editingUser.role} 
+                  onValueChange={(value) => setEditingUser({ ...editingUser, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Benutzer</SelectItem>
+                    <SelectItem value="admin">Administrator</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Abbrechen
+                </Button>
+                <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
+                  Speichern
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+      </div>
+      );
+      }
