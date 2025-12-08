@@ -93,10 +93,10 @@ export default function Employees() {
       smtp_port: 587,
       smtp_username: '',
       smtp_password: '',
-      pop3_server: '',
-      pop3_port: 995,
-      pop3_username: '',
-      pop3_password: '',
+      imap_server: '',
+      imap_port: 993,
+      imap_username: '',
+      imap_password: '',
       status: 'Aktiv'
     });
     setEditingEmployee(null);
@@ -316,10 +316,10 @@ export default function Employees() {
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Konfiguration (SMTP/POP3)</h3>
+                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Konfiguration (SMTP/IMAP)</h3>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
                   <p className="text-xs text-blue-900">
-                    <strong>Beispiel IONOS:</strong> SMTP: smtp.ionos.de (Port 587), POP3: pop.ionos.de (Port 995)
+                    <strong>Beispiel IONOS:</strong> SMTP: smtp.ionos.de (Port 587), IMAP: imap.ionos.de (Port 993)
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -367,36 +367,36 @@ export default function Employees() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>POP3 Server</Label>
+                    <Label>IMAP Server</Label>
                     <Input
-                      value={formData.pop3_server}
-                      onChange={(e) => setFormData({ ...formData, pop3_server: e.target.value })}
-                      placeholder="pop.ionos.de"
+                      value={formData.imap_server}
+                      onChange={(e) => setFormData({ ...formData, imap_server: e.target.value })}
+                      placeholder="imap.ionos.de"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>POP3 Port</Label>
+                    <Label>IMAP Port</Label>
                     <Input
                       type="number"
-                      value={formData.pop3_port}
-                      onChange={(e) => setFormData({ ...formData, pop3_port: parseInt(e.target.value) || 995 })}
-                      placeholder="995"
+                      value={formData.imap_port}
+                      onChange={(e) => setFormData({ ...formData, imap_port: parseInt(e.target.value) || 993 })}
+                      placeholder="993"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>POP3 Benutzername</Label>
+                    <Label>IMAP Benutzername</Label>
                     <Input
-                      value={formData.pop3_username}
-                      onChange={(e) => setFormData({ ...formData, pop3_username: e.target.value })}
+                      value={formData.imap_username}
+                      onChange={(e) => setFormData({ ...formData, imap_username: e.target.value })}
                       placeholder="mitarbeiter@firma.de"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>POP3 Passwort</Label>
+                    <Label>IMAP Passwort</Label>
                     <Input
                       type="password"
-                      value={formData.pop3_password}
-                      onChange={(e) => setFormData({ ...formData, pop3_password: e.target.value })}
+                      value={formData.imap_password}
+                      onChange={(e) => setFormData({ ...formData, imap_password: e.target.value })}
                       placeholder="••••••••"
                     />
                   </div>

@@ -125,7 +125,7 @@ export default function Outlook() {
 
   const handleReceiveEmails = async () => {
     try {
-      const response = await base44.functions.invoke('receiveEmailsPOP3', {});
+      const response = await base44.functions.invoke('receiveEmailsIMAP', {});
       
       if (response.data.error) {
         throw new Error(response.data.error);
@@ -359,10 +359,10 @@ export default function Outlook() {
           <div className="space-y-4">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-900 font-semibold mb-2">
-                SMTP & POP3 Konfiguration
+                SMTP & IMAP Konfiguration
               </p>
               <p className="text-xs text-blue-800">
-                Bitte kontaktieren Sie Ihren Administrator, um Ihre E-Mail-Server-Zugangsdaten (SMTP/POP3) zu konfigurieren.
+                Bitte kontaktieren Sie Ihren Administrator, um Ihre E-Mail-Server-Zugangsdaten (SMTP/IMAP) zu konfigurieren.
                 Diese werden in Ihren Mitarbeiter-Einstellungen hinterlegt.
               </p>
             </div>
