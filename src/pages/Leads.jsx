@@ -124,11 +124,14 @@ export default function Leads() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if archiv_kategorie was set
+    // Check if archiv_kategorie was set or changed
     let dataToSave = { ...formData };
-    if (formData.archiv_kategorie && !editingLead?.archiv_kategorie) {
+    
+    // Wenn archiv_kategorie gesetzt oder geändert wurde, setze Datum
+    if (formData.archiv_kategorie && formData.archiv_kategorie !== editingLead?.archiv_kategorie) {
       dataToSave.archiviert_am = new Date().toISOString().split('T')[0];
     } else if (!formData.archiv_kategorie) {
+      // Wenn archiv_kategorie entfernt wurde, lösche Datum
       dataToSave.archiviert_am = '';
     }
     
