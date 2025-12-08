@@ -58,11 +58,14 @@ export default function Dashboard() {
   const totalRevenue = currentMonthSales.reduce((sum, s) => sum + (s.contract_value || 0), 0);
   const totalCommissions = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
 
-  // Teamleiter: Eigene Provision + Bonus von Mitarbeitern
-  const teamleiterOwnCommission = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+  // Teamleiter: Eigene Provision (ohne Bonus) + Bonus von Mitarbeitern
+  const teamleiterOwnCommission = currentMonthSales
+    .filter(s => !s.product?.includes('Teamleiter-Bonus'))
+    .reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+  
   const teamleiterBonusCommission = allSales.filter(s => 
     s.sale_date?.startsWith(currentMonth) && 
-    s.employee_name?.includes('Teamleiter-Bonus') &&
+    s.product?.includes('Teamleiter-Bonus') &&
     s.employee_id === user?.email
   ).reduce((sum, s) => sum + (s.commission_amount || 0), 0);
 
