@@ -17,15 +17,14 @@ Deno.serve(async (req) => {
     }
 
     // Get employee SMTP settings
-    const employees = await base44.asServiceRole.entities.Employee.filter({ email: user.email });
+    const allEmployees = await base44.asServiceRole.entities.Employee.list();
+    const employee = allEmployees.find(e => e.email === user.email || e.email_adresse === user.email);
     
-    if (!employees || employees.length === 0) {
+    if (!employee) {
       return Response.json({ 
-        error: 'Kein Mitarbeiter-Profil gefunden. Bitte kontaktieren Sie Ihren Administrator.' 
+        error: `Kein Mitarbeiter-Profil gefunden für ${user.email}. Bitte im Admin-Bereich Mitarbeiter anlegen.` 
       }, { status: 404 });
     }
-
-    const employee = employees[0];
 
     if (!employee.smtp_server || !employee.smtp_username || !employee.smtp_password) {
       return Response.json({ 
