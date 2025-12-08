@@ -15,9 +15,15 @@ export default function Postfach() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [composeData, setComposeData] = useState({
     empfaenger: '',
+    betreff: '',
+    nachricht: ''
+  });
+  const [importData, setImportData] = useState({
+    absender: '',
     betreff: '',
     nachricht: ''
   });
@@ -71,6 +77,15 @@ export default function Postfach() {
     },
   });
 
+  const importEmailMutation = useMutation({
+    mutationFn: (data) => base44.entities.Email.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['emails']);
+      setIsImportOpen(false);
+      setImportData({ absender: '', betreff: '', nachricht: '' });
+    },
+  });
+
   const markAsReadMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Email.update(id, data),
     onSuccess: () => {
@@ -86,16 +101,37 @@ export default function Postfach() {
   });
 
   const handleSendEmail = () => {
-    const currentEmployee = employees.find(e => e.email === user?.email);
+    if (!currentEmployee?.email_login) {
+      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Adresse in den Mitarbeitereinstellungen.');
+      return;
+    }
     
     sendEmailMutation.mutate({
       ...composeData,
-      absender: user?.email || '',
-      mitarbeiter_email: user?.email || '',
+      absender: currentEmployee.email_login,
+      mitarbeiter_email: currentEmployee.email_login,
       mitarbeiter_name: user?.full_name || '',
       sparte: currentEmployee?.sparte || 'Backoffice',
       typ: 'Ausgang',
       gelesen: true,
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  const handleImportEmail = () => {
+    if (!currentEmployee?.email_login) {
+      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Adresse in den Mitarbeitereinstellungen.');
+      return;
+    }
+    
+    importEmailMutation.mutate({
+      ...importData,
+      empfaenger: currentEmployee.email_login,
+      mitarbeiter_email: currentEmployee.email_login,
+      mitarbeiter_name: user?.full_name || '',
+      sparte: currentEmployee?.sparte || 'Backoffice',
+      typ: 'Eingang',
+      gelesen: false,
       timestamp: new Date().toISOString()
     });
   };
@@ -122,29 +158,93 @@ export default function Postfach() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">E-Mail Postfach</h1>
-          <p className="text-slate-500 mt-1">Zentrale E-Mail-Verwaltung</p>
+          <p className="text-slate-500 mt-1">
+            {currentEmployee?.email_login ? `Verbunden mit: ${currentEmployee.email_login}` : 'Keine E-Mail-Adresse konfiguriert'}
+          </p>
         </div>
-        <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-900 hover:bg-blue-800">
-              <Plus className="h-4 w-4 mr-2" />
-              Neue E-Mail
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Neue E-Mail verfassen</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>An</Label>
-                <Input
-                  type="email"
-                  value={composeData.empfaenger}
-                  onChange={(e) => setComposeData({ ...composeData, empfaenger: e.target.value })}
-                  placeholder="empfaenger@beispiel.de"
-                />
+        <div className="flex gap-3">
+          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Inbox className="h-4 w-4 mr-2" />
+                E-Mail empfangen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>E-Mail manuell erfassen</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-xs text-blue-900">
+                    Hinweis: Kopieren Sie empfangene E-Mails hier hinein. 
+                    Für automatische IMAP-Synchronisation aktivieren Sie Backend-Funktionen.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Von</Label>
+                  <Input
+                    type="email"
+                    value={importData.absender}
+                    onChange={(e) => setImportData({ ...importData, absender: e.target.value })}
+                    placeholder="absender@beispiel.de"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Betreff</Label>
+                  <Input
+                    value={importData.betreff}
+                    onChange={(e) => setImportData({ ...importData, betreff: e.target.value })}
+                    placeholder="Betreff eingeben..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nachricht</Label>
+                  <Textarea
+                    value={importData.nachricht}
+                    onChange={(e) => setImportData({ ...importData, nachricht: e.target.value })}
+                    rows={8}
+                    placeholder="E-Mail Text..."
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setIsImportOpen(false)}>
+                    Abbrechen
+                  </Button>
+                  <Button onClick={handleImportEmail} className="bg-blue-900 hover:bg-blue-800">
+                    <Inbox className="h-4 w-4 mr-2" />
+                    Importieren
+                  </Button>
+                </div>
               </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-900 hover:bg-blue-800">
+                <Plus className="h-4 w-4 mr-2" />
+                E-Mail senden
+              </Button>
+            </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Neue E-Mail verfassen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+              <p className="text-xs text-green-900">
+                Von: {currentEmployee?.email_login || 'Keine E-Mail konfiguriert'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>An</Label>
+              <Input
+                type="email"
+                value={composeData.empfaenger}
+                onChange={(e) => setComposeData({ ...composeData, empfaenger: e.target.value })}
+                placeholder="empfaenger@beispiel.de"
+              />
+            </div>
               <div className="space-y-2">
                 <Label>Betreff</Label>
                 <Input
