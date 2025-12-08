@@ -39,6 +39,14 @@ export default function Dashboard() {
   // Mitarbeiter die diesem Teamleiter zugeordnet sind
   const teamMembers = employees.filter(e => e.teamleiter_id === currentEmployee?.id);
 
+  // Teamleiter: Eigene Provision + Bonus von Mitarbeitern
+  const teamleiterOwnCommission = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+  const teamleiterBonusCommission = allSales.filter(s => 
+    s.sale_date?.startsWith(currentMonth) && 
+    s.employee_name?.includes('Teamleiter-Bonus') &&
+    s.employee_id === user?.email
+  ).reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+
   const { data: allSales = [] } = useQuery({
     queryKey: ['sales'],
     queryFn: () => base44.entities.Sale.list('-sale_date', 100),
@@ -250,7 +258,7 @@ export default function Dashboard() {
       </Card>
 
       {/* Teamleiter: Mitarbeiter Übersicht */}
-      {isTeamleiter && teamMembers.length > 0 && (
+      {isTeamleiter && (
         <Card className="border-0 shadow-lg">
           <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-purple-50 to-indigo-50">
             <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -259,6 +267,35 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
+            {/* Teamleiter eigene Provisionen */}
+            <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-amber-800 mb-1">Meine Provisionen (eigene Verkäufe)</p>
+                  <p className="text-2xl font-bold text-amber-900">
+                    {teamleiterOwnCommission.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-purple-800 mb-1">Bonus-Provisionen (von Team)</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {teamleiterBonusCommission.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-green-800 mb-1">Gesamt</p>
+                  <p className="text-3xl font-bold text-green-900">
+                    {(teamleiterOwnCommission + teamleiterBonusCommission).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Mitarbeiter Übersicht */}
+            {teamMembers.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-slate-700 mb-3">Meine Mitarbeiter</h3>
+                <div className="space-y-4">
             <div className="space-y-4">
               {teamMembers.map(member => {
                 const memberSales = allSales.filter(s => 
@@ -289,7 +326,9 @@ export default function Dashboard() {
                   </div>
                 );
               })}
-            </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
