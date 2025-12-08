@@ -23,6 +23,7 @@ export default function Kalender() {
   const [editingTermin, setEditingTermin] = useState(null);
   const [importData, setImportData] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [importAssignedTo, setImportAssignedTo] = useState('');
   const [formData, setFormData] = useState({
     titel: '',
     beschreibung: '',
@@ -131,10 +132,12 @@ export default function Kalender() {
   };
 
   const handleImportCalendar = async () => {
-    if (!importData.trim()) return;
+    if (!importData.trim() || !importAssignedTo) return;
     
     setIsImporting(true);
     try {
+      const assignedEmployee = employees.find(e => e.full_name === importAssignedTo);
+      
       // Parse ICS or CSV format
       const lines = importData.trim().split('\n');
       const termine = [];
@@ -157,8 +160,8 @@ export default function Kalender() {
             if (currentEvent.titel && currentEvent.startzeit) {
               termine.push({
                 ...currentEvent,
-                mitarbeiter_email: user.email,
-                mitarbeiter_name: user.full_name,
+                mitarbeiter_email: assignedEmployee?.email || user.email,
+                mitarbeiter_name: assignedEmployee?.full_name || user.full_name,
                 typ: 'Termin',
                 status: 'Geplant'
               });
@@ -173,7 +176,8 @@ export default function Kalender() {
         queryClient.invalidateQueries(['termine']);
         setIsImportDialogOpen(false);
         setImportData('');
-        alert(`${termine.length} Termine erfolgreich importiert!`);
+        setImportAssignedTo('');
+        alert(`${termine.length} Termine erfolgreich importiert und ${assignedEmployee?.full_name} zugewiesen!`);
       } else {
         alert('Keine gültigen Termine gefunden. Bitte prüfen Sie das Format.');
       }
@@ -281,6 +285,21 @@ export default function Kalender() {
                   </ol>
                 </div>
                 <div className="space-y-2">
+                  <Label>Mitarbeiter zuweisen *</Label>
+                  <Select value={importAssignedTo} onValueChange={setImportAssignedTo}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Mitarbeiter wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.full_name}>
+                          {emp.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Kalender-Daten (ICS Format)</Label>
                   <Textarea
                     value={importData}
@@ -296,7 +315,7 @@ export default function Kalender() {
                   </Button>
                   <Button 
                     onClick={handleImportCalendar}
-                    disabled={!importData.trim() || isImporting}
+                    disabled={!importData.trim() || !importAssignedTo || isImporting}
                     className="bg-blue-900 hover:bg-blue-800"
                   >
                     {isImporting ? 'Importiere...' : 'Importieren'}
