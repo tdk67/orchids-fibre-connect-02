@@ -32,25 +32,17 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Employee.list(),
   });
 
+  const { data: allSales = [] } = useQuery({
+    queryKey: ['sales'],
+    queryFn: () => base44.entities.Sale.list('-sale_date', 100),
+  });
+
   // Finde den aktuellen Mitarbeiter-Eintrag
   const currentEmployee = employees.find(e => e.email === user?.email);
   const isTeamleiter = currentEmployee?.rolle === 'Teamleiter';
 
   // Mitarbeiter die diesem Teamleiter zugeordnet sind
   const teamMembers = employees.filter(e => e.teamleiter_id === currentEmployee?.id);
-
-  // Teamleiter: Eigene Provision + Bonus von Mitarbeitern
-  const teamleiterOwnCommission = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
-  const teamleiterBonusCommission = allSales.filter(s => 
-    s.sale_date?.startsWith(currentMonth) && 
-    s.employee_name?.includes('Teamleiter-Bonus') &&
-    s.employee_id === user?.email
-  ).reduce((sum, s) => sum + (s.commission_amount || 0), 0);
-
-  const { data: allSales = [] } = useQuery({
-    queryKey: ['sales'],
-    queryFn: () => base44.entities.Sale.list('-sale_date', 100),
-  });
 
   // Filter für Mitarbeiter - nur eigene Daten
   const leads = user?.role === 'admin' 
@@ -65,6 +57,14 @@ export default function Dashboard() {
   const currentMonthSales = sales.filter(s => s.sale_date?.startsWith(currentMonth));
   const totalRevenue = currentMonthSales.reduce((sum, s) => sum + (s.contract_value || 0), 0);
   const totalCommissions = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+
+  // Teamleiter: Eigene Provision + Bonus von Mitarbeitern
+  const teamleiterOwnCommission = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+  const teamleiterBonusCommission = allSales.filter(s => 
+    s.sale_date?.startsWith(currentMonth) && 
+    s.employee_name?.includes('Teamleiter-Bonus') &&
+    s.employee_id === user?.email
+  ).reduce((sum, s) => sum + (s.commission_amount || 0), 0);
 
   const stats = user?.role === 'admin' ? [
     {
@@ -296,8 +296,7 @@ export default function Dashboard() {
               <div>
                 <h3 className="font-semibold text-slate-700 mb-3">Meine Mitarbeiter</h3>
                 <div className="space-y-4">
-            <div className="space-y-4">
-              {teamMembers.map(member => {
+                  {teamMembers.map(member => {
                 const memberSales = allSales.filter(s => 
                   s.employee_id === member.email && 
                   s.sale_date?.startsWith(currentMonth)
@@ -324,8 +323,8 @@ export default function Dashboard() {
                       <p className="text-xs text-slate-500">Provision</p>
                     </div>
                   </div>
-                );
-              })}
+                  );
+                })}
                 </div>
               </div>
             )}
