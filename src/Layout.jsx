@@ -15,7 +15,8 @@ import {
   LogOut,
   Mail,
   Settings,
-  Search
+  Search,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +30,7 @@ export default function Layout({ children, currentPageName }) {
 
   const navigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
+    { name: 'Kalender', path: 'Kalender', icon: CalendarIcon, roles: ['admin', 'user'] },
     { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'] },
     { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'] },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'] },

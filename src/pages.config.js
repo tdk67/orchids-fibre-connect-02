@@ -13,6 +13,7 @@ import Provisionsregeln from './pages/Provisionsregeln';
 import PVP from './pages/PVP';
 import Unternehmenssuche from './pages/Unternehmenssuche';
 import Bestandskunden from './pages/Bestandskunden';
+import Kalender from './pages/Kalender';
 import __Layout from './Layout.jsx';
 
 
@@ -32,6 +33,7 @@ export const PAGES = {
     "PVP": PVP,
     "Unternehmenssuche": Unternehmenssuche,
     "Bestandskunden": Bestandskunden,
+    "Kalender": Kalender,
 }
 
 export const pagesConfig = {
