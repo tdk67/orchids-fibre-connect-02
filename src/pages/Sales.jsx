@@ -11,11 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Sales() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
   const [user, setUser] = useState(null);
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
   const [formData, setFormData] = useState({
     customer_name: '',
     employee_name: '',
@@ -33,7 +35,10 @@ export default function Sales() {
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then((u) => {
+      setUser(u);
+      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+    }).catch(() => {});
   }, []);
 
   const { data: allSales = [] } = useQuery({
@@ -41,10 +46,10 @@ export default function Sales() {
     queryFn: () => base44.entities.Sale.list('-sale_date'),
   });
 
-  // Filter für Mitarbeiter - nur eigene Verkäufe
+  // Filter für Mitarbeiter - nur eigene Verkäufe + Benutzertyp
   const sales = user?.role === 'admin' 
-    ? allSales 
-    : allSales.filter(sale => sale.employee_id === user?.email);
+    ? allSales.filter(s => s.benutzertyp === selectedBenutzertyp)
+    : allSales.filter(sale => sale.employee_id === user?.email && sale.benutzertyp === (user?.benutzertyp || 'Interner Mitarbeiter'));
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -63,7 +68,8 @@ export default function Sales() {
       return base44.entities.Sale.create({ 
         ...data, 
         commission_month: month,
-        employee_id: employee?.email || data.employee_name
+        employee_id: employee?.email || data.employee_name,
+        benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
       });
     },
     onSuccess: () => {
@@ -125,11 +131,18 @@ export default function Sales() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Verkäufe</h1>
-          <p className="text-slate-500 mt-1">
-            {user?.role === 'admin' ? 'Erfassen und verwalten Sie alle Verkäufe' : 'Meine Verkäufe'}
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Verkäufe</h1>
+            <p className="text-slate-500 mt-1">
+              {user?.role === 'admin' ? 'Erfassen und verwalten Sie alle Verkäufe' : 'Meine Verkäufe'}
+            </p>
+          </div>
+          <BenutzertypFilter 
+            value={selectedBenutzertyp} 
+            onChange={setSelectedBenutzertyp}
+            userRole={user?.role}
+          />
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);

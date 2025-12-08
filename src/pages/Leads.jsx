@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
+import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +38,7 @@ export default function Leads() {
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
   const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
@@ -64,7 +66,10 @@ export default function Leads() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then((u) => {
+      setUser(u);
+      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+    }).catch(() => {});
   }, []);
 
   const { data: leads = [], isLoading } = useQuery({
@@ -135,7 +140,10 @@ export default function Leads() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    let dataToSave = { ...formData };
+    let dataToSave = { 
+      ...formData,
+      benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
+    };
     
     // Prüfe ob Status ein Archiv-Status ist
     const archivStatusMapping = {
@@ -481,10 +489,17 @@ export default function Leads() {
     }
   };
 
-  // Filter leads based on user role, selected employee, and active tab
+  // Filter leads based on user role, selected employee, active tab, and benutzertyp
   const filteredLeads = leads.filter((lead) => {
     // Verstecke Leads die bereits zu Verkaufschancen wurden
     if (lead.verkaufschance_status) return false;
+    
+    // Benutzertyp-Filter
+    if (user?.role === 'admin') {
+      if (lead.benutzertyp !== selectedBenutzertyp) return false;
+    } else {
+      if (lead.benutzertyp !== (user?.benutzertyp || 'Interner Mitarbeiter')) return false;
+    }
     
     // Tab-basierte Filterung
     if (activeTab === 'aktiv' && lead.archiv_kategorie) return false;
@@ -518,9 +533,16 @@ export default function Leads() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
-          <p className="text-slate-500 mt-1">Verwalten Sie Ihre Lead-Datenbank</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
+            <p className="text-slate-500 mt-1">Verwalten Sie Ihre Lead-Datenbank</p>
+          </div>
+          <BenutzertypFilter 
+            value={selectedBenutzertyp} 
+            onChange={setSelectedBenutzertyp}
+            userRole={user?.role}
+          />
         </div>
         <div className="flex gap-3">
                     <Button 

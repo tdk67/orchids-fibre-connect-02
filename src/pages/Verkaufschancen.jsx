@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Pencil, Building2, Euro, TrendingUp, Target, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Verkaufschancen() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,11 +19,15 @@ export default function Verkaufschancen() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [user, setUser] = useState(null);
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
 
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then((u) => {
+      setUser(u);
+      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+    }).catch(() => {});
   }, []);
 
   const { data: leads = [], isLoading } = useQuery({
@@ -44,13 +49,20 @@ export default function Verkaufschancen() {
     },
   });
 
-  // Filter nur Leads mit Verkaufschancen-Status
+  // Filter nur Leads mit Verkaufschancen-Status + Benutzertyp
   const verkaufschancen = leads.filter((lead) => {
     const istVerkaufschance = 
       lead.status?.toLowerCase().includes('angebot') ||
       lead.verkaufschance_status;
     
     if (!istVerkaufschance) return false;
+
+    // Benutzertyp-Filter
+    if (user?.role === 'admin') {
+      if (lead.benutzertyp !== selectedBenutzertyp) return false;
+    } else {
+      if (lead.benutzertyp !== (user?.benutzertyp || 'Interner Mitarbeiter')) return false;
+    }
 
     const searchMatch = 
       lead.firma?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,7 +105,8 @@ export default function Verkaufschancen() {
         sale_date: today.toISOString().split('T')[0],
         commission_paid: false,
         commission_month: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
-        notes: `Automatisch erstellt aus Verkaufschance: ${editingLead.firma}`
+        notes: `Automatisch erstellt aus Verkaufschance: ${editingLead.firma}`,
+        benutzertyp: editingLead.benutzertyp || 'Interner Mitarbeiter'
       };
       
       try {
@@ -117,7 +130,8 @@ export default function Verkaufschancen() {
                 sale_date: today.toISOString().split('T')[0],
                 commission_paid: false,
                 commission_month: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
-                notes: `Teamleiter-Bonus für Abschluss von ${editingLead.assigned_to}`
+                notes: `Teamleiter-Bonus für Abschluss von ${editingLead.assigned_to}`,
+                benutzertyp: editingLead.benutzertyp || 'Interner Mitarbeiter'
               };
               await base44.entities.Sale.create(teamleiterSaleData);
             }
@@ -176,9 +190,16 @@ export default function Verkaufschancen() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Verkaufschancen</h1>
-        <p className="text-slate-500 mt-1">Verwalten Sie Ihre aktiven Verkaufschancen</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Verkaufschancen</h1>
+          <p className="text-slate-500 mt-1">Verwalten Sie Ihre aktiven Verkaufschancen</p>
+        </div>
+        <BenutzertypFilter 
+          value={selectedBenutzertyp} 
+          onChange={setSelectedBenutzertyp}
+          userRole={user?.role}
+        />
       </div>
 
       {/* Statistiken */}

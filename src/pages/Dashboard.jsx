@@ -15,12 +15,17 @@ import {
   Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import BenutzertypFilter from '../components/BenutzertypFilter';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
+  const [selectedBenutzertyp, setSelectedBenutzertyp] = useState('Interner Mitarbeiter');
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then((u) => {
+      setUser(u);
+      setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+    }).catch(() => {});
   }, []);
 
   const { data: allLeads = [] } = useQuery({
@@ -75,14 +80,14 @@ export default function Dashboard() {
     }
   });
 
-  // Filter für Mitarbeiter - nur eigene Daten
+  // Filter für Mitarbeiter - nur eigene Daten + Benutzertyp
   const leads = user?.role === 'admin' 
-    ? allLeads 
-    : allLeads.filter(lead => lead.assigned_to_email === user?.email);
+    ? allLeads.filter(l => l.benutzertyp === selectedBenutzertyp)
+    : allLeads.filter(lead => lead.assigned_to_email === user?.email && lead.benutzertyp === (user?.benutzertyp || 'Interner Mitarbeiter'));
 
   const sales = user?.role === 'admin' 
-    ? allSales 
-    : allSales.filter(sale => sale.employee_id === user?.email);
+    ? allSales.filter(s => s.benutzertyp === selectedBenutzertyp)
+    : allSales.filter(sale => sale.employee_id === user?.email && sale.benutzertyp === (user?.benutzertyp || 'Interner Mitarbeiter'));
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthSales = sales.filter(s => s.sale_date?.startsWith(currentMonth));
@@ -156,11 +161,18 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">
-          Willkommen zurück{user?.full_name ? `, ${user.full_name}` : ''}
-        </h1>
-        <p className="text-slate-500 mt-2">Hier ist Ihre Übersicht für heute</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Willkommen zurück{user?.full_name ? `, ${user.full_name}` : ''}
+          </h1>
+          <p className="text-slate-500 mt-2">Hier ist Ihre Übersicht für heute</p>
+        </div>
+        <BenutzertypFilter 
+          value={selectedBenutzertyp} 
+          onChange={setSelectedBenutzertyp}
+          userRole={user?.role}
+        />
       </div>
 
       {/* Heutige Termine */}
