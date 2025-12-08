@@ -91,28 +91,18 @@ export default function Outlook() {
         ? `${composeForm.nachricht}\n\n---\n${signature}`
         : composeForm.nachricht;
 
-      // Send email via Base44
-      await base44.integrations.Core.SendEmail({
+      // Send email via SMTP
+      const response = await base44.functions.invoke('sendEmailSMTP', {
         to: composeForm.empfaenger,
         subject: composeForm.betreff,
-        body: messageWithSignature,
-        from_name: currentEmployee?.full_name || user?.full_name || user?.email
+        body: messageWithSignature
       });
 
-      // Save to database
-      await createEmailMutation.mutateAsync({
-        betreff: composeForm.betreff,
-        absender: currentEmployee?.email_adresse || user?.email,
-        empfaenger: composeForm.empfaenger,
-        nachricht: messageWithSignature,
-        mitarbeiter_email: user?.email,
-        mitarbeiter_name: user?.full_name,
-        sparte: currentEmployee?.sparte || 'Backoffice',
-        typ: 'Ausgang',
-        gelesen: true,
-        timestamp: new Date().toISOString()
-      });
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
 
+      queryClient.invalidateQueries(['emails']);
       alert('E-Mail erfolgreich versendet!');
       setShowComposeDialog(false);
       setComposeForm({ empfaenger: '', betreff: '', nachricht: '' });
