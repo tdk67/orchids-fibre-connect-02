@@ -28,19 +28,23 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   const navigation = [
-    { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
-    { name: 'Leads', path: 'Leads', icon: Users },
-    { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search },
-    { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart },
-    { name: 'PVP Portal', path: 'PVP', icon: Settings },
-    { name: 'Postfach', path: 'Postfach', icon: Mail },
-    { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle },
-    { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart },
-    { name: 'Provisionen', path: 'Commissions', icon: Calculator },
-    { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings },
-    { name: 'Gutschriften', path: 'CreditNotes', icon: FileText },
-    { name: 'Team Chat', path: 'Chat', icon: MessageSquare },
+    { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
+    { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'] },
+    { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'] },
+    { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'] },
+    { name: 'PVP Portal', path: 'PVP', icon: Settings, roles: ['admin'] },
+    { name: 'Postfach', path: 'Postfach', icon: Mail, roles: ['admin', 'user'] },
+    { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin'] },
+    { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart, roles: ['admin', 'user'] },
+    { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'] },
+    { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin'] },
+    { name: 'Gutschriften', path: 'CreditNotes', icon: FileText, roles: ['admin', 'user'] },
+    { name: 'Team Chat', path: 'Chat', icon: MessageSquare, roles: ['admin'] },
   ];
+
+  const filteredNavigation = navigation.filter(item => 
+    item.roles.includes(user?.role || 'user')
+  );
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -69,7 +73,7 @@ export default function Layout({ children, currentPageName }) {
                       </div>
           <nav className="flex flex-1 flex-col">
             <ul className="flex flex-1 flex-col gap-y-2">
-              {navigation.map((item) => {
+              {filteredNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPageName === item.path;
                 return (
@@ -153,7 +157,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
             <nav className="px-6 py-6">
               <ul className="space-y-2">
-                {navigation.map((item) => {
+                {filteredNavigation.map((item) => {
                   const Icon = item.icon;
                   const isActive = currentPageName === item.path;
                   return (
