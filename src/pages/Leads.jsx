@@ -159,8 +159,8 @@ export default function Leads() {
   };
 
   // Calculate provision based on rules
-  const calculateProvision = (produkt, bandbreite, laufzeit) => {
-    if (!produkt || !bandbreite || !laufzeit) return 0;
+  const calculateProvision = (produkt, bandbreite, laufzeit, assignedTo) => {
+    if (!produkt || !bandbreite || !laufzeit) return { provision: 0, bonus: 0 };
     
     const regel = provisionsregeln.find(r => 
       r.tarif === produkt && 
@@ -168,12 +168,20 @@ export default function Leads() {
       r.laufzeit_monate === laufzeit
     );
     
+    if (!regel) return { provision: 0, bonus: 0 };
+    
     // Check if assigned employee is a Teamleiter or Mitarbeiter
-    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
+    const assignedEmp = employees.find(e => e.full_name === assignedTo);
     if (assignedEmp?.rolle === 'Teamleiter') {
-      return regel?.teamleiter_provision || 0;
+      return { 
+        provision: regel.teamleiter_provision || 0, 
+        bonus: 0 
+      };
     } else {
-      return regel?.mitarbeiter_provision || 0;
+      return { 
+        provision: regel.mitarbeiter_provision || 0, 
+        bonus: regel.teamleiter_bonus_provision || 0 
+      };
     }
   };
 
@@ -190,15 +198,7 @@ export default function Leads() {
   const handleProduktChange = (produkt) => {
     const bandwidths = getAvailableBandwidths(produkt);
     const newBandbreite = bandwidths.length > 0 ? bandwidths[0] : '';
-    const regel = provisionsregeln.find(r => 
-      r.tarif === produkt && 
-      r.bandbreite === newBandbreite && 
-      r.laufzeit_monate === formData.laufzeit_monate
-    );
-    
-    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
-    const provision = assignedEmp?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
-    const bonus = assignedEmp?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
+    const { provision, bonus } = calculateProvision(produkt, newBandbreite, formData.laufzeit_monate, formData.assigned_to);
     
     setFormData({
       ...formData,
@@ -211,15 +211,7 @@ export default function Leads() {
 
   // Handle bandbreite change
   const handleBandbreiteChange = (bandbreite) => {
-    const regel = provisionsregeln.find(r => 
-      r.tarif === formData.produkt && 
-      r.bandbreite === bandbreite && 
-      r.laufzeit_monate === formData.laufzeit_monate
-    );
-    
-    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
-    const provision = assignedEmp?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
-    const bonus = assignedEmp?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
+    const { provision, bonus } = calculateProvision(formData.produkt, bandbreite, formData.laufzeit_monate, formData.assigned_to);
     
     setFormData({
       ...formData,
@@ -231,15 +223,7 @@ export default function Leads() {
 
   // Handle laufzeit change
   const handleLaufzeitChange = (laufzeit) => {
-    const regel = provisionsregeln.find(r => 
-      r.tarif === formData.produkt && 
-      r.bandbreite === formData.bandbreite && 
-      r.laufzeit_monate === laufzeit
-    );
-    
-    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
-    const provision = assignedEmp?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
-    const bonus = assignedEmp?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
+    const { provision, bonus } = calculateProvision(formData.produkt, formData.bandbreite, laufzeit, formData.assigned_to);
     
     setFormData({
       ...formData,
@@ -298,14 +282,7 @@ export default function Leads() {
     const employee = employees.find(e => e.full_name === employeeName);
     
     // Recalculate provision based on employee role
-    const regel = provisionsregeln.find(r => 
-      r.tarif === formData.produkt && 
-      r.bandbreite === formData.bandbreite && 
-      r.laufzeit_monate === formData.laufzeit_monate
-    );
-    
-    const provision = employee?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
-    const bonus = employee?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
+    const { provision, bonus } = calculateProvision(formData.produkt, formData.bandbreite, formData.laufzeit_monate, employeeName);
     
     setFormData({
       ...formData,
