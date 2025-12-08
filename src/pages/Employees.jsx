@@ -32,12 +32,7 @@ export default function Employees() {
     bank_details: '',
     tax_id: '',
     google_calendar_link: '',
-    email_login: '',
-    email_password: '',
-    smtp_server: 'smtp.gmail.com',
-    smtp_port: 587,
-    imap_server: 'imap.gmail.com',
-    imap_port: 993,
+    email_adresse: '',
     status: 'Aktiv'
   });
 
@@ -93,12 +88,7 @@ export default function Employees() {
       bank_details: '',
       tax_id: '',
       google_calendar_link: '',
-      email_login: '',
-      email_password: '',
-      smtp_server: 'smtp.gmail.com',
-      smtp_port: 587,
-      imap_server: 'imap.gmail.com',
-      imap_port: 993,
+      email_adresse: '',
       status: 'Aktiv'
     });
     setEditingEmployee(null);
@@ -318,69 +308,23 @@ export default function Employees() {
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach (SMTP & IMAP)</h3>
+                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach</h3>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                  <p className="text-xs text-blue-900 font-medium mb-1">Server-Konfiguration für E-Mail-Versand und Empfang</p>
-                  <p className="text-xs text-blue-800">
-                    <strong>Gmail:</strong> smtp.gmail.com:587 / imap.gmail.com:993<br/>
-                    <strong>IONOS:</strong> smtp.ionos.de:587 / imap.ionos.de:993<br/>
-                    <strong>1&1:</strong> smtp.1und1.de:587 / imap.1und1.de:993<br/>
-                    <strong>Outlook:</strong> smtp.office365.com:587 / outlook.office365.com:993
+                  <p className="text-xs text-blue-900">
+                    E-Mails werden automatisch über Base44 versendet. Empfangene E-Mails können manuell erfasst werden.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>E-Mail Login/Adresse</Label>
-                    <Input
-                      type="email"
-                      value={formData.email_login}
-                      onChange={(e) => setFormData({ ...formData, email_login: e.target.value })}
-                      placeholder="mitarbeiter@firma.de"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>E-Mail Passwort</Label>
-                    <Input
-                      type="password"
-                      value={formData.email_password}
-                      onChange={(e) => setFormData({ ...formData, email_password: e.target.value })}
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>SMTP-Server (Versand)</Label>
-                    <Input
-                      value={formData.smtp_server}
-                      onChange={(e) => setFormData({ ...formData, smtp_server: e.target.value })}
-                      placeholder="smtp.gmail.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>SMTP-Port</Label>
-                    <Input
-                      type="number"
-                      value={formData.smtp_port}
-                      onChange={(e) => setFormData({ ...formData, smtp_port: parseInt(e.target.value) || 587 })}
-                      placeholder="587"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>IMAP-Server (Empfang)</Label>
-                    <Input
-                      value={formData.imap_server}
-                      onChange={(e) => setFormData({ ...formData, imap_server: e.target.value })}
-                      placeholder="imap.gmail.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>IMAP-Port</Label>
-                    <Input
-                      type="number"
-                      value={formData.imap_port}
-                      onChange={(e) => setFormData({ ...formData, imap_port: parseInt(e.target.value) || 993 })}
-                      placeholder="993"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label>E-Mail-Adresse für Postfach</Label>
+                  <Input
+                    type="email"
+                    value={formData.email_adresse}
+                    onChange={(e) => setFormData({ ...formData, email_adresse: e.target.value })}
+                    placeholder="mitarbeiter@firma.de"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Diese Adresse wird im Postfach verwendet
+                  </p>
                 </div>
               </div>
 

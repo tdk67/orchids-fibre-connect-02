@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Mail, Send, Inbox, Search, Plus, Paperclip, RefreshCw } from 'lucide-react';
+import { Mail, Send, Inbox, Search, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function Postfach() {
@@ -17,7 +17,7 @@ export default function Postfach() {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const [isFetching, setIsFetching] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [composeData, setComposeData] = useState({
     empfaenger: '',
     betreff: '',
@@ -48,7 +48,7 @@ export default function Postfach() {
   // Find current employee
   const currentEmployee = employees.find(e => e.email === user?.email);
 
-  // Filter emails based on employee's email_login
+  // Filter emails based on employee's email_adresse
   const emails = React.useMemo(() => {
     if (!user) return [];
     
@@ -57,15 +57,15 @@ export default function Postfach() {
       return allEmails;
     }
     
-    if (!currentEmployee?.email_login) {
+    if (!currentEmployee?.email_adresse) {
       return []; // Kein Email-Zugang konfiguriert
     }
     
     // Mitarbeiter sehen nur Emails ihrer konfigurierten Email-Adresse
     return allEmails.filter(email => 
-      email.mitarbeiter_email === currentEmployee.email_login ||
-      email.empfaenger === currentEmployee.email_login ||
-      email.absender === currentEmployee.email_login
+      email.mitarbeiter_email === currentEmployee.email_adresse ||
+      email.empfaenger === currentEmployee.email_adresse ||
+      email.absender === currentEmployee.email_adresse
     );
   }, [allEmails, user, currentEmployee]);
 
@@ -102,41 +102,56 @@ export default function Postfach() {
   });
 
   const handleSendEmail = async () => {
-    if (!currentEmployee?.email_login || !currentEmployee?.smtp_server) {
-      alert('Bitte konfigurieren Sie zuerst Ihre SMTP-Zugangsdaten in den Mitarbeitereinstellungen.');
+    if (!currentEmployee?.email_adresse) {
+      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Adresse in den Mitarbeitereinstellungen.');
       return;
     }
     
+    setIsSending(true);
     try {
-      const response = await base44.functions.invoke('sendEmail', {
+      // E-Mail über Base44 Core Integration senden
+      await base44.integrations.Core.SendEmail({
+        from_name: currentEmployee.full_name,
         to: composeData.empfaenger,
         subject: composeData.betreff,
-        text: composeData.nachricht
+        body: composeData.nachricht
       });
 
-      if (response.data.success) {
-        queryClient.invalidateQueries(['emails']);
-        setIsComposeOpen(false);
-        setComposeData({ empfaenger: '', betreff: '', nachricht: '' });
-        alert('E-Mail erfolgreich versendet!');
-      } else {
-        alert(`Fehler: ${response.data.error}`);
-      }
+      // In Datenbank speichern
+      await base44.entities.Email.create({
+        betreff: composeData.betreff,
+        absender: currentEmployee.email_adresse,
+        empfaenger: composeData.empfaenger,
+        nachricht: composeData.nachricht,
+        mitarbeiter_email: currentEmployee.email_adresse,
+        mitarbeiter_name: user?.full_name || '',
+        sparte: currentEmployee?.sparte || 'Backoffice',
+        typ: 'Ausgang',
+        gelesen: true,
+        timestamp: new Date().toISOString()
+      });
+
+      queryClient.invalidateQueries(['emails']);
+      setIsComposeOpen(false);
+      setComposeData({ empfaenger: '', betreff: '', nachricht: '' });
+      alert('E-Mail erfolgreich versendet!');
     } catch (error) {
       alert(`Fehler beim Versenden: ${error.message}`);
+    } finally {
+      setIsSending(false);
     }
   };
 
   const handleImportEmail = () => {
-    if (!currentEmployee?.email_login) {
+    if (!currentEmployee?.email_adresse) {
       alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Adresse in den Mitarbeitereinstellungen.');
       return;
     }
     
     importEmailMutation.mutate({
       ...importData,
-      empfaenger: currentEmployee.email_login,
-      mitarbeiter_email: currentEmployee.email_login,
+      empfaenger: currentEmployee.email_adresse,
+      mitarbeiter_email: currentEmployee.email_adresse,
       mitarbeiter_name: user?.full_name || '',
       sparte: currentEmployee?.sparte || 'Backoffice',
       typ: 'Eingang',
@@ -155,32 +170,6 @@ export default function Postfach() {
     }
   };
 
-  const handleFetchEmails = async () => {
-    if (!currentEmployee?.email_login || !currentEmployee?.email_password) {
-      alert('Bitte konfigurieren Sie zuerst Ihre E-Mail-Zugangsdaten (Login, Passwort, IMAP-Server) in den Mitarbeitereinstellungen.');
-      return;
-    }
-
-    setIsFetching(true);
-    try {
-      const response = await base44.functions.invoke('fetchEmails', {
-        employee_email: currentEmployee.email,
-        limit: 50
-      });
-
-      if (response.data.success) {
-        queryClient.invalidateQueries(['emails']);
-        alert(`Erfolgreich: ${response.data.new} neue E-Mails abgerufen (${response.data.fetched} gesamt gefunden)`);
-      } else {
-        alert(`Fehler: ${response.data.error}\n\n${response.data.details || ''}`);
-      }
-    } catch (error) {
-      alert(`Fehler beim Abrufen der E-Mails: ${error.message || error}`);
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
   const stats = {
     gesamt: filteredEmails.length,
     ungelesen: filteredEmails.filter(e => !e.gelesen && e.typ === 'Eingang').length,
@@ -194,19 +183,10 @@ export default function Postfach() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">E-Mail Postfach</h1>
           <p className="text-slate-500 mt-1">
-            {currentEmployee?.email_login ? `Verbunden mit: ${currentEmployee.email_login}` : 'Keine E-Mail-Adresse konfiguriert'}
+            {currentEmployee?.email_adresse ? `Postfach: ${currentEmployee.email_adresse}` : 'Keine E-Mail-Adresse konfiguriert'}
           </p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={handleFetchEmails}
-            disabled={isFetching || !currentEmployee?.email_login}
-            className="bg-green-50 hover:bg-green-100 text-green-900"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            {isFetching ? 'Abrufen...' : 'E-Mails abrufen (IMAP)'}
-          </Button>
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -219,12 +199,6 @@ export default function Postfach() {
                 <DialogTitle>E-Mail manuell erfassen</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <p className="text-xs text-blue-900">
-                    Hinweis: Kopieren Sie empfangene E-Mails hier hinein. 
-                    Für automatische IMAP-Synchronisation aktivieren Sie Backend-Funktionen.
-                  </p>
-                </div>
                 <div className="space-y-2">
                   <Label>Von</Label>
                   <Input
@@ -277,7 +251,7 @@ export default function Postfach() {
               <div className="space-y-4">
                 <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                   <p className="text-xs text-green-900">
-                    Von: {currentEmployee?.email_login || 'Keine E-Mail konfiguriert'}
+                    Von: {currentEmployee?.email_adresse || 'Keine E-Mail konfiguriert'}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -310,9 +284,13 @@ export default function Postfach() {
                   <Button variant="outline" onClick={() => setIsComposeOpen(false)}>
                     Abbrechen
                   </Button>
-                  <Button onClick={handleSendEmail} className="bg-blue-900 hover:bg-blue-800">
+                  <Button 
+                    onClick={handleSendEmail} 
+                    disabled={isSending}
+                    className="bg-blue-900 hover:bg-blue-800"
+                  >
                     <Send className="h-4 w-4 mr-2" />
-                    Senden
+                    {isSending ? 'Wird gesendet...' : 'Senden'}
                   </Button>
                 </div>
               </div>
