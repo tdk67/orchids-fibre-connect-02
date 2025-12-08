@@ -57,7 +57,8 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Team Chat', path: 'Chat', icon: MessageSquare, roles: ['admin'], partnerAccess: false },
   ];
 
-  const isPartner = user?.benutzertyp && user.benutzertyp !== 'Interner Mitarbeiter';
+  const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
+  const isPartner = userBenutzertyp !== 'Interner Mitarbeiter';
 
   const filteredNavigation = navigation.filter(item => {
     // Rolle prüfen
@@ -232,7 +233,7 @@ export default function Layout({ children, currentPageName }) {
       {/* Main Content */}
       <main className="lg:pl-72">
         {/* Admin Benutzertyp Tabs - NUR für interne Admins */}
-        {user?.role === 'admin' && user?.benutzertyp === 'Interner Mitarbeiter' && (
+        {user?.role === 'admin' && (!user?.benutzertyp || user?.benutzertyp === 'Interner Mitarbeiter') && (
           <div className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30">
             <Tabs value={selectedBenutzertyp} onValueChange={handleBenutzertypChange}>
               <TabsList className="bg-slate-100">

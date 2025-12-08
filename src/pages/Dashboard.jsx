@@ -95,6 +95,8 @@ export default function Dashboard() {
   const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
   const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
   
+  console.log('Dashboard Filter:', { userBenutzertyp, isInternalAdmin, selectedBenutzertyp, userRole: user?.role });
+  
   const leads = isInternalAdmin
     ? allLeads.filter(l => l.benutzertyp === selectedBenutzertyp)
     : allLeads.filter(lead => lead.assigned_to_email === user?.email && lead.benutzertyp === userBenutzertyp);
