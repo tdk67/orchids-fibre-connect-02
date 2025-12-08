@@ -148,7 +148,7 @@ export default function Postfach() {
     setIsFetching(true);
     try {
       const response = await base44.functions.invoke('fetchEmailsPop3', {
-        limit: 10
+        limit: 100
       });
 
       if (response.data.success) {

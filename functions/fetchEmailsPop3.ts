@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { limit = 10 } = await req.json();
+        const { limit = 100 } = await req.json();
 
         const employees = await base44.asServiceRole.entities.Employee.list();
         const employee = employees.find(e => e.email === user.email);
