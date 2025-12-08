@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 export default function Provisionsregeln() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
+  const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     tarif: '',
     bandbreite: '',
@@ -25,6 +26,10 @@ export default function Provisionsregeln() {
   });
 
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   const { data: regeln = [] } = useQuery({
     queryKey: ['provisionsregeln'],
@@ -176,27 +181,31 @@ export default function Provisionsregeln() {
                     />
                     <p className="text-xs text-slate-500">Provision die ein Mitarbeiter für einen Abschluss erhält</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Teamleiter Provision (€) *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formData.teamleiter_provision}
-                      onChange={(e) => setFormData({ ...formData, teamleiter_provision: parseFloat(e.target.value) || 0 })}
-                      required
-                    />
-                    <p className="text-xs text-slate-500">Provision für eigene Abschlüsse des Teamleiters</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Teamleiter Bonus bei Mitarbeiter-Abschluss (€)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formData.teamleiter_bonus_provision}
-                      onChange={(e) => setFormData({ ...formData, teamleiter_bonus_provision: parseFloat(e.target.value) || 0 })}
-                    />
-                    <p className="text-xs text-slate-500">Zusätzliche Provision wenn ein Mitarbeiter abschließt</p>
-                  </div>
+                  {user?.role === 'admin' && (
+                                        <>
+                                          <div className="space-y-2">
+                                            <Label>Teamleiter Provision (€) *</Label>
+                                            <Input
+                                              type="number"
+                                              step="0.01"
+                                              value={formData.teamleiter_provision}
+                                              onChange={(e) => setFormData({ ...formData, teamleiter_provision: parseFloat(e.target.value) || 0 })}
+                                              required
+                                            />
+                                            <p className="text-xs text-slate-500">Provision für eigene Abschlüsse des Teamleiters</p>
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label>Teamleiter Bonus bei Mitarbeiter-Abschluss (€)</Label>
+                                            <Input
+                                              type="number"
+                                              step="0.01"
+                                              value={formData.teamleiter_bonus_provision}
+                                              onChange={(e) => setFormData({ ...formData, teamleiter_bonus_provision: parseFloat(e.target.value) || 0 })}
+                                            />
+                                            <p className="text-xs text-slate-500">Zusätzliche Provision wenn ein Mitarbeiter abschließt</p>
+                                          </div>
+                                        </>
+                                      )}
                 </div>
               </div>
 
@@ -236,8 +245,8 @@ export default function Provisionsregeln() {
                   <TableHead>Bandbreite</TableHead>
                   <TableHead>Laufzeit</TableHead>
                   <TableHead>Mitarbeiter</TableHead>
-                  <TableHead>Teamleiter (eigen)</TableHead>
-                  <TableHead>TL Bonus (MA)</TableHead>
+                  {user?.role === 'admin' && <TableHead>Teamleiter (eigen)</TableHead>}
+                  {user?.role === 'admin' && <TableHead>TL Bonus (MA)</TableHead>}
                   <TableHead>Sparte</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
@@ -251,12 +260,16 @@ export default function Provisionsregeln() {
                     <TableCell className="text-green-600 font-medium">
                       {(regel.mitarbeiter_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                     </TableCell>
-                    <TableCell className="text-blue-600 font-medium">
-                      {(regel.teamleiter_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                    </TableCell>
-                    <TableCell className="text-purple-600 font-medium">
-                      {(regel.teamleiter_bonus_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                    </TableCell>
+                    {user?.role === 'admin' && (
+                      <TableCell className="text-blue-600 font-medium">
+                        {(regel.teamleiter_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </TableCell>
+                    )}
+                    {user?.role === 'admin' && (
+                      <TableCell className="text-purple-600 font-medium">
+                        {(regel.teamleiter_bonus_provision || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <span className="text-sm">{regel.sparte}</span>
                     </TableCell>

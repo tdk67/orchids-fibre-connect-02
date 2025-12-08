@@ -117,11 +117,32 @@ export default function Leads() {
         }
       };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (editingLead) {
-      updateMutation.mutate({ id: editingLead.id, data: formData });
+      // Wenn Status auf "Angebot gesendet" geändert wird, verschiebe zu Verkaufschancen
+      if (formData.status === 'Angebot gesendet' && editingLead.status !== 'Angebot gesendet') {
+        try {
+          // Erstelle Verkaufschance
+          await base44.entities.Lead.update(editingLead.id, {
+            ...formData,
+            verkaufschance_status: 'Angebot gesendet'
+          });
+          
+          // Lösche aus Leads nach kurzer Verzögerung
+          setTimeout(() => {
+            deleteMutation.mutate(editingLead.id);
+          }, 500);
+          
+          setIsDialogOpen(false);
+          alert('Lead wurde zu Verkaufschancen verschoben!');
+        } catch (error) {
+          alert('Fehler: ' + error.message);
+        }
+      } else {
+        updateMutation.mutate({ id: editingLead.id, data: formData });
+      }
     } else {
       createMutation.mutate(formData);
     }
@@ -345,6 +366,9 @@ export default function Leads() {
 
   // Filter leads based on user role and selected employee
   const filteredLeads = leads.filter((lead) => {
+    // Verstecke Leads die bereits zu Verkaufschancen wurden
+    if (lead.verkaufschance_status) return false;
+    
     const searchMatch = 
       lead.firma?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.ansprechpartner?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -631,27 +655,36 @@ export default function Leads() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {formData.berechnete_provision > 0 && (
-                    <div className="space-y-2">
-                      <Label>Berechnete Provision</Label>
-                      <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-md">
-                        <span className="text-lg font-bold text-green-700">
-                          {formData.berechnete_provision.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {formData.teamleiter_bonus > 0 && (
-                    <div className="space-y-2">
-                      <Label>Teamleiter Bonus</Label>
-                      <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-md">
-                        <span className="text-lg font-bold text-purple-700">
-                          {formData.teamleiter_bonus.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500">Bonus für zugeordneten Teamleiter</p>
-                    </div>
-                  )}
+{(() => {
+                    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
+                    const isTeamleiter = assignedEmp?.rolle === 'Teamleiter';
+                    
+                    return (
+                      <>
+                        {formData.berechnete_provision > 0 && (
+                          <div className="space-y-2">
+                            <Label>Berechnete Provision</Label>
+                            <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-md">
+                              <span className="text-lg font-bold text-green-700">
+                                {formData.berechnete_provision.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {formData.teamleiter_bonus > 0 && user?.role === 'admin' && (
+                          <div className="space-y-2">
+                            <Label>Teamleiter Bonus</Label>
+                            <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-md">
+                              <span className="text-lg font-bold text-purple-700">
+                                {formData.teamleiter_bonus.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500">Bonus für zugeordneten Teamleiter</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   <div className="space-y-2 col-span-2">
                     <Label>Zugewiesen an</Label>
                     <Select value={formData.assigned_to} onValueChange={handleEmployeeChange}>
