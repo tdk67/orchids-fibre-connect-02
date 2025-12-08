@@ -33,7 +33,6 @@ export default function Employees() {
     tax_id: '',
     google_calendar_link: '',
     email_adresse: '',
-    email_password: '',
     status: 'Aktiv'
   });
 
@@ -90,7 +89,6 @@ export default function Employees() {
       tax_id: '',
       google_calendar_link: '',
       email_adresse: '',
-      email_password: '',
       status: 'Aktiv'
     });
     setEditingEmployee(null);
@@ -310,38 +308,21 @@ export default function Employees() {
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold text-slate-900 mb-4">IONOS E-Mail Postfach (SMTP/POP3)</h3>
+                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach</h3>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                  <p className="text-xs text-blue-900 font-medium mb-1">📧 IONOS E-Mail Integration</p>
-                  <p className="text-xs text-blue-800">
-                    E-Mails werden über IONOS SMTP versendet und per POP3 abgerufen.<br/>
-                    Server: smtp.ionos.de (Port 587) / pop.ionos.de (Port 995)
+                  <p className="text-xs text-blue-900">
+                    E-Mails werden automatisch über Base44 versendet. Empfangene E-Mails können manuell erfasst werden.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>IONOS E-Mail-Adresse *</Label>
-                    <Input
-                      type="email"
-                      value={formData.email_adresse}
-                      onChange={(e) => setFormData({ ...formData, email_adresse: e.target.value })}
-                      placeholder="name@ihre-domain.de"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>IONOS Passwort *</Label>
-                    <Input
-                      type="password"
-                      value={formData.email_password}
-                      onChange={(e) => setFormData({ ...formData, email_password: e.target.value })}
-                      placeholder="••••••••"
-                      autoComplete="new-password"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label>E-Mail-Adresse</Label>
+                  <Input
+                    type="email"
+                    value={formData.email_adresse}
+                    onChange={(e) => setFormData({ ...formData, email_adresse: e.target.value })}
+                    placeholder="mitarbeiter@firma.de"
+                  />
                 </div>
-                <p className="text-xs text-slate-500 mt-2">
-                  ⚠️ Verwenden Sie Ihr IONOS E-Mail-Passwort (nicht das Login-Passwort)
-                </p>
               </div>
 
               <div className="flex justify-end gap-3">
