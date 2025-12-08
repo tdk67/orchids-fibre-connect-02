@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Link } from 'react-router-dom';
@@ -29,6 +30,7 @@ export default function Leads() {
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
+  const [activeTab, setActiveTab] = useState('aktiv');
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
@@ -48,8 +50,10 @@ export default function Leads() {
     berechnete_provision: 0,
     teamleiter_bonus: 0,
     sparte: 'Telekom',
-    google_calendar_link: ''
-  });
+    google_calendar_link: '',
+    archiv_kategorie: '',
+    archiviert_am: ''
+    });
 
   const queryClient = useQueryClient();
 
@@ -120,13 +124,21 @@ export default function Leads() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Check if archiv_kategorie was set
+    let dataToSave = { ...formData };
+    if (formData.archiv_kategorie && !editingLead?.archiv_kategorie) {
+      dataToSave.archiviert_am = new Date().toISOString().split('T')[0];
+    } else if (!formData.archiv_kategorie) {
+      dataToSave.archiviert_am = '';
+    }
+    
     if (editingLead) {
       // Wenn Status auf "Angebot gesendet" geändert wird, verschiebe zu Verkaufschancen
-      if (formData.status === 'Angebot gesendet' && editingLead.status !== 'Angebot gesendet') {
+      if (dataToSave.status === 'Angebot gesendet' && editingLead.status !== 'Angebot gesendet') {
         try {
           // Erstelle Verkaufschance
           await base44.entities.Lead.update(editingLead.id, {
-            ...formData,
+            ...dataToSave,
             verkaufschance_status: 'Angebot gesendet'
           });
           
@@ -141,10 +153,10 @@ export default function Leads() {
           alert('Fehler: ' + error.message);
         }
       } else {
-        updateMutation.mutate({ id: editingLead.id, data: formData });
+        updateMutation.mutate({ id: editingLead.id, data: dataToSave });
       }
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(dataToSave);
     }
   };
 
@@ -171,7 +183,9 @@ export default function Leads() {
       berechnete_provision: 0,
       teamleiter_bonus: 0,
       sparte: 'Telekom',
-      google_calendar_link: currentEmployee?.google_calendar_link || ''
+      google_calendar_link: currentEmployee?.google_calendar_link || '',
+      archiv_kategorie: '',
+      archiviert_am: ''
     });
     setEditingLead(null);
   };
@@ -367,10 +381,16 @@ export default function Leads() {
     }
   };
 
-  // Filter leads based on user role and selected employee
+  // Filter leads based on user role, selected employee, and active tab
   const filteredLeads = leads.filter((lead) => {
     // Verstecke Leads die bereits zu Verkaufschancen wurden
     if (lead.verkaufschance_status) return false;
+    
+    // Tab-basierte Filterung
+    if (activeTab === 'aktiv' && lead.archiv_kategorie) return false;
+    if (activeTab === 'nicht_erreicht' && lead.archiv_kategorie !== 'Nicht erreicht') return false;
+    if (activeTab === 'anderer_provider' && lead.archiv_kategorie !== 'Anderer Provider') return false;
+    if (activeTab === 'kein_interesse' && lead.archiv_kategorie !== 'Kein Interesse') return false;
     
     const searchMatch = 
       lead.firma?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -609,6 +629,25 @@ export default function Leads() {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label>Archiv-Kategorie</Label>
+                    <Select value={formData.archiv_kategorie || ''} onValueChange={(value) => setFormData({ ...formData, archiv_kategorie: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Keine" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={null}>Keine (Aktiv)</SelectItem>
+                        <SelectItem value="Nicht erreicht">Nicht erreicht</SelectItem>
+                        <SelectItem value="Anderer Provider">Anderer Provider</SelectItem>
+                        <SelectItem value="Kein Interesse">Kein Interesse</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {formData.archiviert_am && (
+                      <p className="text-xs text-slate-500">
+                        Archiviert am: {new Date(formData.archiviert_am).toLocaleDateString('de-DE')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
                     <Label>Produkt/Service</Label>
                     <Select value={formData.produkt} onValueChange={handleProduktChange}>
                       <SelectTrigger>
@@ -783,10 +822,26 @@ export default function Leads() {
         </Card>
       )}
 
-      {/* Filters */}
+      {/* Tabs & Filters */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
-          <div className="flex gap-4 flex-wrap">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="aktiv">
+                Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status).length})
+              </TabsTrigger>
+              <TabsTrigger value="nicht_erreicht">
+                Nicht erreicht ({leads.filter(l => l.archiv_kategorie === 'Nicht erreicht').length})
+              </TabsTrigger>
+              <TabsTrigger value="anderer_provider">
+                Anderer Provider ({leads.filter(l => l.archiv_kategorie === 'Anderer Provider').length})
+              </TabsTrigger>
+              <TabsTrigger value="kein_interesse">
+                Kein Interesse ({leads.filter(l => l.archiv_kategorie === 'Kein Interesse').length})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex gap-4 flex-wrap mt-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
@@ -820,7 +875,12 @@ export default function Leads() {
       {/* Leads List */}
       <Card className="border-0 shadow-md">
         <CardHeader className="border-b border-slate-100">
-          <CardTitle>Alle Leads ({filteredLeads.length})</CardTitle>
+          <CardTitle>
+            {activeTab === 'aktiv' && `Aktive Leads (${filteredLeads.length})`}
+            {activeTab === 'nicht_erreicht' && `Nicht erreicht (${filteredLeads.length})`}
+            {activeTab === 'anderer_provider' && `Anderer Provider (${filteredLeads.length})`}
+            {activeTab === 'kein_interesse' && `Kein Interesse (${filteredLeads.length})`}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -843,6 +903,7 @@ export default function Leads() {
                   <TableHead>Produkt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Zugewiesen an</TableHead>
+                  {activeTab !== 'aktiv' && <TableHead>Archiviert am</TableHead>}
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -921,6 +982,13 @@ export default function Leads() {
                     <TableCell>
                       <span className="text-sm text-slate-600">{lead.assigned_to || '-'}</span>
                     </TableCell>
+                    {activeTab !== 'aktiv' && (
+                      <TableCell>
+                        <span className="text-xs text-slate-500">
+                          {lead.archiviert_am ? new Date(lead.archiviert_am).toLocaleDateString('de-DE') : '-'}
+                        </span>
+                      </TableCell>
+                    )}
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
                         {lead.google_calendar_link && (
