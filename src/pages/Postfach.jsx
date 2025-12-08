@@ -28,7 +28,7 @@ export default function Postfach() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const { data: emails = [] } = useQuery({
+  const { data: allEmails = [] } = useQuery({
     queryKey: ['emails'],
     queryFn: () => base44.entities.Email.list('-timestamp'),
   });
@@ -37,6 +37,30 @@ export default function Postfach() {
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
   });
+
+  // Find current employee
+  const currentEmployee = employees.find(e => e.email === user?.email);
+
+  // Filter emails based on employee's email_login
+  const emails = React.useMemo(() => {
+    if (!user) return [];
+    
+    // Admin/Geschäftsführer sehen alle Emails
+    if (user.role === 'admin' || currentEmployee?.titel === 'Geschäftsführer') {
+      return allEmails;
+    }
+    
+    if (!currentEmployee?.email_login) {
+      return []; // Kein Email-Zugang konfiguriert
+    }
+    
+    // Mitarbeiter sehen nur Emails ihrer konfigurierten Email-Adresse
+    return allEmails.filter(email => 
+      email.mitarbeiter_email === currentEmployee.email_login ||
+      email.empfaenger === currentEmployee.email_login ||
+      email.absender === currentEmployee.email_login
+    );
+  }, [allEmails, user, currentEmployee]);
 
   const sendEmailMutation = useMutation({
     mutationFn: (data) => base44.entities.Email.create(data),
@@ -54,34 +78,11 @@ export default function Postfach() {
     },
   });
 
-  // Filter emails based on user role
+  // Filter emails by search term
   const filteredEmails = emails.filter((email) => {
-    const searchMatch = 
-      email.betreff?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return email.betreff?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.absender?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.empfaenger?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    if (!user) return false;
-
-    // Get employee data for current user
-    const currentEmployee = employees.find(e => e.email === user.email);
-    
-    // Geschäftsführer sees all emails
-    if (currentEmployee?.titel === 'Geschäftsführer') {
-      return searchMatch;
-    }
-
-    // Teamleiter sees all emails from their Sparte
-    if (currentEmployee?.titel === 'Teamleiter') {
-      return searchMatch && email.sparte === currentEmployee.sparte;
-    }
-
-    // Other employees see only their own emails
-    return searchMatch && (
-      email.mitarbeiter_email === user.email ||
-      email.absender === user.email ||
-      email.empfaenger === user.email
-    );
   });
 
   const handleSendEmail = () => {

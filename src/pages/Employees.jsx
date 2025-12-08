@@ -89,6 +89,8 @@ export default function Employees() {
       bank_details: '',
       tax_id: '',
       google_calendar_link: '',
+      email_login: '',
+      email_password: '',
       status: 'Aktiv'
     });
     setEditingEmployee(null);
@@ -304,7 +306,32 @@ export default function Employees() {
                       Dieser Kalender wird automatisch mit den Leads des Mitarbeiters verknüpft
                     </p>
                   </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach Zugang</h3>
+                <p className="text-xs text-slate-500 mb-4">Zugangsdaten für das integrierte E-Mail Postfach des Mitarbeiters</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>E-Mail Login/Adresse</Label>
+                    <Input
+                      type="email"
+                      value={formData.email_login}
+                      onChange={(e) => setFormData({ ...formData, email_login: e.target.value })}
+                      placeholder="mitarbeiter@firma.de"
+                    />
                   </div>
+                  <div className="space-y-2">
+                    <Label>E-Mail Passwort</Label>
+                    <Input
+                      type="password"
+                      value={formData.email_password}
+                      onChange={(e) => setFormData({ ...formData, email_password: e.target.value })}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3">
