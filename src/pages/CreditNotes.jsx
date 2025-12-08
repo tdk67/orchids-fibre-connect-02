@@ -103,12 +103,47 @@ export default function CreditNotes() {
   };
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }) => {
-      const creditNote = creditNotes.find(cn => cn.id === id);
-      return base44.entities.CreditNote.update(id, { ...creditNote, status });
+    mutationFn: async ({ id, status, creditNote }) => {
+      await base44.entities.CreditNote.update(id, { status });
+      
+      // Wenn auf "Bezahlt" gesetzt, konvertiere Sales zu Bestandskunden
+      if (status === 'Bezahlt' && creditNote.sales_ids) {
+        const salesToConvert = allSales.filter(s => creditNote.sales_ids.includes(s.id));
+        
+        // Zähle existierende Bestandskunden für Kundennummer
+        const existingBestandskunden = await base44.entities.Bestandskunde.list();
+        let kundenNr = existingBestandskunden.length + 1;
+        
+        for (const sale of salesToConvert) {
+          // Erstelle Bestandskunde
+          const bestandskundeData = {
+            kundennummer: `BK-${String(kundenNr).padStart(5, '0')}`,
+            firma: sale.customer_name,
+            sparte: sale.sparte,
+            produkt: sale.product,
+            vertragswert: sale.contract_value,
+            provision_mitarbeiter: sale.commission_amount,
+            mitarbeiter_name: sale.employee_name,
+            mitarbeiter_email: sale.employee_id,
+            abschlussdatum: sale.sale_date,
+            gutschrift_nummer: creditNote.credit_note_number,
+            status: 'Aktiv',
+            notizen: sale.notes || ''
+          };
+          
+          await base44.entities.Bestandskunde.create(bestandskundeData);
+          
+          // Lösche den Sale
+          await base44.entities.Sale.delete(sale.id);
+          
+          kundenNr++;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['creditNotes']);
+      queryClient.invalidateQueries(['sales']);
+      queryClient.invalidateQueries(['bestandskunden']);
     },
   });
 
