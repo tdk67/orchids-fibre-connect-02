@@ -22,7 +22,7 @@ export default function Dashboard() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const { data: leads = [] } = useQuery({
+  const { data: allLeads = [] } = useQuery({
     queryKey: ['leads'],
     queryFn: () => base44.entities.Lead.list(),
   });
@@ -32,17 +32,26 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Employee.list(),
   });
 
-  const { data: sales = [] } = useQuery({
+  const { data: allSales = [] } = useQuery({
     queryKey: ['sales'],
     queryFn: () => base44.entities.Sale.list('-sale_date', 100),
   });
+
+  // Filter für Mitarbeiter - nur eigene Daten
+  const leads = user?.role === 'admin' 
+    ? allLeads 
+    : allLeads.filter(lead => lead.assigned_to_email === user?.email);
+
+  const sales = user?.role === 'admin' 
+    ? allSales 
+    : allSales.filter(sale => sale.employee_id === user?.email);
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthSales = sales.filter(s => s.sale_date?.startsWith(currentMonth));
   const totalRevenue = currentMonthSales.reduce((sum, s) => sum + (s.contract_value || 0), 0);
   const totalCommissions = currentMonthSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
 
-  const stats = [
+  const stats = user?.role === 'admin' ? [
     {
       name: 'Leads',
       value: leads.length,
@@ -70,6 +79,28 @@ export default function Dashboard() {
       icon: Euro,
       color: 'from-amber-500 to-amber-600',
       link: 'Sales'
+    },
+  ] : [
+    {
+      name: 'Meine Leads',
+      value: leads.length,
+      icon: Users,
+      color: 'from-blue-500 to-blue-600',
+      link: 'Leads'
+    },
+    {
+      name: 'Meine Verkäufe (Monat)',
+      value: currentMonthSales.length,
+      icon: ShoppingCart,
+      color: 'from-green-500 to-green-600',
+      link: 'Sales'
+    },
+    {
+      name: 'Meine Provision (Monat)',
+      value: `${totalCommissions.toLocaleString('de-DE')} €`,
+      icon: Euro,
+      color: 'from-amber-500 to-amber-600',
+      link: 'Commissions'
     },
   ];
 
