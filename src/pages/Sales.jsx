@@ -57,7 +57,12 @@ export default function Sales() {
   const createMutation = useMutation({
     mutationFn: (data) => {
       const month = data.sale_date.slice(0, 7);
-      return base44.entities.Sale.create({ ...data, commission_month: month });
+      const employee = employees.find(e => e.full_name === data.employee_name);
+      return base44.entities.Sale.create({ 
+        ...data, 
+        commission_month: month,
+        employee_id: employee?.email || data.employee_name
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['sales']);
@@ -118,7 +123,9 @@ export default function Sales() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Verkäufe</h1>
-          <p className="text-slate-500 mt-1">Erfassen und verwalten Sie alle Verkäufe</p>
+          <p className="text-slate-500 mt-1">
+            {user?.role === 'admin' ? 'Erfassen und verwalten Sie alle Verkäufe' : 'Meine Verkäufe'}
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);

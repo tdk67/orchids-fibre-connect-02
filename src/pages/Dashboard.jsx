@@ -144,7 +144,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-900" />
-              Provisionen aktueller Monat
+              {user?.role === 'admin' ? 'Provisionen aktueller Monat' : 'Meine Provisionen aktueller Monat'}
             </CardTitle>
             <Link to={createPageUrl('Commissions')}>
               <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-700">
@@ -157,7 +157,9 @@ export default function Dashboard() {
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100">
-              <p className="text-sm font-medium text-green-700">Gesamtprovisionen</p>
+              <p className="text-sm font-medium text-green-700">
+                {user?.role === 'admin' ? 'Gesamtprovisionen' : 'Meine Gesamtprovisionen'}
+              </p>
               <p className="text-3xl font-bold text-green-900 mt-2">
                 {totalCommissions.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
               </p>
@@ -186,7 +188,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <Calendar className="h-5 w-5 text-blue-900" />
-              Letzte Verkäufe
+              {user?.role === 'admin' ? 'Letzte Verkäufe' : 'Meine letzten Verkäufe'}
             </CardTitle>
             <Link to={createPageUrl('Sales')}>
               <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-700">

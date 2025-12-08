@@ -82,7 +82,9 @@ export default function Commissions() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Provisionsübersicht</h1>
-        <p className="text-slate-500 mt-1">Analyse der Provisionen nach Mitarbeiter und Zeitraum</p>
+        <p className="text-slate-500 mt-1">
+          {user?.role === 'admin' ? 'Analyse der Provisionen nach Mitarbeiter und Zeitraum' : 'Meine Provisionsübersicht'}
+        </p>
       </div>
 
       {/* Filters */}
