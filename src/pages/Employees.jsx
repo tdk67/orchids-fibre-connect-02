@@ -20,6 +20,9 @@ export default function Employees() {
     full_name: '',
     email: '',
     phone: '',
+    address: '',
+    city: '',
+    postal_code: '',
     sparte: 'Telekom',
     rolle: 'Mitarbeiter',
     titel: 'Mitarbeiter',
@@ -72,6 +75,9 @@ export default function Employees() {
       full_name: '',
       email: '',
       phone: '',
+      address: '',
+      city: '',
+      postal_code: '',
       sparte: 'Telekom',
       rolle: 'Mitarbeiter',
       titel: 'Mitarbeiter',
@@ -144,6 +150,30 @@ export default function Employees() {
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Adresse (Straße, Hausnummer)</Label>
+                  <Input
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="z.B. Kantstr. 3"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Postleitzahl</Label>
+                  <Input
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                    placeholder="z.B. 65451"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stadt</Label>
+                  <Input
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="z.B. Kelsterbach"
                   />
                 </div>
                 <div className="space-y-2">
