@@ -26,10 +26,15 @@ export default function CreditNotes() {
     queryFn: () => base44.entities.Employee.list(),
   });
 
-  const { data: sales = [] } = useQuery({
+  const { data: allSales = [] } = useQuery({
     queryKey: ['sales'],
     queryFn: () => base44.entities.Sale.list(),
   });
+
+  // Filter für Mitarbeiter - nur eigene Verkäufe
+  const sales = user?.role === 'admin' 
+    ? allSales 
+    : allSales.filter(sale => sale.employee_id === user?.email);
 
   const createCreditNoteMutation = useMutation({
     mutationFn: async (data) => {
@@ -122,9 +127,12 @@ export default function CreditNotes() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Gutschriften</h1>
-          <p className="text-slate-500 mt-1">Provisionsabrechnungen für Mitarbeiter</p>
+          <p className="text-slate-500 mt-1">
+            {user?.role === 'admin' ? 'Provisionsabrechnungen für Mitarbeiter' : 'Meine Provisionsabrechnungen'}
+          </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {user?.role === 'admin' && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-blue-900 hover:bg-blue-800">
               <Plus className="h-4 w-4 mr-2" />
@@ -194,6 +202,7 @@ export default function CreditNotes() {
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Info Card */}

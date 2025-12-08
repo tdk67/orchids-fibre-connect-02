@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 export default function Sales() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
+  const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     customer_name: '',
     employee_name: '',
@@ -29,10 +30,19 @@ export default function Sales() {
 
   const queryClient = useQueryClient();
 
-  const { data: sales = [] } = useQuery({
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
+  const { data: allSales = [] } = useQuery({
     queryKey: ['sales'],
     queryFn: () => base44.entities.Sale.list('-sale_date'),
   });
+
+  // Filter für Mitarbeiter - nur eigene Verkäufe
+  const sales = user?.role === 'admin' 
+    ? allSales 
+    : allSales.filter(sale => sale.employee_id === user?.email);
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
