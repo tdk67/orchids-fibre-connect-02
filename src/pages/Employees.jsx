@@ -34,6 +34,8 @@ export default function Employees() {
     google_calendar_link: '',
     email_login: '',
     email_password: '',
+    imap_server: 'imap.gmail.com',
+    imap_port: 993,
     status: 'Aktiv'
   });
 
@@ -91,6 +93,8 @@ export default function Employees() {
       google_calendar_link: '',
       email_login: '',
       email_password: '',
+      imap_server: 'imap.gmail.com',
+      imap_port: 993,
       status: 'Aktiv'
     });
     setEditingEmployee(null);
@@ -310,8 +314,16 @@ export default function Employees() {
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach Zugang</h3>
-                <p className="text-xs text-slate-500 mb-4">Zugangsdaten für das integrierte E-Mail Postfach des Mitarbeiters</p>
+                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach Zugang (IMAP)</h3>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+                  <p className="text-xs text-blue-900 font-medium mb-1">Zugangsdaten für automatisches E-Mail-Abrufen via IMAP</p>
+                  <p className="text-xs text-blue-800">
+                    • Gmail: imap.gmail.com (Port 993)<br/>
+                    • IONOS: imap.ionos.de (Port 993)<br/>
+                    • 1&1: imap.1und1.de (Port 993)<br/>
+                    • Outlook: outlook.office365.com (Port 993)
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>E-Mail Login/Adresse</Label>
@@ -329,6 +341,23 @@ export default function Employees() {
                       value={formData.email_password}
                       onChange={(e) => setFormData({ ...formData, email_password: e.target.value })}
                       placeholder="••••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IMAP-Server</Label>
+                    <Input
+                      value={formData.imap_server}
+                      onChange={(e) => setFormData({ ...formData, imap_server: e.target.value })}
+                      placeholder="imap.gmail.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IMAP-Port</Label>
+                    <Input
+                      type="number"
+                      value={formData.imap_port}
+                      onChange={(e) => setFormData({ ...formData, imap_port: parseInt(e.target.value) || 993 })}
+                      placeholder="993"
                     />
                   </div>
                 </div>
