@@ -10,6 +10,11 @@ import { UserCircle, Euro, TrendingUp, Calendar } from 'lucide-react';
 export default function Commissions() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedEmployee, setSelectedEmployee] = useState('all');
+  const [user, setUser] = useState(null);
+
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   const { data: sales = [] } = useQuery({
     queryKey: ['sales'],
@@ -24,6 +29,12 @@ export default function Commissions() {
   // Filter sales by month and employee
   const filteredSales = sales.filter((sale) => {
     const monthMatch = sale.sale_date?.startsWith(selectedMonth);
+    
+    // Nicht-Admins sehen nur ihre eigenen Verkäufe
+    if (user?.role !== 'admin') {
+      return monthMatch && sale.employee_id === user?.email;
+    }
+    
     const employeeMatch = selectedEmployee === 'all' || sale.employee_name === selectedEmployee;
     return monthMatch && employeeMatch;
   });
@@ -93,22 +104,24 @@ export default function Commissions() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-sm font-medium text-slate-700 mb-2 block">Mitarbeiter</label>
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle Mitarbeiter</SelectItem>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.full_name}>
-                      {emp.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+{user?.role === 'admin' && (
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-sm font-medium text-slate-700 mb-2 block">Mitarbeiter</label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Mitarbeiter</SelectItem>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.full_name}>
+                        {emp.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -162,72 +175,75 @@ export default function Commissions() {
         </Card>
       </div>
 
-      {/* Commission by Employee */}
-      <Card className="border-0 shadow-md">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle>Provisionen nach Mitarbeiter</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mitarbeiter</TableHead>
-                  <TableHead>Verkäufe</TableHead>
-                  <TableHead>Umsatz</TableHead>
-                  <TableHead>Provision</TableHead>
-                  <TableHead>Bezahlt</TableHead>
-                  <TableHead>Offen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {commissionSummary.map((item) => (
-                  <TableRow key={item.employee} className="hover:bg-slate-50">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <UserCircle className="h-4 w-4 text-slate-400" />
-                        <span className="font-semibold text-slate-900">{item.employee}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-semibold">
-                        {item.sales_count}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-900">
-                      {item.total_revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                    </TableCell>
-                    <TableCell className="font-bold text-green-600 text-lg">
-                      {item.total_commission.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-100 text-green-800">
-                        {item.paid_count}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="bg-amber-100 text-amber-800">
-                        {item.unpaid_count}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          {commissionSummary.length === 0 && (
-            <div className="p-12 text-center text-slate-500">
-              Keine Provisionen für den ausgewählten Zeitraum
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Detailed Sales */}
-      {selectedEmployee !== 'all' && commissionsByEmployee[selectedEmployee] && (
+{user?.role === 'admin' && (
         <Card className="border-0 shadow-md">
           <CardHeader className="border-b border-slate-100">
-            <CardTitle>Verkäufe von {selectedEmployee}</CardTitle>
+            <CardTitle>Provisionen nach Mitarbeiter</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mitarbeiter</TableHead>
+                    <TableHead>Verkäufe</TableHead>
+                    <TableHead>Umsatz</TableHead>
+                    <TableHead>Provision</TableHead>
+                    <TableHead>Bezahlt</TableHead>
+                    <TableHead>Offen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {commissionSummary.map((item) => (
+                    <TableRow key={item.employee} className="hover:bg-slate-50">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <UserCircle className="h-4 w-4 text-slate-400" />
+                          <span className="font-semibold text-slate-900">{item.employee}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-semibold">
+                          {item.sales_count}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-900">
+                        {item.total_revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </TableCell>
+                      <TableCell className="font-bold text-green-600 text-lg">
+                        {item.total_commission.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-green-100 text-green-800">
+                          {item.paid_count}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-amber-100 text-amber-800">
+                          {item.unpaid_count}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {commissionSummary.length === 0 && (
+              <div className="p-12 text-center text-slate-500">
+                Keine Provisionen für den ausgewählten Zeitraum
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Detailed Sales */}
+      {(user?.role === 'admin' ? (selectedEmployee !== 'all' && commissionsByEmployee[selectedEmployee]) : commissionSummary.length > 0) && (
+        <Card className="border-0 shadow-md">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle>
+              {user?.role === 'admin' ? `Verkäufe von ${selectedEmployee}` : 'Meine Verkäufe'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -243,7 +259,10 @@ export default function Commissions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {commissionsByEmployee[selectedEmployee].sales.map((sale) => (
+                  {(user?.role === 'admin' 
+                    ? commissionsByEmployee[selectedEmployee].sales 
+                    : filteredSales
+                  ).map((sale) => (
                     <TableRow key={sale.id} className="hover:bg-slate-50">
                       <TableCell className="text-sm">
                         {new Date(sale.sale_date).toLocaleDateString('de-DE')}
