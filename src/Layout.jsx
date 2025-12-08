@@ -35,8 +35,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'] },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'] },
     { name: 'PVP Portal', path: 'PVP', icon: Settings, roles: ['admin'] },
-    { name: 'IONOS Webmail', path: 'IonOSMail', icon: Mail, roles: ['admin', 'user'] },
-    { name: 'Postfach', path: 'Postfach', icon: Mail, roles: ['admin', 'user'] },
     { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin'] },
     { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart, roles: ['admin', 'user'] },
     { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'] },
