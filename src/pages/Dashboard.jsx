@@ -32,6 +32,13 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Employee.list(),
   });
 
+  // Finde den aktuellen Mitarbeiter-Eintrag
+  const currentEmployee = employees.find(e => e.email === user?.email);
+  const isTeamleiter = currentEmployee?.rolle === 'Teamleiter';
+
+  // Mitarbeiter die diesem Teamleiter zugeordnet sind
+  const teamMembers = employees.filter(e => e.teamleiter_id === currentEmployee?.id);
+
   const { data: allSales = [] } = useQuery({
     queryKey: ['sales'],
     queryFn: () => base44.entities.Sale.list('-sale_date', 100),
@@ -241,6 +248,51 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Teamleiter: Mitarbeiter Übersicht */}
+      {isTeamleiter && teamMembers.length > 0 && (
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-purple-50 to-indigo-50">
+            <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <UserCircle className="h-5 w-5 text-purple-900" />
+              Team-Provisionen aktueller Monat
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {teamMembers.map(member => {
+                const memberSales = allSales.filter(s => 
+                  s.employee_id === member.email && 
+                  s.sale_date?.startsWith(currentMonth)
+                );
+                const memberCommission = memberSales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+                
+                return (
+                  <div key={member.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {member.full_name?.charAt(0) || 'M'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">{member.full_name}</p>
+                        <p className="text-sm text-slate-500">{memberSales.length} Verkäufe</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-green-600">
+                        {memberCommission.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </p>
+                      <p className="text-xs text-slate-500">Provision</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
