@@ -12,17 +12,34 @@ Deno.serve(async (req) => {
 
     const { to, subject, body, signature } = await req.json();
 
+    console.log('User:', user.email);
+    console.log('Payload:', { to, subject, hasBody: !!body });
+
     if (!to || !subject || !body) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 });
+      return Response.json({ error: 'Missing required fields: to, subject, body' }, { status: 400 });
     }
 
     // Get employee SMTP config
-    const employees = await base44.asServiceRole.entities.Employee.filter({ email: user.email });
-    const employee = employees[0];
+    const employees = await base44.asServiceRole.entities.Employee.list();
+    const employee = employees.find(e => e.email === user.email);
+
+    console.log('Employee found:', !!employee);
+    console.log('SMTP Config:', {
+      server: employee?.smtp_server,
+      port: employee?.smtp_port,
+      username: employee?.smtp_username,
+      hasPassword: !!employee?.smtp_password
+    });
 
     if (!employee || !employee.smtp_server || !employee.smtp_username || !employee.smtp_password) {
       return Response.json({ 
-        error: 'SMTP-Konfiguration fehlt. Bitte in Mitarbeiter-Einstellungen hinterlegen.' 
+        error: 'SMTP-Konfiguration fehlt. Bitte in Mitarbeiter-Einstellungen hinterlegen.',
+        details: {
+          hasEmployee: !!employee,
+          hasServer: !!employee?.smtp_server,
+          hasUsername: !!employee?.smtp_username,
+          hasPassword: !!employee?.smtp_password
+        }
       }, { status: 400 });
     }
 
@@ -42,15 +59,19 @@ Deno.serve(async (req) => {
       },
     });
 
+    console.log('Sending email...');
+
     // Send email
     await client.send({
-      from: employee.email_adresse || employee.email,
+      from: employee.email_adresse || employee.email || employee.smtp_username,
       to: to,
       subject: subject,
       content: fullBody,
     });
 
     await client.close();
+
+    console.log('Email sent successfully');
 
     // Save to Email entity
     await base44.asServiceRole.entities.Email.create({
@@ -69,8 +90,10 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('SMTP Error:', error);
+    console.error('Error stack:', error.stack);
     return Response.json({ 
-      error: error.message || 'Fehler beim Versenden der E-Mail'
+      error: error.message || 'Fehler beim Versenden der E-Mail',
+      details: error.toString()
     }, { status: 500 });
   }
 });
