@@ -16,7 +16,8 @@ export default function Benutzerverwaltung() {
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
-    role: 'user'
+    role: 'user',
+    benutzertyp: 'Interner Mitarbeiter'
   });
 
   const queryClient = useQueryClient();
@@ -62,7 +63,8 @@ export default function Benutzerverwaltung() {
     setFormData({
       email: '',
       full_name: '',
-      role: 'user'
+      role: 'user',
+      benutzertyp: 'Interner Mitarbeiter'
     });
   };
 
@@ -127,6 +129,22 @@ export default function Benutzerverwaltung() {
                   placeholder="Max Mustermann"
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Benutzertyp *</Label>
+                <Select value={formData.benutzertyp} onValueChange={(value) => setFormData({ ...formData, benutzertyp: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Interner Mitarbeiter">Interner Mitarbeiter</SelectItem>
+                    <SelectItem value="Partner 1">Partner 1</SelectItem>
+                    <SelectItem value="Partner 2">Partner 2</SelectItem>
+                    <SelectItem value="Partner 3">Partner 3</SelectItem>
+                    <SelectItem value="Partner 4">Partner 4</SelectItem>
+                    <SelectItem value="Partner 5">Partner 5</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Rolle *</Label>
@@ -234,6 +252,7 @@ export default function Benutzerverwaltung() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>E-Mail</TableHead>
+                  <TableHead>Benutzertyp</TableHead>
                   <TableHead>Rolle</TableHead>
                   <TableHead>Mitarbeiter-Profil</TableHead>
                   <TableHead>Erstellt am</TableHead>
@@ -258,6 +277,13 @@ export default function Benutzerverwaltung() {
                           <Mail className="h-3 w-3" />
                           {user.email}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={
+                          user.benutzertyp === 'Interner Mitarbeiter' ? 'border-blue-300 text-blue-800' : 'border-green-300 text-green-800'
+                        }>
+                          {user.benutzertyp || 'Interner Mitarbeiter'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-800'}>
