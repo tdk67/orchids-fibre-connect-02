@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import nodemailer from 'npm:nodemailer@6.9.15';
 
 Deno.serve(async (req) => {
     try {
@@ -21,41 +22,23 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // SMTP über fetch API (einfacher als nodemailer)
-        const smtpUrl = `smtps://${encodeURIComponent(employee.email_adresse)}:${encodeURIComponent(employee.email_password)}@smtp.ionos.de:465`;
-        
-        const emailContent = [
-            `From: ${employee.full_name} <${employee.email_adresse}>`,
-            `To: ${to}`,
-            `Subject: ${subject}`,
-            `Content-Type: text/plain; charset=utf-8`,
-            '',
-            text
-        ].join('\r\n');
-
-        // Alternative: Direkter SMTP-Aufruf mit nativen Deno-Mitteln
-        const response = await fetch('https://api.smtp2go.com/v3/email/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                // Fallback auf direkten SMTP-Socket
-                host: 'smtp.ionos.de',
-                port: 587,
-                secure: false,
-                auth: {
-                    user: employee.email_adresse,
-                    pass: employee.email_password
-                },
-                from: `${employee.full_name} <${employee.email_adresse}>`,
-                to: [to],
-                subject: subject,
-                text: text
-            })
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.ionos.de',
+            port: 587,
+            secure: false,
+            auth: {
+                user: employee.email_adresse,
+                pass: employee.email_password
+            }
         });
 
-        // Speichere E-Mail in Datenbank
+        await transporter.sendMail({
+            from: `"${employee.full_name}" <${employee.email_adresse}>`,
+            to: to,
+            subject: subject,
+            text: text
+        });
+
         await base44.asServiceRole.entities.Email.create({
             betreff: subject,
             absender: employee.email_adresse,
@@ -71,11 +54,11 @@ Deno.serve(async (req) => {
 
         return Response.json({ 
             success: true,
-            message: 'E-Mail wurde versendet'
+            message: 'E-Mail erfolgreich versendet'
         });
 
     } catch (error) {
-        console.error('SMTP-Versand Fehler:', error);
+        console.error('SMTP Fehler:', error);
         return Response.json({ 
             error: error.message,
             success: false

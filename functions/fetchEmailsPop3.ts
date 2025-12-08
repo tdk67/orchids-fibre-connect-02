@@ -1,4 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import Imap from 'npm:imap@0.8.19';
+import { simpleParser } from 'npm:mailparser@3.7.1';
 
 Deno.serve(async (req) => {
     try {
@@ -21,81 +23,76 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // Verbindung zu POP3
-        const conn = await Deno.connect({
-            hostname: 'pop.ionos.de',
-            port: 995,
-            transport: 'tcp',
+        const imap = new Imap({
+            user: employee.email_adresse,
+            password: employee.email_password,
+            host: 'imap.ionos.de',
+            port: 993,
+            tls: true,
+            tlsOptions: { rejectUnauthorized: false }
         });
 
-        const tlsConn = await Deno.startTls(conn, { hostname: 'pop.ionos.de' });
-        
-        const encoder = new TextEncoder();
-        const decoder = new TextDecoder();
-        
-        // POP3-Befehle
-        const sendCommand = async (command) => {
-            await tlsConn.write(encoder.encode(command + '\r\n'));
-            const buffer = new Uint8Array(4096);
-            const n = await tlsConn.read(buffer);
-            return decoder.decode(buffer.subarray(0, n));
-        };
-
-        // Login
-        await sendCommand(`USER ${employee.email_adresse}`);
-        await sendCommand(`PASS ${employee.email_password}`);
-        
-        // Anzahl Nachrichten abrufen
-        const statResponse = await sendCommand('STAT');
-        const messageCount = parseInt(statResponse.split(' ')[1]);
-        
         const emails = [];
-        const fetchCount = Math.min(limit, messageCount);
 
-        // Letzte X E-Mails abrufen
-        for (let i = messageCount; i > messageCount - fetchCount && i > 0; i--) {
-            const retrResponse = await sendCommand(`RETR ${i}`);
-            
-            // Parse E-Mail-Header und Body
-            const lines = retrResponse.split('\r\n');
-            let subject = '';
-            let from = '';
-            let body = '';
-            let inBody = false;
-            
-            for (const line of lines) {
-                if (line.startsWith('Subject:')) {
-                    subject = line.substring(8).trim();
-                } else if (line.startsWith('From:')) {
-                    from = line.substring(5).trim();
-                } else if (line === '') {
-                    inBody = true;
-                } else if (inBody && line !== '.') {
-                    body += line + '\n';
-                }
-            }
+        await new Promise((resolve, reject) => {
+            imap.once('ready', () => {
+                imap.openBox('INBOX', true, (err, box) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
 
-            if (subject && from) {
-                emails.push({
-                    betreff: subject,
-                    absender: from,
-                    empfaenger: employee.email_adresse,
-                    nachricht: body.trim(),
-                    mitarbeiter_email: employee.email_adresse,
-                    mitarbeiter_name: employee.full_name,
-                    sparte: employee.sparte,
-                    typ: 'Eingang',
-                    gelesen: false,
-                    timestamp: new Date().toISOString()
+                    const total = box.messages.total;
+                    if (total === 0) {
+                        imap.end();
+                        resolve();
+                        return;
+                    }
+
+                    const fetchLimit = Math.min(limit, total);
+                    const start = Math.max(1, total - fetchLimit + 1);
+                    
+                    const fetch = imap.seq.fetch(`${start}:${total}`, {
+                        bodies: '',
+                        struct: true
+                    });
+
+                    fetch.on('message', (msg) => {
+                        msg.on('body', (stream) => {
+                            simpleParser(stream, (err, parsed) => {
+                                if (!err && parsed) {
+                                    emails.push({
+                                        betreff: parsed.subject || '(Kein Betreff)',
+                                        absender: parsed.from?.text || '',
+                                        empfaenger: employee.email_adresse,
+                                        nachricht: parsed.text || parsed.html || '',
+                                        mitarbeiter_email: employee.email_adresse,
+                                        mitarbeiter_name: employee.full_name,
+                                        sparte: employee.sparte,
+                                        typ: 'Eingang',
+                                        gelesen: false,
+                                        timestamp: parsed.date ? parsed.date.toISOString() : new Date().toISOString()
+                                    });
+                                }
+                            });
+                        });
+                    });
+
+                    fetch.once('end', () => {
+                        setTimeout(() => {
+                            imap.end();
+                        }, 500);
+                    });
+
+                    fetch.once('error', reject);
                 });
-            }
-        }
+            });
 
-        // Verbindung schließen
-        await sendCommand('QUIT');
-        tlsConn.close();
+            imap.once('error', reject);
+            imap.once('end', resolve);
+            imap.connect();
+        });
 
-        // Nur neue E-Mails speichern
         const existingEmails = await base44.asServiceRole.entities.Email.list();
         let newCount = 0;
 
@@ -103,7 +100,7 @@ Deno.serve(async (req) => {
             const exists = existingEmails.some(e => 
                 e.betreff === email.betreff &&
                 e.absender === email.absender &&
-                Math.abs(new Date(e.timestamp) - new Date(email.timestamp)) < 300000
+                Math.abs(new Date(e.timestamp) - new Date(email.timestamp)) < 60000
             );
 
             if (!exists) {
@@ -119,7 +116,7 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('POP3-Abruf Fehler:', error);
+        console.error('IMAP Fehler:', error);
         return Response.json({ 
             error: error.message,
             success: false
