@@ -13,10 +13,15 @@ export default function CreditNotes() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const [user, setUser] = useState(null);
 
   const queryClient = useQueryClient();
 
-  const { data: creditNotes = [] } = useQuery({
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
+  const { data: allCreditNotes = [] } = useQuery({
     queryKey: ['creditNotes'],
     queryFn: () => base44.entities.CreditNote.list('-issued_date'),
   });
@@ -31,7 +36,11 @@ export default function CreditNotes() {
     queryFn: () => base44.entities.Sale.list(),
   });
 
-  // Filter für Mitarbeiter - nur eigene Verkäufe
+  // Filter für Mitarbeiter - nur eigene Daten
+  const creditNotes = user?.role === 'admin' 
+    ? allCreditNotes 
+    : allCreditNotes.filter(cn => cn.employee_id === user?.email || cn.employee_name === user?.full_name);
+
   const sales = user?.role === 'admin' 
     ? allSales 
     : allSales.filter(sale => sale.employee_id === user?.email);
