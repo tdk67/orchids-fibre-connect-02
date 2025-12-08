@@ -34,11 +34,11 @@ export default function Outlook() {
             </p>
           </div>
           <iframe
-            src="https://outlook.office.com/mail/"
-            className="w-full border-0"
-            style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}
+            src="https://outlook.office.com"
+            width="100%"
+            height="600px"
+            frameBorder="0"
             title="Outlook Webmail"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
           />
         </CardContent>
       </Card>
