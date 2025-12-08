@@ -16,7 +16,8 @@ import {
   Mail,
   Settings,
   Search,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
