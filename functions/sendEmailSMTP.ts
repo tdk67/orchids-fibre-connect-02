@@ -18,15 +18,18 @@ Deno.serve(async (req) => {
 
     // Get employee SMTP settings
     const employees = await base44.asServiceRole.entities.Employee.filter({ email: user.email });
+    
     if (!employees || employees.length === 0) {
-      return Response.json({ error: 'Employee not found' }, { status: 404 });
+      return Response.json({ 
+        error: 'Kein Mitarbeiter-Profil gefunden. Bitte kontaktieren Sie Ihren Administrator.' 
+      }, { status: 404 });
     }
 
     const employee = employees[0];
 
     if (!employee.smtp_server || !employee.smtp_username || !employee.smtp_password) {
       return Response.json({ 
-        error: 'SMTP credentials not configured. Please update your settings.' 
+        error: 'SMTP-Zugangsdaten nicht konfiguriert. Bitte in Mitarbeiter-Einstellungen hinterlegen.' 
       }, { status: 400 });
     }
 

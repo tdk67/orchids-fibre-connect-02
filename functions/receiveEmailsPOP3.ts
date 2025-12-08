@@ -12,15 +12,18 @@ Deno.serve(async (req) => {
 
     // Get employee POP3 settings
     const employees = await base44.asServiceRole.entities.Employee.filter({ email: user.email });
+    
     if (!employees || employees.length === 0) {
-      return Response.json({ error: 'Employee not found' }, { status: 404 });
+      return Response.json({ 
+        error: 'Kein Mitarbeiter-Profil gefunden. Bitte kontaktieren Sie Ihren Administrator.' 
+      }, { status: 404 });
     }
 
     const employee = employees[0];
 
     if (!employee.pop3_server || !employee.pop3_username || !employee.pop3_password) {
       return Response.json({ 
-        error: 'POP3 credentials not configured. Please update your settings.' 
+        error: 'POP3-Zugangsdaten nicht konfiguriert. Bitte in Mitarbeiter-Einstellungen hinterlegen.' 
       }, { status: 400 });
     }
 
