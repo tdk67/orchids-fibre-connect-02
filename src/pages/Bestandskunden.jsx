@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Building2, Calendar, User, Package, Euro } from 'lucide-react';
+import { Search, Building2, Calendar, User, Package, Euro, Plus } from 'lucide-react';
 
 export default function Bestandskunden() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,6 +19,54 @@ export default function Bestandskunden() {
   const { data: bestandskunden = [] } = useQuery({
     queryKey: ['bestandskunden'],
     queryFn: () => base44.entities.Bestandskunde.list('-created_date'),
+  });
+
+  const { data: sales = [] } = useQuery({
+    queryKey: ['sales'],
+    queryFn: () => base44.entities.Sale.list(),
+  });
+
+  const migratePaidSalesMutation = useMutation({
+    mutationFn: async () => {
+      const paidSales = sales.filter(s => s.commission_paid);
+      
+      if (paidSales.length === 0) {
+        throw new Error('Keine bezahlten Verkäufe gefunden');
+      }
+
+      let kundenNr = bestandskunden.length + 1;
+      
+      for (const sale of paidSales) {
+        const bestandskundeData = {
+          kundennummer: `BK-${String(kundenNr).padStart(5, '0')}`,
+          firma: sale.customer_name,
+          sparte: sale.sparte,
+          produkt: sale.product,
+          vertragswert: sale.contract_value,
+          provision_mitarbeiter: sale.commission_amount,
+          mitarbeiter_name: sale.employee_name,
+          mitarbeiter_email: sale.employee_id,
+          abschlussdatum: sale.sale_date,
+          status: 'Aktiv',
+          notizen: sale.notes || ''
+        };
+        
+        await base44.entities.Bestandskunde.create(bestandskundeData);
+        await base44.entities.Sale.delete(sale.id);
+        
+        kundenNr++;
+      }
+      
+      return paidSales.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries(['bestandskunden']);
+      queryClient.invalidateQueries(['sales']);
+      alert(`${count} bezahlte Verkäufe wurden erfolgreich zu Bestandskunden übertragen!`);
+    },
+    onError: (error) => {
+      alert('Fehler: ' + error.message);
+    }
   });
 
   const updateStatusMutation = useMutation({
@@ -53,9 +101,25 @@ export default function Bestandskunden() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Bestandskunden</h1>
-        <p className="text-slate-500 mt-1">Übersicht aller bezahlten und aktiven Verträge</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Bestandskunden</h1>
+          <p className="text-slate-500 mt-1">Übersicht aller bezahlten und aktiven Verträge</p>
+        </div>
+        {sales.filter(s => s.commission_paid).length > 0 && (
+          <Button 
+            onClick={() => {
+              if (confirm(`${sales.filter(s => s.commission_paid).length} bezahlte Verkäufe werden zu Bestandskunden übertragen und aus Verkäufen gelöscht. Fortfahren?`)) {
+                migratePaidSalesMutation.mutate();
+              }
+            }}
+            className="bg-blue-900 hover:bg-blue-800"
+            disabled={migratePaidSalesMutation.isLoading}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {migratePaidSalesMutation.isLoading ? 'Übertrage...' : `${sales.filter(s => s.commission_paid).length} Bezahlte Verkäufe übertragen`}
+          </Button>
+        )}
       </div>
 
       {/* Statistiken */}
