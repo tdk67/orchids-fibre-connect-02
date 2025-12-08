@@ -39,6 +39,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'] },
     { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin'] },
     { name: 'Gutschriften', path: 'CreditNotes', icon: FileText, roles: ['admin', 'user'] },
+    { name: 'Bestandskunden', path: 'Bestandskunden', icon: Users, roles: ['admin', 'user'] },
     { name: 'Team Chat', path: 'Chat', icon: MessageSquare, roles: ['admin'] },
   ];
 

@@ -277,7 +277,7 @@ export default function CreditNotes() {
                     <TableCell>
                       <Select 
                         value={note.status} 
-                        onValueChange={(value) => updateStatusMutation.mutate({ id: note.id, status: value })}
+                        onValueChange={(value) => updateStatusMutation.mutate({ id: note.id, status: value, creditNote: note })}
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />

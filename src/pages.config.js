@@ -12,6 +12,7 @@ import Postfach from './pages/Postfach';
 import Provisionsregeln from './pages/Provisionsregeln';
 import PVP from './pages/PVP';
 import Unternehmenssuche from './pages/Unternehmenssuche';
+import Bestandskunden from './pages/Bestandskunden';
 import __Layout from './Layout.jsx';
 
 
@@ -30,6 +31,7 @@ export const PAGES = {
     "Provisionsregeln": Provisionsregeln,
     "PVP": PVP,
     "Unternehmenssuche": Unternehmenssuche,
+    "Bestandskunden": Bestandskunden,
 }
 
 export const pagesConfig = {
