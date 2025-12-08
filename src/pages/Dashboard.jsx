@@ -11,7 +11,8 @@ import {
   Euro,
   TrendingUp,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -37,12 +38,30 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Sale.list('-sale_date', 100),
   });
 
+  const { data: allTermine = [] } = useQuery({
+    queryKey: ['termine'],
+    queryFn: () => base44.entities.Termin.list('startzeit'),
+  });
+
   // Finde den aktuellen Mitarbeiter-Eintrag
   const currentEmployee = employees.find(e => e.email === user?.email);
   const isTeamleiter = currentEmployee?.rolle === 'Teamleiter';
 
   // Mitarbeiter die diesem Teamleiter zugeordnet sind
   const teamMembers = employees.filter(e => e.teamleiter_id === currentEmployee?.id);
+
+  // Heutige Termine filtern
+  const today = new Date().toISOString().split('T')[0];
+  const todayTermine = allTermine.filter(t => {
+    if (!t.startzeit) return false;
+    const terminDate = new Date(t.startzeit).toISOString().split('T')[0];
+    const isToday = terminDate === today;
+    
+    // Admin sieht alle, Teamleiter sieht alle, normale Mitarbeiter nur eigene
+    if (user?.role === 'admin') return isToday;
+    if (isTeamleiter) return isToday;
+    return isToday && t.mitarbeiter_email === user?.email;
+  }).sort((a, b) => new Date(a.startzeit) - new Date(b.startzeit));
 
   // Filter für Mitarbeiter - nur eigene Daten
   const leads = user?.role === 'admin' 
@@ -131,6 +150,66 @@ export default function Dashboard() {
         </h1>
         <p className="text-slate-500 mt-2">Hier ist Ihre Übersicht für heute</p>
       </div>
+
+      {/* Heutige Termine */}
+      {todayTermine.length > 0 && (
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardHeader className="border-b border-blue-100">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-900" />
+                Meine Termine heute ({todayTermine.length})
+              </CardTitle>
+              <Link to={createPageUrl('Kalender')}>
+                <Button variant="ghost" size="sm" className="text-blue-900 hover:text-blue-700">
+                  Zum Kalender
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-blue-100">
+              {todayTermine.map((termin) => (
+                <div key={termin.id} className="p-4 hover:bg-blue-50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-blue-900">
+                          {new Date(termin.startzeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {termin.endzeit && (
+                          <>
+                            <span className="text-slate-400">-</span>
+                            <span className="text-slate-600">
+                              {new Date(termin.endzeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <p className="font-semibold text-slate-900">{termin.titel}</p>
+                      {termin.kunde_name && (
+                        <p className="text-sm text-slate-600 mt-1">{termin.kunde_name}</p>
+                      )}
+                      {(user?.role === 'admin' || isTeamleiter) && termin.mitarbeiter_name && (
+                        <p className="text-xs text-slate-500 mt-1">Mitarbeiter: {termin.mitarbeiter_name}</p>
+                      )}
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      termin.status === 'Geplant' ? 'bg-blue-100 text-blue-800' :
+                      termin.status === 'Bestätigt' ? 'bg-green-100 text-green-800' :
+                      termin.status === 'Abgeschlossen' ? 'bg-gray-100 text-gray-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {termin.status}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
