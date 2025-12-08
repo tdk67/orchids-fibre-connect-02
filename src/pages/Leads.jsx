@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar } from 'lucide-react';
+import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
@@ -31,6 +33,10 @@ export default function Leads() {
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
   const [activeTab, setActiveTab] = useState('aktiv');
+  const [showTerminDialog, setShowTerminDialog] = useState(false);
+  const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
+  const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [formData, setFormData] = useState({
     firma: '',
     ansprechpartner: '',
@@ -79,6 +85,11 @@ export default function Leads() {
   const { data: provisionsregeln = [] } = useQuery({
     queryKey: ['provisionsregeln'],
     queryFn: () => base44.entities.Provisionsregel.list(),
+  });
+
+  const { data: termine = [] } = useQuery({
+    queryKey: ['termine'],
+    queryFn: () => base44.entities.Termin.list(),
   });
 
   const createMutation = useMutation({
@@ -326,6 +337,83 @@ export default function Leads() {
     if (confirm(`Lead "${lead.firma}" wirklich löschen?`)) {
       deleteMutation.mutate(lead.id);
     }
+  };
+
+  const handleTerminClick = (lead) => {
+    setSelectedLeadForTermin(lead);
+    setSelectedTerminDate(new Date());
+    setSelectedTimeSlot('');
+    setShowTerminDialog(true);
+  };
+
+  const getAvailableTimeSlots = () => {
+    const slots = [];
+    const startHour = 9;
+    const endHour = 17;
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const dateStr = format(selectedTerminDate, 'yyyy-MM-dd');
+        const fullDateTime = `${dateStr}T${timeStr}`;
+        
+        // Check if slot is already taken
+        const isOccupied = termine.some(t => {
+          if (!t.startzeit) return false;
+          const terminStart = new Date(t.startzeit);
+          const slotStart = new Date(fullDateTime);
+          const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
+          const terminEnd = t.endzeit ? new Date(t.endzeit) : new Date(terminStart.getTime() + 30 * 60000);
+          
+          return (
+            (slotStart >= terminStart && slotStart < terminEnd) ||
+            (slotEnd > terminStart && slotEnd <= terminEnd) ||
+            (slotStart <= terminStart && slotEnd >= terminEnd)
+          );
+        });
+        
+        slots.push({
+          time: timeStr,
+          available: !isOccupied,
+          dateTime: fullDateTime
+        });
+      }
+    }
+    
+    return slots;
+  };
+
+  const createTerminMutation = useMutation({
+    mutationFn: (data) => base44.entities.Termin.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['termine']);
+      setShowTerminDialog(false);
+      alert('Termin erfolgreich erstellt!');
+    },
+  });
+
+  const handleCreateTermin = () => {
+    if (!selectedTimeSlot || !selectedLeadForTermin) return;
+    
+    const [dateStr, timeStr] = selectedTimeSlot.split('T');
+    const [hour, minute] = timeStr.split(':');
+    const startDate = new Date(selectedTerminDate);
+    startDate.setHours(parseInt(hour), parseInt(minute), 0);
+    
+    const endDate = new Date(startDate.getTime() + 30 * 60000);
+    
+    createTerminMutation.mutate({
+      titel: `Termin: ${selectedLeadForTermin.firma}`,
+      beschreibung: `Kundentermin mit ${selectedLeadForTermin.ansprechpartner || selectedLeadForTermin.firma}`,
+      startzeit: startDate.toISOString().slice(0, 16),
+      endzeit: endDate.toISOString().slice(0, 16),
+      mitarbeiter_email: selectedLeadForTermin.assigned_to_email || user?.email,
+      mitarbeiter_name: selectedLeadForTermin.assigned_to || user?.full_name,
+      kunde_name: selectedLeadForTermin.firma,
+      lead_id: selectedLeadForTermin.id,
+      typ: 'Termin',
+      status: 'Geplant'
+    });
   };
 
   const handleEmployeeChange = (employeeName) => {
@@ -991,6 +1079,14 @@ export default function Leads() {
                     )}
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleTerminClick(lead)}
+                          title="Termin erstellen"
+                        >
+                          <Clock className="h-4 w-4 text-blue-600" />
+                        </Button>
                         {lead.google_calendar_link && (
                           <Button 
                             variant="ghost" 
@@ -1025,7 +1121,81 @@ export default function Leads() {
             </div>
           )}
         </CardContent>
-      </Card>
-    </div>
-  );
-}
+        </Card>
+
+        {/* Termin Dialog */}
+        <Dialog open={showTerminDialog} onOpenChange={setShowTerminDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Termin erstellen für {selectedLeadForTermin?.firma}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Datum wählen</Label>
+              <Input
+                type="date"
+                value={format(selectedTerminDate, 'yyyy-MM-dd')}
+                onChange={(e) => {
+                  setSelectedTerminDate(new Date(e.target.value));
+                  setSelectedTimeSlot('');
+                }}
+                min={format(new Date(), 'yyyy-MM-dd')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Freie Zeitslots (30 Min.)</Label>
+              <div className="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto p-2 border rounded-lg">
+                {getAvailableTimeSlots().map((slot) => (
+                  <Button
+                    key={slot.time}
+                    variant={selectedTimeSlot === slot.dateTime ? "default" : "outline"}
+                    className={`${
+                      !slot.available 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : selectedTimeSlot === slot.dateTime
+                        ? 'bg-blue-900'
+                        : 'hover:bg-blue-50'
+                    }`}
+                    disabled={!slot.available}
+                    onClick={() => setSelectedTimeSlot(slot.dateTime)}
+                  >
+                    {slot.time}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">
+                Grau = Besetzt, Weiß = Frei, Blau = Ausgewählt
+              </p>
+            </div>
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm font-semibold text-blue-900">Termindetails:</p>
+              <p className="text-xs text-blue-800 mt-1">
+                {selectedLeadForTermin?.firma} - {selectedLeadForTermin?.ansprechpartner}
+              </p>
+              <p className="text-xs text-blue-800">
+                Zugewiesen: {selectedLeadForTermin?.assigned_to}
+              </p>
+              {selectedTimeSlot && (
+                <p className="text-xs text-blue-800 font-semibold mt-2">
+                  Termin: {format(selectedTerminDate, 'dd.MM.yyyy', { locale: de })} um {selectedTimeSlot.split('T')[1]} (30 Min.)
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowTerminDialog(false)}>
+                Abbrechen
+              </Button>
+              <Button 
+                onClick={handleCreateTermin}
+                disabled={!selectedTimeSlot}
+                className="bg-blue-900 hover:bg-blue-800"
+              >
+                Termin erstellen
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+        </Dialog>
+        </div>
+        );
+        }
