@@ -29,11 +29,11 @@ Deno.serve(async (req) => {
     // Prepare email body with signature
     const fullBody = signature ? `${body}\n\n${signature}` : body;
 
-    // Create transporter
+    // Create transporter - use port 465 with SSL for IONOS
     const transporter = nodemailer.createTransport({
       host: employee.smtp_server,
-      port: employee.smtp_port || 587,
-      secure: (employee.smtp_port || 587) === 465,
+      port: 465, // Force SSL port for Deno Deploy
+      secure: true, // Use SSL
       auth: {
         user: employee.smtp_username,
         pass: employee.smtp_password,
