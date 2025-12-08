@@ -45,11 +45,8 @@ export default function Leads() {
     laufzeit_monate: 36,
     assigned_to: '',
     assigned_to_email: '',
-    closer_name: '',
-    closer_email: '',
-    setter_name: '',
-    setter_email: '',
     berechnete_provision: 0,
+    teamleiter_bonus: 0,
     sparte: 'Telekom',
     google_calendar_link: ''
   });
@@ -122,17 +119,11 @@ export default function Leads() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Auto-fill setter if not already set
-    const dataToSubmit = {
-      ...formData,
-      setter_name: formData.setter_name || user?.full_name || '',
-      setter_email: formData.setter_email || user?.email || ''
-    };
     
     if (editingLead) {
-      updateMutation.mutate({ id: editingLead.id, data: dataToSubmit });
+      updateMutation.mutate({ id: editingLead.id, data: formData });
     } else {
-      createMutation.mutate(dataToSubmit);
+      createMutation.mutate(formData);
     }
   };
 
@@ -153,11 +144,8 @@ export default function Leads() {
       laufzeit_monate: 36,
       assigned_to: '',
       assigned_to_email: '',
-      closer_name: '',
-      closer_email: '',
-      setter_name: '',
-      setter_email: '',
       berechnete_provision: 0,
+      teamleiter_bonus: 0,
       sparte: 'Telekom',
       google_calendar_link: ''
     });
@@ -166,11 +154,7 @@ export default function Leads() {
 
   const handleEdit = (lead) => {
     setEditingLead(lead);
-    setFormData({
-      ...lead,
-      setter_name: lead.setter_name || user?.full_name || '',
-      setter_email: lead.setter_email || user?.email || ''
-    });
+    setFormData(lead);
     setIsDialogOpen(true);
   };
 
@@ -184,7 +168,13 @@ export default function Leads() {
       r.laufzeit_monate === laufzeit
     );
     
-    return regel?.closer_provision || 0;
+    // Check if assigned employee is a Teamleiter or Mitarbeiter
+    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
+    if (assignedEmp?.rolle === 'Teamleiter') {
+      return regel?.teamleiter_provision || 0;
+    } else {
+      return regel?.mitarbeiter_provision || 0;
+    }
   };
 
   // Get available bandwidths for selected product
@@ -200,43 +190,62 @@ export default function Leads() {
   const handleProduktChange = (produkt) => {
     const bandwidths = getAvailableBandwidths(produkt);
     const newBandbreite = bandwidths.length > 0 ? bandwidths[0] : '';
-    const provision = calculateProvision(produkt, newBandbreite, formData.laufzeit_monate);
+    const regel = provisionsregeln.find(r => 
+      r.tarif === produkt && 
+      r.bandbreite === newBandbreite && 
+      r.laufzeit_monate === formData.laufzeit_monate
+    );
+    
+    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
+    const provision = assignedEmp?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
+    const bonus = assignedEmp?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
     
     setFormData({
       ...formData,
       produkt,
       bandbreite: newBandbreite,
-      berechnete_provision: provision
+      berechnete_provision: provision,
+      teamleiter_bonus: bonus
     });
   };
 
   // Handle bandbreite change
   const handleBandbreiteChange = (bandbreite) => {
-    const provision = calculateProvision(formData.produkt, bandbreite, formData.laufzeit_monate);
+    const regel = provisionsregeln.find(r => 
+      r.tarif === formData.produkt && 
+      r.bandbreite === bandbreite && 
+      r.laufzeit_monate === formData.laufzeit_monate
+    );
+    
+    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
+    const provision = assignedEmp?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
+    const bonus = assignedEmp?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
+    
     setFormData({
       ...formData,
       bandbreite,
-      berechnete_provision: provision
+      berechnete_provision: provision,
+      teamleiter_bonus: bonus
     });
   };
 
   // Handle laufzeit change
   const handleLaufzeitChange = (laufzeit) => {
-    const provision = calculateProvision(formData.produkt, formData.bandbreite, laufzeit);
+    const regel = provisionsregeln.find(r => 
+      r.tarif === formData.produkt && 
+      r.bandbreite === formData.bandbreite && 
+      r.laufzeit_monate === laufzeit
+    );
+    
+    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
+    const provision = assignedEmp?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
+    const bonus = assignedEmp?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
+    
     setFormData({
       ...formData,
       laufzeit_monate: laufzeit,
-      berechnete_provision: provision
-    });
-  };
-
-  // Handle closer change
-  const handleCloserChange = (closerName) => {
-    const closer = employees.find(e => e.full_name === closerName);
-    setFormData({
-      ...formData,
-      closer_name: closerName,
-      closer_email: closer?.email || ''
+      berechnete_provision: provision,
+      teamleiter_bonus: bonus
     });
   };
 
@@ -287,11 +296,24 @@ export default function Leads() {
 
   const handleEmployeeChange = (employeeName) => {
     const employee = employees.find(e => e.full_name === employeeName);
+    
+    // Recalculate provision based on employee role
+    const regel = provisionsregeln.find(r => 
+      r.tarif === formData.produkt && 
+      r.bandbreite === formData.bandbreite && 
+      r.laufzeit_monate === formData.laufzeit_monate
+    );
+    
+    const provision = employee?.rolle === 'Teamleiter' ? (regel?.teamleiter_provision || 0) : (regel?.mitarbeiter_provision || 0);
+    const bonus = employee?.rolle === 'Mitarbeiter' ? (regel?.teamleiter_bonus_provision || 0) : 0;
+    
     setFormData({
       ...formData,
       assigned_to: employeeName,
       assigned_to_email: employee?.email || '',
-      google_calendar_link: employee?.google_calendar_link || ''
+      google_calendar_link: employee?.google_calendar_link || '',
+      berechnete_provision: provision,
+      teamleiter_bonus: bonus
     });
   };
 
@@ -642,31 +664,27 @@ export default function Leads() {
                       </div>
                     </div>
                   )}
-                  <div className="space-y-2">
-                    <Label>Zugewiesen an (Setter)</Label>
+                  {formData.teamleiter_bonus > 0 && (
+                    <div className="space-y-2">
+                      <Label>Teamleiter Bonus</Label>
+                      <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-md">
+                        <span className="text-lg font-bold text-purple-700">
+                          {formData.teamleiter_bonus.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">Bonus für zugeordneten Teamleiter</p>
+                    </div>
+                  )}
+                  <div className="space-y-2 col-span-2">
+                    <Label>Zugewiesen an</Label>
                     <Select value={formData.assigned_to} onValueChange={handleEmployeeChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Mitarbeiter wählen" />
+                        <SelectValue placeholder="Mitarbeiter/Teamleiter wählen" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.filter(e => e.rolle === 'Setter' || e.rolle === 'Lead Setter').map((emp) => (
+                        {employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.full_name}>
-                            {emp.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Closer/Allrounder</Label>
-                    <Select value={formData.closer_name} onValueChange={handleCloserChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Closer wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.filter(e => e.rolle === 'Closer/Allrounder' || e.rolle === 'Teamleiter').map((emp) => (
-                          <SelectItem key={emp.id} value={emp.full_name}>
-                            {emp.full_name}
+                            {emp.full_name} ({emp.rolle || 'Mitarbeiter'})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -695,14 +713,7 @@ export default function Leads() {
                       Wird automatisch vom zugewiesenen Mitarbeiter übernommen. Klicken Sie "Termin buchen" um den Kalender zu öffnen.
                     </p>
                   </div>
-                  <div className="space-y-2 col-span-2 bg-slate-50 p-3 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-slate-700">Bearbeitet von (Setter)</Label>
-                      <span className="text-sm font-medium text-slate-900">
-                        {formData.setter_name || user?.full_name || 'Automatisch'}
-                      </span>
-                    </div>
-                  </div>
+
                   <div className="space-y-2 col-span-2">
                     <Label>Infobox / Notizen</Label>
                     <Textarea

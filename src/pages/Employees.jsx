@@ -21,6 +21,9 @@ export default function Employees() {
     email: '',
     phone: '',
     sparte: 'Telekom',
+    rolle: 'Mitarbeiter',
+    titel: 'Mitarbeiter',
+    teamleiter_id: '',
     commission_rate: 0,
     fixed_commission: 0,
     bank_details: '',
@@ -70,6 +73,9 @@ export default function Employees() {
       email: '',
       phone: '',
       sparte: 'Telekom',
+      rolle: 'Mitarbeiter',
+      titel: 'Mitarbeiter',
+      teamleiter_id: '',
       commission_rate: 0,
       fixed_commission: 0,
       bank_details: '',
@@ -141,6 +147,32 @@ export default function Employees() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>Rolle *</Label>
+                  <Select value={formData.rolle} onValueChange={(value) => setFormData({ ...formData, rolle: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Mitarbeiter">Mitarbeiter</SelectItem>
+                      <SelectItem value="Teamleiter">Teamleiter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Titel</Label>
+                  <Select value={formData.titel} onValueChange={(value) => setFormData({ ...formData, titel: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Mitarbeiter">Mitarbeiter</SelectItem>
+                      <SelectItem value="Teamleiter">Teamleiter</SelectItem>
+                      <SelectItem value="Geschäftsführer">Geschäftsführer</SelectItem>
+                      <SelectItem value="Partner">Partner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Sparte/Abteilung *</Label>
                   <Select value={formData.sparte} onValueChange={(value) => setFormData({ ...formData, sparte: value })}>
                     <SelectTrigger>
@@ -165,6 +197,26 @@ export default function Employees() {
                     </SelectContent>
                   </Select>
                 </div>
+                {formData.rolle === 'Mitarbeiter' && (
+                  <div className="space-y-2 col-span-2">
+                    <Label>Zugeordneter Teamleiter</Label>
+                    <Select value={formData.teamleiter_id} onValueChange={(value) => setFormData({ ...formData, teamleiter_id: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Teamleiter wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.filter(e => e.rolle === 'Teamleiter').map((tl) => (
+                          <SelectItem key={tl.id} value={tl.id}>
+                            {tl.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      Der Teamleiter erhält zusätzliche Bonus-Provisionen für Abschlüsse dieses Mitarbeiters
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4 mt-4">
@@ -247,6 +299,7 @@ export default function Employees() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Rolle</TableHead>
                   <TableHead>Kontakt</TableHead>
                   <TableHead>Sparte</TableHead>
                   <TableHead>Provision</TableHead>
@@ -267,6 +320,11 @@ export default function Employees() {
                           )}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={employee.rolle === 'Teamleiter' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-800'}>
+                        {employee.rolle || 'Mitarbeiter'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
