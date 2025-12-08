@@ -54,14 +54,26 @@ export default function Dashboard() {
   const today = new Date().toISOString().split('T')[0];
   const todayTermine = allTermine.filter(t => {
     if (!t.startzeit) return false;
-    const terminDate = new Date(t.startzeit).toISOString().split('T')[0];
-    const isToday = terminDate === today;
-    
-    // Admin sieht alle, Teamleiter sieht alle, normale Mitarbeiter nur eigene
-    if (user?.role === 'admin') return isToday;
-    if (isTeamleiter) return isToday;
-    return isToday && t.mitarbeiter_email === user?.email;
-  }).sort((a, b) => new Date(a.startzeit) - new Date(b.startzeit));
+    try {
+      const terminDate = new Date(t.startzeit);
+      if (isNaN(terminDate.getTime())) return false;
+      const terminDateStr = terminDate.toISOString().split('T')[0];
+      const isToday = terminDateStr === today;
+      
+      // Admin sieht alle, Teamleiter sieht alle, normale Mitarbeiter nur eigene
+      if (user?.role === 'admin') return isToday;
+      if (isTeamleiter) return isToday;
+      return isToday && t.mitarbeiter_email === user?.email;
+    } catch {
+      return false;
+    }
+  }).sort((a, b) => {
+    try {
+      return new Date(a.startzeit) - new Date(b.startzeit);
+    } catch {
+      return 0;
+    }
+  });
 
   // Filter für Mitarbeiter - nur eigene Daten
   const leads = user?.role === 'admin' 
@@ -170,19 +182,23 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-blue-100">
-              {todayTermine.map((termin) => (
+              {todayTermine.map((termin) => {
+                const startDate = new Date(termin.startzeit);
+                const endDate = termin.endzeit ? new Date(termin.endzeit) : null;
+                
+                return (
                 <div key={termin.id} className="p-4 hover:bg-blue-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-blue-900">
-                          {new Date(termin.startzeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                          {!isNaN(startDate.getTime()) ? startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                         </span>
-                        {termin.endzeit && (
+                        {endDate && !isNaN(endDate.getTime()) && (
                           <>
                             <span className="text-slate-400">-</span>
                             <span className="text-slate-600">
-                              {new Date(termin.endzeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                              {endDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </>
                         )}
