@@ -25,8 +25,10 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
       {/* Employee Address */}
       <div className="mb-12">
         <p className="font-semibold">{employee?.full_name || creditNote.employee_name}</p>
-        <p>{employee?.address || 'Kantstr. 3'}</p>
-        <p>{employee?.city || '65451 Kelsterbach'}</p>
+        {employee?.address && <p>{employee.address}</p>}
+        {(employee?.postal_code || employee?.city) && (
+          <p>{employee?.postal_code} {employee?.city}</p>
+        )}
       </div>
 
       {/* Title and Details */}
