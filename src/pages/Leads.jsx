@@ -149,6 +149,9 @@ export default function Leads() {
   };
 
   const resetForm = () => {
+    // Finde aktuellen Mitarbeiter
+    const currentEmployee = employees.find(e => e.email === user?.email);
+    
     setFormData({
       firma: '',
       ansprechpartner: '',
@@ -163,12 +166,12 @@ export default function Leads() {
       produkt: '',
       bandbreite: '',
       laufzeit_monate: 36,
-      assigned_to: '',
-      assigned_to_email: '',
+      assigned_to: currentEmployee?.full_name || '',
+      assigned_to_email: currentEmployee?.email || user?.email || '',
       berechnete_provision: 0,
       teamleiter_bonus: 0,
       sparte: 'Telekom',
-      google_calendar_link: ''
+      google_calendar_link: currentEmployee?.google_calendar_link || ''
     });
     setEditingLead(null);
   };
@@ -687,18 +690,14 @@ export default function Leads() {
                   })()}
                   <div className="space-y-2 col-span-2">
                     <Label>Zugewiesen an</Label>
-                    <Select value={formData.assigned_to} onValueChange={handleEmployeeChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Mitarbeiter/Teamleiter wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.full_name}>
-                            {emp.full_name} ({emp.rolle || 'Mitarbeiter'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      value={formData.assigned_to}
+                      disabled
+                      className="bg-slate-100"
+                    />
+                    <p className="text-xs text-slate-500">
+                      Automatisch zugewiesen. Teamleiter wird über Mitarbeiter-Einstellungen zugeordnet.
+                    </p>
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Google Kalender</Label>
