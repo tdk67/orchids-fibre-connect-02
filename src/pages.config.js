@@ -13,6 +13,7 @@ import PVP from './pages/PVP';
 import Unternehmenssuche from './pages/Unternehmenssuche';
 import Bestandskunden from './pages/Bestandskunden';
 import Kalender from './pages/Kalender';
+import Outlook from './pages/Outlook';
 import __Layout from './Layout.jsx';
 
 
@@ -32,6 +33,7 @@ export const PAGES = {
     "Unternehmenssuche": Unternehmenssuche,
     "Bestandskunden": Bestandskunden,
     "Kalender": Kalender,
+    "Outlook": Outlook,
 }
 
 export const pagesConfig = {

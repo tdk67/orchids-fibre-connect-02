@@ -31,6 +31,7 @@ export default function Layout({ children, currentPageName }) {
   const navigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
     { name: 'Kalender', path: 'Kalender', icon: CalendarIcon, roles: ['admin', 'user'] },
+    { name: 'Outlook', path: 'Outlook', icon: Mail, roles: ['admin', 'user'] },
     { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'] },
     { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'] },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'] },
