@@ -619,8 +619,8 @@ export default function Leads() {
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <Select value={formData.status} onValueChange={(value) => {
-                      // Automatisch archiv_kategorie setzen
-                      let archivKategorie = formData.archiv_kategorie;
+                      // Automatisch archiv_kategorie setzen basierend auf Status
+                      let archivKategorie = '';
                       if (value === 'Nicht erreicht') {
                         archivKategorie = 'Nicht erreicht';
                       } else if (value === 'Anderer Provider') {
