@@ -8,13 +8,18 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
   const mwst = brutto - netto;
 
   return (
-    <div id="credit-note-document" className="bg-white p-12 max-w-4xl mx-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-800" style={{ letterSpacing: '0.3em' }}>
-          CAREER AGENTS
-        </h1>
-        <p className="text-sm text-slate-600 mt-1">EINFACH ERFOLGREICH</p>
+    <div id="credit-note-document" className="bg-white p-12 w-full h-full min-h-[297mm]" style={{ fontFamily: 'Arial, sans-serif', width: '210mm', height: '297mm' }}>
+      {/* Header with Logo */}
+      <div className="flex items-center justify-between mb-8">
+        <img 
+          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/530965a64_Unbenannt.png"
+          alt="Career Agents"
+          className="h-20 object-contain"
+        />
+        <div className="text-right">
+          <h1 className="text-2xl font-bold text-slate-800">GUTSCHRIFT</h1>
+          <p className="text-sm text-slate-600 mt-1">Provisionsabrechnung</p>
+        </div>
       </div>
 
       {/* Company Address */}
