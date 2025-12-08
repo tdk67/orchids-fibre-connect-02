@@ -226,54 +226,55 @@ export default function Postfach() {
                 E-Mail senden
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Neue E-Mail verfassen</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-              <p className="text-xs text-green-900">
-                Von: {currentEmployee?.email_login || 'Keine E-Mail konfiguriert'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>An</Label>
-              <Input
-                type="email"
-                value={composeData.empfaenger}
-                onChange={(e) => setComposeData({ ...composeData, empfaenger: e.target.value })}
-                placeholder="empfaenger@beispiel.de"
-              />
-            </div>
-              <div className="space-y-2">
-                <Label>Betreff</Label>
-                <Input
-                  value={composeData.betreff}
-                  onChange={(e) => setComposeData({ ...composeData, betreff: e.target.value })}
-                  placeholder="Betreff eingeben..."
-                />
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Neue E-Mail verfassen</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                  <p className="text-xs text-green-900">
+                    Von: {currentEmployee?.email_login || 'Keine E-Mail konfiguriert'}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>An</Label>
+                  <Input
+                    type="email"
+                    value={composeData.empfaenger}
+                    onChange={(e) => setComposeData({ ...composeData, empfaenger: e.target.value })}
+                    placeholder="empfaenger@beispiel.de"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Betreff</Label>
+                  <Input
+                    value={composeData.betreff}
+                    onChange={(e) => setComposeData({ ...composeData, betreff: e.target.value })}
+                    placeholder="Betreff eingeben..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nachricht</Label>
+                  <Textarea
+                    value={composeData.nachricht}
+                    onChange={(e) => setComposeData({ ...composeData, nachricht: e.target.value })}
+                    rows={8}
+                    placeholder="Ihre Nachricht..."
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setIsComposeOpen(false)}>
+                    Abbrechen
+                  </Button>
+                  <Button onClick={handleSendEmail} className="bg-blue-900 hover:bg-blue-800">
+                    <Send className="h-4 w-4 mr-2" />
+                    Senden
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Nachricht</Label>
-                <Textarea
-                  value={composeData.nachricht}
-                  onChange={(e) => setComposeData({ ...composeData, nachricht: e.target.value })}
-                  rows={8}
-                  placeholder="Ihre Nachricht..."
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setIsComposeOpen(false)}>
-                  Abbrechen
-                </Button>
-                <Button onClick={handleSendEmail} className="bg-blue-900 hover:bg-blue-800">
-                  <Send className="h-4 w-4 mr-2" />
-                  Senden
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats */}
