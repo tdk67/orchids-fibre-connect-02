@@ -8,34 +8,34 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
   const mwst = brutto - netto;
 
   return (
-    <div id="credit-note-document" className="bg-white p-12 w-full h-full min-h-[297mm]" style={{ fontFamily: 'Arial, sans-serif', width: '210mm', height: '297mm' }}>
+    <div id="credit-note-document" className="bg-white p-8 w-full h-full min-h-[297mm]" style={{ fontFamily: 'Arial, sans-serif', width: '210mm', height: '297mm' }}>
       {/* Header with Logo */}
-      <div className="text-center mb-12">
+      <div className="text-center mb-6">
         <img 
           src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/fd4ebd25d_EE-logo-1-1e3f66-1024x576.png"
           alt="Career Agents"
-          className="h-48 w-auto mx-auto object-contain"
+          className="h-24 w-auto mx-auto object-contain"
         />
       </div>
 
       {/* Company Address */}
-      <div className="text-xs text-slate-600 mb-8">
+      <div className="text-xs text-slate-600 mb-4">
         CAREER AGENTS | Seelbacher Weg 4, 35764 Sinn, Germany
       </div>
 
       {/* Employee Address */}
-      <div className="mb-12">
-        <p className="font-semibold">{employee?.full_name || creditNote.employee_name}</p>
-        {employee?.address && <p>{employee.address}</p>}
+      <div className="mb-6">
+        <p className="font-semibold text-sm">{employee?.full_name || creditNote.employee_name}</p>
+        {employee?.address && <p className="text-sm">{employee.address}</p>}
         {(employee?.postal_code || employee?.city) && (
-          <p>{employee?.postal_code} {employee?.city}</p>
+          <p className="text-sm">{employee?.postal_code} {employee?.city}</p>
         )}
       </div>
 
       {/* Title and Details */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold mb-6">Gutschrift</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold mb-3">Gutschrift</h2>
+        <div className="grid grid-cols-2 gap-2 text-xs">
           <div>
             <span className="font-semibold">Datum:</span>
           </div>
@@ -63,21 +63,21 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
         </div>
       </div>
 
-      <p className="text-sm mb-8">
+      <p className="text-xs mb-4">
         Ihre Provisionsabrechnung/Gutschrift zum Stichtag {new Date(creditNote.issued_date).toLocaleDateString('de-DE')}
       </p>
 
       {/* Sales Table */}
-      <div className="mb-8">
+      <div className="mb-4">
         <table className="w-full border-t-2 border-b-2 border-slate-800">
           <thead>
-            <tr className="text-sm">
-              <th className="text-left py-3 font-semibold">Kunde und Tarif</th>
-              <th className="text-right py-3 font-semibold">Anzahl</th>
-              <th className="text-right py-3 font-semibold">Netto</th>
-              <th className="text-right py-3 font-semibold">MwSt</th>
-              <th className="text-right py-3 font-semibold">Ust</th>
-              <th className="text-right py-3 font-semibold">Brutto</th>
+            <tr className="text-xs">
+              <th className="text-left py-2 font-semibold">Kunde und Tarif</th>
+              <th className="text-right py-2 font-semibold">Anzahl</th>
+              <th className="text-right py-2 font-semibold">Netto</th>
+              <th className="text-right py-2 font-semibold">MwSt</th>
+              <th className="text-right py-2 font-semibold">Ust</th>
+              <th className="text-right py-2 font-semibold">Brutto</th>
             </tr>
           </thead>
           <tbody>
@@ -87,8 +87,8 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
               const saleMwst = saleBrutto - saleNetto;
               
               return (
-                <tr key={index} className="text-sm border-b border-slate-200">
-                  <td className="py-4">
+                <tr key={index} className="text-xs border-b border-slate-200">
+                  <td className="py-2">
                     <div className="font-semibold">{sale.customer_name}</div>
                     <div className="text-xs text-slate-600">
                       {sale.product || 'Tarif'}
@@ -111,32 +111,32 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
         </table>
       </div>
 
-      <p className="text-sm mb-8">
+      <p className="text-xs mb-4">
         Die Auszahlung erfolgt auf das von Ihnen angegebene Konto.
       </p>
 
-      <div className="border-t border-slate-300 pt-4">
+      <div className="border-t border-slate-300 pt-3">
         {/* Summary */}
         <div className="flex justify-end">
-          <div className="w-96">
-            <div className="flex justify-between py-2">
+          <div className="w-80">
+            <div className="flex justify-between py-1 text-sm">
               <span>Zwischensumme</span>
               <span className="font-semibold">{netto.toFixed(2)} €</span>
             </div>
-            <div className="flex justify-between py-2">
+            <div className="flex justify-between py-1 text-sm">
               <span>Steuerbetrag</span>
               <span className="font-semibold">{mwst.toFixed(2)} €</span>
             </div>
-            <div className="flex justify-between py-2 border-t-2 border-slate-800 mt-2 pt-2">
+            <div className="flex justify-between py-1 border-t-2 border-slate-800 mt-1 pt-1 text-sm">
               <span className="font-bold">Gesamtbetrag</span>
-              <span className="font-bold text-lg">{brutto.toFixed(2)} €</span>
+              <span className="font-bold">{brutto.toFixed(2)} €</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="mt-16 pt-8 border-t border-slate-300 text-center text-xs text-slate-600">
+      <div className="mt-8 pt-4 border-t border-slate-300 text-center text-xs text-slate-600">
         <p>CAREER AGENTS | Seelbacher Weg 4, 35764 Sinn, Germany</p>
         <p>Postbank BIC: PBNKDEFF IBAN: DE33 1001 0010 0073 5071 40</p>
         <p>Steuernummer: 009 853 31159</p>
