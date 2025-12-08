@@ -14,10 +14,8 @@ export default function CreditNoteDocument({ creditNote, employee, sales }) {
         <img 
           src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/fd4ebd25d_EE-logo-1-1e3f66-1024x576.png"
           alt="Career Agents"
-          className="h-32 w-auto mx-auto object-contain mb-6"
+          className="h-48 w-auto mx-auto object-contain"
         />
-        <h1 className="text-3xl font-bold text-slate-800">GUTSCHRIFT</h1>
-        <p className="text-sm text-slate-600 mt-2">Provisionsabrechnung</p>
       </div>
 
       {/* Company Address */}
