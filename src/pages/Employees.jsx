@@ -88,6 +88,15 @@ export default function Employees() {
       bank_details: '',
       tax_id: '',
       google_calendar_link: '',
+      email_adresse: '',
+      smtp_server: '',
+      smtp_port: 587,
+      smtp_username: '',
+      smtp_password: '',
+      imap_server: '',
+      imap_port: 993,
+      imap_username: '',
+      imap_password: '',
       status: 'Aktiv'
     });
     setEditingEmployee(null);
@@ -302,6 +311,94 @@ export default function Employees() {
                     <p className="text-xs text-slate-500">
                       Dieser Kalender wird automatisch mit den Leads des Mitarbeiters verknüpft
                     </p>
+                  </div>
+                  </div>
+                  </div>
+
+                  <div className="border-t pt-4 mt-4">
+                  <h3 className="font-semibold text-slate-900 mb-4">E-Mail Konfiguration (IONOS SMTP/IMAP)</h3>
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+                  <p className="text-xs text-blue-900">
+                    <strong>IONOS Standard:</strong> SMTP: smtp.ionos.de (Port 587), IMAP: imap.ionos.de (Port 993)
+                  </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <Label>E-Mail-Adresse</Label>
+                    <Input
+                      type="email"
+                      value={formData.email_adresse}
+                      onChange={(e) => setFormData({ ...formData, email_adresse: e.target.value })}
+                      placeholder="mitarbeiter@firma.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Server</Label>
+                    <Input
+                      value={formData.smtp_server}
+                      onChange={(e) => setFormData({ ...formData, smtp_server: e.target.value })}
+                      placeholder="smtp.ionos.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Port</Label>
+                    <Input
+                      type="number"
+                      value={formData.smtp_port}
+                      onChange={(e) => setFormData({ ...formData, smtp_port: parseInt(e.target.value) || 587 })}
+                      placeholder="587"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Benutzername</Label>
+                    <Input
+                      value={formData.smtp_username}
+                      onChange={(e) => setFormData({ ...formData, smtp_username: e.target.value })}
+                      placeholder="mitarbeiter@firma.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Passwort</Label>
+                    <Input
+                      type="password"
+                      value={formData.smtp_password}
+                      onChange={(e) => setFormData({ ...formData, smtp_password: e.target.value })}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IMAP Server</Label>
+                    <Input
+                      value={formData.imap_server}
+                      onChange={(e) => setFormData({ ...formData, imap_server: e.target.value })}
+                      placeholder="imap.ionos.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IMAP Port</Label>
+                    <Input
+                      type="number"
+                      value={formData.imap_port}
+                      onChange={(e) => setFormData({ ...formData, imap_port: parseInt(e.target.value) || 993 })}
+                      placeholder="993"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IMAP Benutzername</Label>
+                    <Input
+                      value={formData.imap_username}
+                      onChange={(e) => setFormData({ ...formData, imap_username: e.target.value })}
+                      placeholder="mitarbeiter@firma.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>IMAP Passwort</Label>
+                    <Input
+                      type="password"
+                      value={formData.imap_password}
+                      onChange={(e) => setFormData({ ...formData, imap_password: e.target.value })}
+                      placeholder="••••••••"
+                    />
                   </div>
                   </div>
                   </div>
