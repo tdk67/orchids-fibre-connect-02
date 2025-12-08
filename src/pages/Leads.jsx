@@ -858,15 +858,29 @@ export default function Leads() {
                       rows={3}
                     />
                   </div>
-                </div>
-                <div className="flex justify-end gap-3">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Abbrechen
+                  </div>
+                  <div className="flex justify-between gap-3">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => {
+                      handleTerminClick(editingLead || formData);
+                      setIsDialogOpen(false);
+                    }}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-900"
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    Termin erstellen
                   </Button>
-                  <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                    {editingLead ? 'Speichern' : 'Erstellen'}
-                  </Button>
-                </div>
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Abbrechen
+                    </Button>
+                    <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
+                      {editingLead ? 'Speichern' : 'Erstellen'}
+                    </Button>
+                  </div>
+                  </div>
               </form>
             </DialogContent>
           </Dialog>
@@ -1079,14 +1093,6 @@ export default function Leads() {
                     )}
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleTerminClick(lead)}
-                          title="Termin erstellen"
-                        >
-                          <Clock className="h-4 w-4 text-blue-600" />
-                        </Button>
                         {lead.google_calendar_link && (
                           <Button 
                             variant="ghost" 
