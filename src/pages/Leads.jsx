@@ -126,14 +126,23 @@ export default function Leads() {
     
     let dataToSave = { ...formData };
     
-    // Automatisch Datum setzen wenn archiv_kategorie vorhanden ist
-    if (dataToSave.archiv_kategorie) {
-      // Nur Datum setzen wenn es noch nicht gesetzt ist ODER wenn die Kategorie sich geändert hat
-      if (!dataToSave.archiviert_am || dataToSave.archiv_kategorie !== editingLead?.archiv_kategorie) {
+    // Prüfe ob Status ein Archiv-Status ist
+    const archivStatusMapping = {
+      'Nicht erreicht': 'Nicht erreicht',
+      'Anderer Provider': 'Anderer Provider',
+      'Kein Interesse': 'Kein Interesse'
+    };
+    
+    // Setze archiv_kategorie basierend auf Status
+    if (archivStatusMapping[dataToSave.status]) {
+      dataToSave.archiv_kategorie = archivStatusMapping[dataToSave.status];
+      // Setze Datum wenn noch nicht vorhanden oder wenn Kategorie neu/geändert wurde
+      if (!editingLead?.archiv_kategorie || editingLead.archiv_kategorie !== dataToSave.archiv_kategorie) {
         dataToSave.archiviert_am = new Date().toISOString().split('T')[0];
       }
     } else {
-      // Keine Archivierung - Datum löschen
+      // Kein Archiv-Status - entferne Archivierung
+      dataToSave.archiv_kategorie = '';
       dataToSave.archiviert_am = '';
     }
     
