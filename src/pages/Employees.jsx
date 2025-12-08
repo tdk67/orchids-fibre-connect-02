@@ -32,6 +32,8 @@ export default function Employees() {
     bank_details: '',
     tax_id: '',
     google_calendar_link: '',
+    email_login: '',
+    email_password: '',
     status: 'Aktiv'
   });
 
