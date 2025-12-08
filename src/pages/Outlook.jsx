@@ -91,28 +91,18 @@ export default function Outlook() {
         ? `${composeForm.nachricht}\n\n---\n${signature}`
         : composeForm.nachricht;
 
-      // Send email via Base44
-      await base44.integrations.Core.SendEmail({
+      // Send email via SMTP
+      const response = await base44.functions.invoke('sendEmailSMTP', {
         to: composeForm.empfaenger,
         subject: composeForm.betreff,
-        body: messageWithSignature,
-        from_name: user?.full_name || user?.email
+        body: messageWithSignature
       });
 
-      // Save to database
-      await createEmailMutation.mutateAsync({
-        betreff: composeForm.betreff,
-        absender: user?.email,
-        empfaenger: composeForm.empfaenger,
-        nachricht: messageWithSignature,
-        mitarbeiter_email: user?.email,
-        mitarbeiter_name: user?.full_name,
-        sparte: currentEmployee?.sparte || 'Backoffice',
-        typ: 'Ausgang',
-        gelesen: true,
-        timestamp: new Date().toISOString()
-      });
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
 
+      queryClient.invalidateQueries(['emails']);
       alert('E-Mail erfolgreich versendet!');
       setShowComposeDialog(false);
       setComposeForm({ empfaenger: '', betreff: '', nachricht: '' });
@@ -120,6 +110,21 @@ export default function Outlook() {
       alert('Fehler beim Versenden: ' + error.message);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleReceiveEmails = async () => {
+    try {
+      const response = await base44.functions.invoke('receiveEmailsPOP3', {});
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+
+      queryClient.invalidateQueries(['emails']);
+      alert(`${response.data.newEmailsCount} neue E-Mails empfangen!`);
+    } catch (error) {
+      alert('Fehler beim Empfangen: ' + error.message);
     }
   };
 
@@ -152,6 +157,10 @@ export default function Outlook() {
           <p className="text-slate-500 mt-1">Ihre E-Mail Verwaltung</p>
         </div>
         <div className="flex gap-3">
+          <Button variant="outline" onClick={handleReceiveEmails}>
+            <Inbox className="h-4 w-4 mr-2" />
+            E-Mails abrufen
+          </Button>
           <Button variant="outline" onClick={() => setShowSettingsDialog(true)}>
             <Settings className="h-4 w-4 mr-2" />
             Einstellungen
@@ -339,11 +348,12 @@ export default function Outlook() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-900">
-                <strong>Ihre E-Mail-Adresse:</strong> {user?.email}
+              <p className="text-sm text-blue-900 font-semibold mb-2">
+                SMTP & POP3 Konfiguration
               </p>
-              <p className="text-xs text-blue-800 mt-1">
-                Empfangene E-Mails können manuell über "Neue E-Mail" → Typ: Eingang erstellt werden.
+              <p className="text-xs text-blue-800">
+                Bitte kontaktieren Sie Ihren Administrator, um Ihre E-Mail-Server-Zugangsdaten (SMTP/POP3) zu konfigurieren.
+                Diese werden in Ihren Mitarbeiter-Einstellungen hinterlegt.
               </p>
             </div>
             <div className="space-y-2">

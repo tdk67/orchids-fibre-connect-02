@@ -89,6 +89,14 @@ export default function Employees() {
       tax_id: '',
       google_calendar_link: '',
       email_adresse: '',
+      smtp_server: '',
+      smtp_port: 587,
+      smtp_username: '',
+      smtp_password: '',
+      pop3_server: '',
+      pop3_port: 995,
+      pop3_username: '',
+      pop3_password: '',
       status: 'Aktiv'
     });
     setEditingEmployee(null);
@@ -308,20 +316,90 @@ export default function Employees() {
               </div>
 
               <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Postfach</h3>
+                <h3 className="font-semibold text-slate-900 mb-4">E-Mail Konfiguration (SMTP/POP3)</h3>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
                   <p className="text-xs text-blue-900">
-                    E-Mails werden automatisch über Base44 versendet. Empfangene E-Mails können manuell erfasst werden.
+                    <strong>Beispiel IONOS:</strong> SMTP: smtp.ionos.de (Port 587), POP3: pop.ionos.de (Port 995)
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label>E-Mail-Adresse</Label>
-                  <Input
-                    type="email"
-                    value={formData.email_adresse}
-                    onChange={(e) => setFormData({ ...formData, email_adresse: e.target.value })}
-                    placeholder="mitarbeiter@firma.de"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <Label>E-Mail-Adresse</Label>
+                    <Input
+                      type="email"
+                      value={formData.email_adresse}
+                      onChange={(e) => setFormData({ ...formData, email_adresse: e.target.value })}
+                      placeholder="mitarbeiter@firma.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Server</Label>
+                    <Input
+                      value={formData.smtp_server}
+                      onChange={(e) => setFormData({ ...formData, smtp_server: e.target.value })}
+                      placeholder="smtp.ionos.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Port</Label>
+                    <Input
+                      type="number"
+                      value={formData.smtp_port}
+                      onChange={(e) => setFormData({ ...formData, smtp_port: parseInt(e.target.value) || 587 })}
+                      placeholder="587"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Benutzername</Label>
+                    <Input
+                      value={formData.smtp_username}
+                      onChange={(e) => setFormData({ ...formData, smtp_username: e.target.value })}
+                      placeholder="mitarbeiter@firma.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Passwort</Label>
+                    <Input
+                      type="password"
+                      value={formData.smtp_password}
+                      onChange={(e) => setFormData({ ...formData, smtp_password: e.target.value })}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>POP3 Server</Label>
+                    <Input
+                      value={formData.pop3_server}
+                      onChange={(e) => setFormData({ ...formData, pop3_server: e.target.value })}
+                      placeholder="pop.ionos.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>POP3 Port</Label>
+                    <Input
+                      type="number"
+                      value={formData.pop3_port}
+                      onChange={(e) => setFormData({ ...formData, pop3_port: parseInt(e.target.value) || 995 })}
+                      placeholder="995"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>POP3 Benutzername</Label>
+                    <Input
+                      value={formData.pop3_username}
+                      onChange={(e) => setFormData({ ...formData, pop3_username: e.target.value })}
+                      placeholder="mitarbeiter@firma.de"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>POP3 Passwort</Label>
+                    <Input
+                      type="password"
+                      value={formData.pop3_password}
+                      onChange={(e) => setFormData({ ...formData, pop3_password: e.target.value })}
+                      placeholder="••••••••"
+                    />
+                  </div>
                 </div>
               </div>
 
