@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock } from 'lucide-react';
+import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -410,6 +410,14 @@ export default function Leads() {
     },
   });
 
+  const createAngebotMutation = useMutation({
+    mutationFn: (data) => base44.entities.Angebot.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['angebote']);
+      alert('Angebot erfolgreich erstellt!');
+    },
+  });
+
   const handleCreateTermin = () => {
     if (!selectedTimeSlot || !selectedLeadForTermin) return;
     
@@ -432,6 +440,30 @@ export default function Leads() {
       typ: 'Termin',
       status: 'Geplant'
     });
+  };
+
+  const handleCreateAngebot = async (lead) => {
+    if (!lead.produkt) {
+      alert('Bitte wählen Sie zuerst ein Produkt aus.');
+      return;
+    }
+
+    const angebotData = {
+      lead_id: lead.id,
+      firma: lead.firma,
+      ansprechpartner: lead.ansprechpartner,
+      strasse_hausnummer: lead.strasse_hausnummer,
+      postleitzahl: lead.postleitzahl,
+      stadt: lead.stadt,
+      produkt: lead.produkt,
+      template_name: lead.produkt,
+      status: 'Erstellt',
+      erstellt_von: user?.full_name || user?.email,
+      erstellt_datum: new Date().toISOString().split('T')[0],
+      notizen: `Bandbreite: ${lead.bandbreite || '-'}, Laufzeit: ${lead.laufzeit_monate || '-'} Monate`
+    };
+
+    createAngebotMutation.mutate(angebotData);
   };
 
   const handleEmployeeChange = (employeeName) => {
@@ -888,18 +920,31 @@ export default function Leads() {
                   </div>
                   </div>
                   <div className="flex justify-between gap-3">
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    onClick={() => {
-                      handleTerminClick(editingLead || formData);
-                      setIsDialogOpen(false);
-                    }}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-900"
-                  >
-                    <Clock className="h-4 w-4 mr-2" />
-                    Termin erstellen
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => {
+                        handleTerminClick(editingLead || formData);
+                        setIsDialogOpen(false);
+                      }}
+                      className="bg-blue-50 hover:bg-blue-100 text-blue-900"
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      Termin
+                    </Button>
+                    {editingLead && editingLead.produkt && (
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => handleCreateAngebot(editingLead)}
+                        className="bg-green-50 hover:bg-green-100 text-green-900"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Angebot erstellen
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex gap-3">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Abbrechen
