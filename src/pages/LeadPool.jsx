@@ -134,6 +134,8 @@ export default function LeadPool() {
 
         if (result.success) {
           totalAssigned += result.assigned;
+        } else if (result.message) {
+          console.log(`${emp.full_name}: ${result.message}`);
         }
       }
 
@@ -154,6 +156,8 @@ export default function LeadPool() {
 
       queryClient.invalidateQueries(['leads']);
       if (result.success) {
+        alert(result.message);
+      } else if (result.message) {
         alert(result.message);
       }
     } catch (error) {
@@ -354,6 +358,7 @@ export default function LeadPool() {
             <li>✅ Jeder Mitarbeiter soll 50 aktive Leads gleichzeitig haben</li>
             <li>✅ Klicken Sie "Auto-Verteilung" um automatisch zu verteilen</li>
             <li>✅ Wenn ein Mitarbeiter Leads bearbeitet (Status ändert), werden automatisch neue Leads nachgeliefert</li>
+            <li>⚠️ <strong>Limit-Regel:</strong> Bei ≥10 "Bearbeitet", ≥10 "Adresspunkte" oder ≥50 "Nicht erreicht" keine neuen Leads</li>
             <li>✅ System prüft automatisch: Hat Mitarbeiter {"<"} 50 Leads? → Neue Leads aus Pool zuweisen</li>
             <li>ℹ️ Pool-Leads werden nicht angezeigt - nur für die automatische Verteilung im Hintergrund</li>
           </ul>
