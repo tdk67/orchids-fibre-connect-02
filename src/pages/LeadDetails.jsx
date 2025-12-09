@@ -199,13 +199,24 @@ export default function LeadDetails() {
 
             setFormData(dataToSave);
           } else {
-            // Keine Daten gefunden - zu Adresspunkte
+            // Keine Daten gefunden - zu Adresspunkte (nur Stadt, PLZ, Adresse übertragen)
             dataToSave = {
-              ...dataToSave,
+              benutzertyp: dataToSave.benutzertyp,
+              firma: '',
+              ansprechpartner: '',
+              stadt: dataToSave.stadt || '',
+              postleitzahl: dataToSave.postleitzahl || '',
+              strasse_hausnummer: dataToSave.strasse_hausnummer || '',
+              telefon: '',
+              telefon2: '',
+              email: '',
+              assigned_to: dataToSave.assigned_to,
+              assigned_to_email: dataToSave.assigned_to_email,
+              sparte: dataToSave.sparte,
               status: 'Adresspunkte',
               archiv_kategorie: 'Adresspunkte',
               archiviert_am: new Date().toISOString().split('T')[0],
-              infobox: `${dataToSave.infobox || ''}\n\n[Überprüft am ${new Date().toLocaleDateString('de-DE')}]\nKeine aktuellen Daten im Internet gefunden. Adresse zur manuellen Überprüfung vorgemerkt.`.trim()
+              infobox: `[Überprüft am ${new Date().toLocaleDateString('de-DE')}]\nKeine aktuellen Daten im Internet gefunden. Nur Adressdaten vorgemerkt zur manuellen Überprüfung.`
             };
 
             setFormData(dataToSave);
