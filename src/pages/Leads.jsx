@@ -90,15 +90,6 @@ export default function Leads() {
     return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
   }, []);
 
-  // Tab aus URL-Parameter setzen
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    if (tab && ['aktiv', 'nicht_erreicht', 'anderer_provider', 'kein_interesse'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [location.search]);
-
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: () => base44.entities.Lead.list('-created_date'),
