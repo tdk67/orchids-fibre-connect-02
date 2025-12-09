@@ -126,10 +126,20 @@ export default function Leads() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
-    onSuccess: () => {
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries(['leads']);
-      setIsDialogOpen(false);
-      resetForm();
+
+      // Navigiere zum richtigen Tab basierend auf archiv_kategorie
+      let targetTab = 'aktiv';
+      if (variables.data.archiv_kategorie === 'Nicht erreicht') {
+        targetTab = 'nicht_erreicht';
+      } else if (variables.data.archiv_kategorie === 'Anderer Provider') {
+        targetTab = 'anderer_provider';
+      } else if (variables.data.archiv_kategorie === 'Kein Interesse') {
+        targetTab = 'kein_interesse';
+      }
+
+      navigate(createPageUrl('Leads') + `?tab=${targetTab}`);
     },
   });
 
