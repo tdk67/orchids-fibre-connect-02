@@ -126,19 +126,24 @@ export default function Leads() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
-    onSuccess: (response, variables) => {
-      queryClient.invalidateQueries(['leads']);
+    onSuccess: async (response, variables) => {
+      // Warte auf Query-Invalidierung
+      await queryClient.invalidateQueries(['leads']);
 
-      // Navigiere zum richtigen Tab basierend auf archiv_kategorie
+      // Bestimme den Ziel-Tab basierend auf archiv_kategorie
       let targetTab = 'aktiv';
       if (variables.data.archiv_kategorie === 'Nicht erreicht') {
         targetTab = 'nicht_erreicht';
+        alert('Lead wurde in "Nicht erreicht" verschoben!');
       } else if (variables.data.archiv_kategorie === 'Anderer Provider') {
         targetTab = 'anderer_provider';
+        alert('Lead wurde in "Anderer Provider" verschoben!');
       } else if (variables.data.archiv_kategorie === 'Kein Interesse') {
         targetTab = 'kein_interesse';
+        alert('Lead wurde in "Kein Interesse" verschoben!');
       }
 
+      // Navigiere zum richtigen Tab
       navigate(createPageUrl('Leads') + `?tab=${targetTab}`);
     },
   });
