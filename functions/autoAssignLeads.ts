@@ -75,16 +75,19 @@ Deno.serve(async (req) => {
 
     const currentCount = assignedLeads.length;
     const targetCount = 50;
-    const needsAssignment = targetCount - currentCount;
-
-    if (needsAssignment <= 0) {
+    const minThreshold = 40;
+    
+    // Nur auffüllen wenn unter 40 Leads
+    if (currentCount >= minThreshold) {
       return Response.json({ 
         success: true, 
-        message: 'Mitarbeiter hat bereits 50 Leads',
+        message: `Mitarbeiter hat ${currentCount} Leads (Schwelle: ${minThreshold})`,
         assigned: 0,
         currentCount 
       });
     }
+    
+    const needsAssignment = targetCount - currentCount;
 
     // Hole unzugewiesene Leads aus Pool (schließe Leads vom vorherigen MA aus)
     const poolLeads = allLeads.filter(l => 
