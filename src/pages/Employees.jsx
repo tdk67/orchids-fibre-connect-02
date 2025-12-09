@@ -70,10 +70,24 @@ export default function Employees() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
     if (editingEmployee) {
       updateMutation.mutate({ id: editingEmployee.id, data: formData });
     } else {
-      createMutation.mutate(formData);
+      // Automatische Mitarbeiternummer generieren
+      const existingNumbers = employees
+        .map(e => e.employee_number)
+        .filter(num => num && num.startsWith('MA'))
+        .map(num => parseInt(num.replace('MA', '')))
+        .filter(num => !isNaN(num));
+      
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      const employeeNumber = `MA${nextNumber.toString().padStart(3, '0')}`;
+      
+      createMutation.mutate({
+        ...formData,
+        employee_number: employeeNumber
+      });
     }
   };
 
@@ -156,9 +170,11 @@ export default function Employees() {
                 <div className="space-y-2">
                   <Label>Mitarbeiternummer</Label>
                   <Input
-                    value={formData.employee_number}
-                    onChange={(e) => setFormData({ ...formData, employee_number: e.target.value })}
+                    value={formData.employee_number || (editingEmployee ? formData.employee_number : 'Wird automatisch vergeben')}
+                    disabled
+                    className="bg-slate-100"
                   />
+                  <p className="text-xs text-slate-500">Wird automatisch beim Erstellen vergeben (z.B. MA001)</p>
                 </div>
                 <div className="space-y-2">
                   <Label>E-Mail</Label>
