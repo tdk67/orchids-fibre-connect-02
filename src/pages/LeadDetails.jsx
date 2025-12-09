@@ -187,22 +187,18 @@ export default function LeadDetails() {
       dataToSave.archiviert_am = '';
     }
 
-    if (dataToSave.status === 'Angebot erstellt') {
-      dataToSave.verkaufschance_status = 'Angebot erstellt';
+    // Wenn Status auf Angebot gesetzt wird, zu Verkaufschancen verschieben
+    if (dataToSave.status === 'Angebot erstellt' || dataToSave.status === 'Angebot gesendet') {
+      dataToSave.verkaufschance_status = dataToSave.status;
     }
-    
+
     if (lead) {
-      if (dataToSave.status === 'Angebot gesendet' && lead.status !== 'Angebot gesendet') {
-        await base44.entities.Lead.update(lead.id, {
-          ...dataToSave,
-          verkaufschance_status: 'Angebot gesendet'
-        });
-        
-        setTimeout(() => {
-          deleteMutation.mutate(lead.id);
-        }, 500);
-        
+      // Wenn Status auf Angebot geändert wird, zu Verkaufschancen verschieben
+      if ((dataToSave.status === 'Angebot erstellt' || dataToSave.status === 'Angebot gesendet') && 
+          lead.status !== dataToSave.status) {
+        await base44.entities.Lead.update(lead.id, dataToSave);
         alert('Lead wurde zu Verkaufschancen verschoben!');
+        navigate(createPageUrl('Verkaufschancen'));
       } else {
         updateMutation.mutate({ id: lead.id, data: dataToSave });
       }
