@@ -52,25 +52,27 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Kalender', path: 'Kalender', icon: CalendarIcon, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'E-Mail', path: 'Outlook', icon: Mail, roles: ['admin', 'user'], partnerAccess: true },
-    { name: 'Lead Pool', path: 'LeadPool', icon: Shield, roles: ['admin'], partnerAccess: false },
+    { name: 'Lead Pool', path: 'LeadPool', icon: Shield, roles: ['admin', 'teamleiter'], partnerAccess: false },
     { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'], partnerAccess: true },
-    { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin'], partnerAccess: false },
+    { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin', 'teamleiter'], partnerAccess: false },
     { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart, roles: ['admin', 'user'], partnerAccess: true },
-    { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'], partnerAccess: false },
-    { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin'], partnerAccess: false },
+    { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin', 'teamleiter'], partnerAccess: false },
+    { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin', 'teamleiter'], partnerAccess: false },
     { name: 'Gutschriften', path: 'CreditNotes', icon: FileText, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Bestandskunden', path: 'Bestandskunden', icon: Users, roles: ['admin', 'user'], partnerAccess: true },
-    { name: 'Team Chat', path: 'Chat', icon: MessageSquare, roles: ['admin'], partnerAccess: false },
+    { name: 'Team Chat', path: 'Chat', icon: MessageSquare, roles: ['admin', 'teamleiter'], partnerAccess: false },
   ];
 
   const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
   const isPartner = userBenutzertyp !== 'Interner Mitarbeiter';
+  const isTeamleiter = user?.rolle === 'Teamleiter';
 
   const filteredNavigation = navigation.filter(item => {
-    // Rolle prüfen
-    if (!item.roles.includes(user?.role || 'user')) return false;
+    // Rolle prüfen - Teamleiter haben Admin-Rechte
+    const hasRoleAccess = item.roles.includes(user?.role || 'user') || (isTeamleiter && item.roles.includes('teamleiter'));
+    if (!hasRoleAccess) return false;
     
     // Partner-Zugriff prüfen: Partner sehen nur Seiten mit partnerAccess: true
     if (isPartner && !item.partnerAccess) return false;
@@ -240,8 +242,8 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main Content */}
       <main className="lg:pl-72">
-        {/* Admin Benutzertyp Tabs - NUR für interne Admins */}
-        {user?.role === 'admin' && (!user?.benutzertyp || user?.benutzertyp === 'Interner Mitarbeiter') && (
+        {/* Admin Benutzertyp Tabs - für Admins und Teamleiter */}
+        {(user?.role === 'admin' || user?.rolle === 'Teamleiter') && (!user?.benutzertyp || user?.benutzertyp === 'Interner Mitarbeiter') && (
           <div className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30">
             <Tabs value={selectedBenutzertyp} onValueChange={handleBenutzertypChange}>
               <TabsList className="bg-slate-100">
@@ -256,20 +258,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
         )}
 
-        {/* Teamleiter Ansicht Umschaltung */}
-        {user?.rolle === 'Teamleiter' && (
-          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-200 px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-purple-900">Ansicht:</span>
-              <Tabs value={teamleiterAnsicht ? 'teamleiter' : 'mitarbeiter'} onValueChange={(val) => handleTeamleiterAnsichtChange(val === 'teamleiter')}>
-                <TabsList className="bg-white">
-                  <TabsTrigger value="mitarbeiter">Meine Leads (Mitarbeiter)</TabsTrigger>
-                  <TabsTrigger value="teamleiter">Team-Übersicht (Teamleiter)</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-        )}
+
         <div className="px-4 py-8 sm:px-6 lg:px-8">
           {children}
         </div>

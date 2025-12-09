@@ -54,7 +54,8 @@ export default function LeadPool() {
 
   // Statistiken
   const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
-  const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
+  const isTeamleiter = user?.rolle === 'Teamleiter';
+  const isInternalAdmin = (user?.role === 'admin' || isTeamleiter) && userBenutzertyp === 'Interner Mitarbeiter';
   
   const filteredLeads = leads.filter(l => {
     if (isInternalAdmin) {

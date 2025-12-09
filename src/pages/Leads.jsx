@@ -714,7 +714,8 @@ export default function Leads() {
 
   // Filter leads based on user role, selected employee, active tab, and benutzertyp
   const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
-  const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
+  const isTeamleiter = user?.rolle === 'Teamleiter';
+  const isInternalAdmin = (user?.role === 'admin' || isTeamleiter) && userBenutzertyp === 'Interner Mitarbeiter';
   
   const filteredLeads = leads.filter((lead) => {
     // WICHTIG: Pool-Leads (im_pool) niemals anzeigen - nur im Hintergrund
@@ -754,21 +755,13 @@ export default function Leads() {
       lead.telefon?.includes(searchTerm) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Employee-Filter: Partner-Admins sehen alle Leads ihres Benutzertyps, interne Admins mit Filter
+    // Employee-Filter
     let employeeMatch = true;
-    if (!isInternalAdmin && user?.role !== 'admin') {
-      // Teamleiter: Ansicht-abhängig
-      if (user?.rolle === 'Teamleiter' && !teamleiterAnsicht) {
-        // Als Mitarbeiter: nur eigene Leads
-        employeeMatch = lead.assigned_to_email === user?.email;
-      } else if (user?.rolle === 'Teamleiter' && teamleiterAnsicht) {
-        // Als Teamleiter: alle Team-Leads
-        employeeMatch = true; // Alle Leads sehen
-      } else {
-        // Normaler Mitarbeiter: nur eigene
-        employeeMatch = lead.assigned_to_email === user?.email;
-      }
+    if (!isInternalAdmin && user?.role !== 'admin' && !isTeamleiter) {
+      // Normaler Mitarbeiter: nur eigene Leads
+      employeeMatch = lead.assigned_to_email === user?.email;
     } else if (isInternalAdmin && selectedEmployee !== 'all') {
+      // Admin/Teamleiter mit Filter
       employeeMatch = lead.assigned_to === selectedEmployee;
     }
     
@@ -1006,7 +999,7 @@ export default function Leads() {
                 className="pl-10"
               />
             </div>
-            {user?.role === 'admin' && (
+            {(user?.role === 'admin' || user?.rolle === 'Teamleiter') && (
               <div className="min-w-[200px]">
                 <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                   <SelectTrigger>

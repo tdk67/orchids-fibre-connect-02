@@ -5,14 +5,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || user.role !== 'admin') {
+    const employees = await base44.asServiceRole.entities.Employee.list();
+    const currentEmployee = employees.find(e => e.email === user?.email);
+    const isTeamleiter = currentEmployee?.rolle === 'Teamleiter';
+    
+    if (!user || (user.role !== 'admin' && !isTeamleiter)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { employeeEmail } = await req.json();
-
-    // Hole Mitarbeiter
-    const employees = await base44.asServiceRole.entities.Employee.list();
     const employee = employees.find(e => e.email === employeeEmail);
 
     if (!employee) {
