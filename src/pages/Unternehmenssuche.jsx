@@ -32,8 +32,21 @@ export default function Unternehmenssuche() {
   // Adressen für aktuellen User aus localStorage laden
   React.useEffect(() => {
     if (user?.email) {
-      const saved = localStorage.getItem(`unternehmenssuche_adressen_${user.email}`);
-      setAddressList(saved ? JSON.parse(saved) : []);
+      // Prüfe zuerst ob Adressen von Leads übertragen wurden
+      const transferKey = `unternehmenssuche_addresses_${user.email}`;
+      const transferredAddresses = localStorage.getItem(transferKey);
+      
+      if (transferredAddresses) {
+        // Konvertiere String zu Array
+        const addressArray = transferredAddresses.split('\n').filter(a => a.trim());
+        setAddressList(addressArray);
+        localStorage.removeItem(transferKey);
+        alert(`${addressArray.length} Adresse(n) aus Leads übertragen!`);
+      } else {
+        // Lade normale gespeicherte Adressen
+        const saved = localStorage.getItem(`unternehmenssuche_adressen_${user.email}`);
+        setAddressList(saved ? JSON.parse(saved) : []);
+      }
     }
   }, [user]);
 
