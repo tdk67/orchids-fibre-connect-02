@@ -81,6 +81,15 @@ export default function Verkaufschancen() {
     }
   };
 
+  // Verfügbare Bandbreiten für Produkt
+  const getAvailableBandwidths = (produkt) => {
+    if (!produkt) return [];
+    const bandwidths = provisionsregeln
+      .filter(r => r.tarif === produkt)
+      .map(r => r.bandbreite);
+    return [...new Set(bandwidths)];
+  };
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
     onSuccess: () => {
@@ -599,12 +608,22 @@ export default function Verkaufschancen() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs text-slate-600">Bandbreite</Label>
-                    <Input
-                      value={editingLead.bandbreite || ''}
-                      onChange={(e) => handleUpdateDetails('bandbreite', e.target.value)}
-                      placeholder="z.B. 300/100"
-                      className="bg-white"
-                    />
+                    <Select 
+                      value={editingLead.bandbreite} 
+                      onValueChange={(value) => handleUpdateDetails('bandbreite', value)}
+                      disabled={!editingLead.produkt}
+                    >
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Bandbreite wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableBandwidths(editingLead.produkt).map((bw) => (
+                          <SelectItem key={bw} value={bw}>
+                            {bw}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs text-slate-600">Laufzeit (Monate)</Label>
