@@ -98,8 +98,8 @@ export default function Dashboard() {
   console.log('Dashboard Filter:', { userBenutzertyp, isInternalAdmin, selectedBenutzertyp, userRole: user?.role });
   
   const leads = isInternalAdmin
-    ? allLeads.filter(l => l.benutzertyp === selectedBenutzertyp)
-    : allLeads.filter(lead => lead.assigned_to_email === user?.email && lead.benutzertyp === userBenutzertyp);
+    ? allLeads.filter(l => l.benutzertyp === selectedBenutzertyp && l.pool_status !== 'im_pool')
+    : allLeads.filter(lead => lead.assigned_to_email === user?.email && lead.benutzertyp === userBenutzertyp && lead.pool_status !== 'im_pool');
 
   const sales = isInternalAdmin
     ? allSales.filter(s => s.benutzertyp === selectedBenutzertyp)
