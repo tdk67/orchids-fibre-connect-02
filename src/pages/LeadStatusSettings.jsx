@@ -7,13 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
 export default function LeadStatusSettings() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     color: 'blue',
@@ -36,6 +37,15 @@ export default function LeadStatusSettings() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.LeadStatus.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['leadStatuses']);
+      setIsDialogOpen(false);
+      resetForm();
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.LeadStatus.delete(id),
     onSuccess: () => {
@@ -45,10 +55,27 @@ export default function LeadStatusSettings() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createMutation.mutate({
-      ...formData,
-      order: statuses.length
+    if (editingStatus) {
+      updateMutation.mutate({
+        id: editingStatus.id,
+        data: formData
+      });
+    } else {
+      createMutation.mutate({
+        ...formData,
+        order: statuses.length
+      });
+    }
+  };
+
+  const handleEdit = (status) => {
+    setEditingStatus(status);
+    setFormData({
+      name: status.name,
+      color: status.color,
+      order: status.order
     });
+    setIsDialogOpen(true);
   };
 
   const resetForm = () => {
@@ -57,6 +84,7 @@ export default function LeadStatusSettings() {
       color: 'blue',
       order: 0
     });
+    setEditingStatus(null);
   };
 
   const handleDelete = (id) => {
@@ -90,7 +118,10 @@ export default function LeadStatusSettings() {
           <h1 className="text-3xl font-bold text-slate-900">Lead-Status Verwaltung</h1>
           <p className="text-slate-500 mt-1">Verwalten Sie die verfügbaren Status-Optionen</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) resetForm();
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-blue-900 hover:bg-blue-800">
               <Plus className="h-4 w-4 mr-2" />
@@ -99,7 +130,7 @@ export default function LeadStatusSettings() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Neuer Lead-Status</DialogTitle>
+              <DialogTitle>{editingStatus ? 'Status bearbeiten' : 'Neuer Lead-Status'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -130,11 +161,14 @@ export default function LeadStatusSettings() {
                 </Select>
               </div>
               <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsDialogOpen(false);
+                  resetForm();
+                }}>
                   Abbrechen
                 </Button>
                 <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                  Erstellen
+                  {editingStatus ? 'Speichern' : 'Erstellen'}
                 </Button>
               </div>
             </form>
@@ -188,14 +222,23 @@ export default function LeadStatusSettings() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(status.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(status)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(status.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
