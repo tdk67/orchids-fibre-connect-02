@@ -628,6 +628,15 @@ export default function Leads() {
     if (activeTab === 'verloren') {
       if (!lead.verloren) return false;
     }
+    if (activeTab === 'nicht_erreicht') {
+      if (lead.archiv_kategorie !== 'Nicht erreicht') return false;
+    }
+    if (activeTab === 'anderer_provider') {
+      if (lead.archiv_kategorie !== 'Anderer Provider') return false;
+    }
+    if (activeTab === 'kein_interesse') {
+      if (lead.archiv_kategorie !== 'Kein Interesse') return false;
+    }
     
     const searchMatch = 
       lead.firma?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -816,7 +825,7 @@ export default function Leads() {
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="aktiv">
                 Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
               </TabsTrigger>
@@ -825,6 +834,15 @@ export default function Leads() {
               </TabsTrigger>
               <TabsTrigger value="verloren">
                 Verloren ({leads.filter(l => l.verloren).length})
+              </TabsTrigger>
+              <TabsTrigger value="nicht_erreicht">
+                Nicht erreicht ({leads.filter(l => l.archiv_kategorie === 'Nicht erreicht').length})
+              </TabsTrigger>
+              <TabsTrigger value="anderer_provider">
+                Anderer Provider ({leads.filter(l => l.archiv_kategorie === 'Anderer Provider').length})
+              </TabsTrigger>
+              <TabsTrigger value="kein_interesse">
+                Kein Interesse ({leads.filter(l => l.archiv_kategorie === 'Kein Interesse').length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -866,6 +884,9 @@ export default function Leads() {
             {activeTab === 'aktiv' && `Aktive Leads (${filteredLeads.length})`}
             {activeTab === 'angebote' && `Angebote (${filteredLeads.length})`}
             {activeTab === 'verloren' && `Verloren (${filteredLeads.length})`}
+            {activeTab === 'nicht_erreicht' && `Nicht erreicht (${filteredLeads.length})`}
+            {activeTab === 'anderer_provider' && `Anderer Provider (${filteredLeads.length})`}
+            {activeTab === 'kein_interesse' && `Kein Interesse (${filteredLeads.length})`}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
