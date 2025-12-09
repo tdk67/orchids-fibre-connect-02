@@ -19,8 +19,54 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Mitarbeiter nicht gefunden' }, { status: 404 });
     }
 
-    // Zähle aktuelle Leads des Mitarbeiters (zugewiesen, nicht bearbeitet)
+    // Hole alle Leads
     const allLeads = await base44.asServiceRole.entities.Lead.list();
+    
+    // Zähle Leads in kritischen Archiv-Kategorien
+    const bearbeitetCount = allLeads.filter(l => 
+      l.assigned_to_email === employeeEmail && 
+      l.archiv_kategorie === 'Bearbeitet'
+    ).length;
+    
+    const adresspunkteCount = allLeads.filter(l => 
+      l.assigned_to_email === employeeEmail && 
+      l.archiv_kategorie === 'Adresspunkte'
+    ).length;
+    
+    const nichtErreichtCount = allLeads.filter(l => 
+      l.assigned_to_email === employeeEmail && 
+      l.archiv_kategorie === 'Nicht erreicht'
+    ).length;
+    
+    // Prüfe ob Limits überschritten sind
+    if (bearbeitetCount >= 10) {
+      return Response.json({
+        success: false,
+        message: `Hat ${bearbeitetCount} Leads in "Bearbeitet". Erst diese bearbeiten!`,
+        assigned: 0,
+        currentCount: 0
+      });
+    }
+    
+    if (adresspunkteCount >= 10) {
+      return Response.json({
+        success: false,
+        message: `Hat ${adresspunkteCount} Leads in "Adresspunkte". Erst diese bearbeiten!`,
+        assigned: 0,
+        currentCount: 0
+      });
+    }
+    
+    if (nichtErreichtCount >= 50) {
+      return Response.json({
+        success: false,
+        message: `Hat ${nichtErreichtCount} Leads in "Nicht erreicht". Erst diese bearbeiten!`,
+        assigned: 0,
+        currentCount: 0
+      });
+    }
+    
+    // Zähle aktuelle Leads des Mitarbeiters (zugewiesen, nicht bearbeitet)
     const assignedLeads = allLeads.filter(l => 
       l.assigned_to_email === employeeEmail && 
       l.pool_status === 'zugewiesen' &&
