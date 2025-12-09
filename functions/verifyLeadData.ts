@@ -49,9 +49,18 @@ Wichtig: Gib nur verifizierte, aktuelle Daten zurück. Wenn etwas nicht gefunden
       }
     });
 
+    // Prüfe ob Daten gefunden wurden
+    const dataFound = result && result.existiert && (
+      result.firma || 
+      result.telefon || 
+      result.email || 
+      result.strasse_hausnummer
+    );
+
     return Response.json({
       success: true,
-      verifiedData: result
+      verifiedData: result,
+      dataFound: dataFound
     });
 
   } catch (error) {

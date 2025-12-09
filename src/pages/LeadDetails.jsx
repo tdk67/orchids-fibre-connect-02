@@ -182,31 +182,41 @@ export default function LeadDetails() {
             leadData: dataToSave
           });
 
-          if (result.success && result.verifiedData) {
-            const verified = result.verifiedData;
-            
-            // Aktualisiere formData mit verifizierten Daten
-            dataToSave = {
-              ...dataToSave,
-              firma: verified.firma || dataToSave.firma,
-              ansprechpartner: verified.ansprechpartner || dataToSave.ansprechpartner,
-              strasse_hausnummer: verified.strasse_hausnummer || dataToSave.strasse_hausnummer,
-              postleitzahl: verified.postleitzahl || dataToSave.postleitzahl,
-              stadt: verified.stadt || dataToSave.stadt,
-              telefon: verified.telefon || dataToSave.telefon,
-              email: verified.email || dataToSave.email,
-              infobox: `${dataToSave.infobox || ''}\n\n[Automatisch überprüft am ${new Date().toLocaleDateString('de-DE')}]\n${verified.notizen || ''}\nUnternehmen existiert: ${verified.existiert ? 'Ja' : 'Nein'}`.trim()
-            };
+          if (result.success) {
+            if (result.dataFound && result.verifiedData) {
+              // Daten wurden gefunden - Status auf "Bearbeitet"
+              const verified = result.verifiedData;
+              
+              dataToSave = {
+                ...dataToSave,
+                firma: verified.firma || dataToSave.firma,
+                ansprechpartner: verified.ansprechpartner || dataToSave.ansprechpartner,
+                strasse_hausnummer: verified.strasse_hausnummer || dataToSave.strasse_hausnummer,
+                postleitzahl: verified.postleitzahl || dataToSave.postleitzahl,
+                stadt: verified.stadt || dataToSave.stadt,
+                telefon: verified.telefon || dataToSave.telefon,
+                email: verified.email || dataToSave.email,
+                infobox: `${dataToSave.infobox || ''}\n\n[Automatisch überprüft am ${new Date().toLocaleDateString('de-DE')}]\n${verified.notizen || ''}`.trim(),
+                status: 'Bearbeitet',
+                archiv_kategorie: 'Bearbeitet',
+                archiviert_am: new Date().toISOString().split('T')[0]
+              };
 
-            // Status zurück auf aktiv setzen wenn Daten verifiziert wurden
-            if (verified.existiert) {
-              dataToSave.status = '';
-              dataToSave.archiv_kategorie = '';
-              dataToSave.archiviert_am = '';
+              setFormData(dataToSave);
+              alert('Daten wurden erfolgreich gefunden und aktualisiert! Lead wurde als "Bearbeitet" markiert.');
+            } else {
+              // Keine Daten gefunden - zu Adresspunkte
+              dataToSave = {
+                ...dataToSave,
+                status: 'Adresspunkte',
+                archiv_kategorie: 'Adresspunkte',
+                archiviert_am: new Date().toISOString().split('T')[0],
+                infobox: `${dataToSave.infobox || ''}\n\n[Überprüft am ${new Date().toLocaleDateString('de-DE')}]\nKeine aktuellen Daten im Internet gefunden. Adresse zur manuellen Überprüfung vorgemerkt.`.trim()
+              };
+
+              setFormData(dataToSave);
+              alert('Keine Daten gefunden. Lead wurde zu "Adresspunkte" verschoben.');
             }
-
-            setFormData(dataToSave);
-            alert('Daten wurden erfolgreich überprüft und aktualisiert!');
           }
         } catch (error) {
           alert('Fehler bei der Datenüberprüfung: ' + error.message);
