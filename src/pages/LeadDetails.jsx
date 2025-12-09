@@ -156,7 +156,8 @@ export default function LeadDetails() {
     const archivStatusMapping = {
       'Nicht erreicht': 'Nicht erreicht',
       'Anderer Provider': 'Anderer Provider',
-      'Kein Interesse': 'Kein Interesse'
+      'Kein Interesse': 'Kein Interesse',
+      'Falsche Daten': 'Falsche Daten'
     };
 
     if (archivStatusMapping[dataToSave.status]) {
@@ -520,7 +521,7 @@ export default function LeadDetails() {
                     ))}
                   </SelectContent>
                 </Select>
-                {(formData.status === 'Nicht erreicht' || formData.status === 'Anderer Provider' || formData.status === 'Kein Interesse') && (
+                {(formData.status === 'Nicht erreicht' || formData.status === 'Anderer Provider' || formData.status === 'Kein Interesse' || formData.status === 'Falsche Daten') && (
                   <p className="text-xs text-amber-600 font-medium">
                     ⚠️ Lead wird archiviert in: {formData.status}
                   </p>

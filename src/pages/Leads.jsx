@@ -624,6 +624,8 @@ export default function Leads() {
       if (lead.archiv_kategorie !== 'Anderer Provider') return false;
     } else if (activeTab === 'kein_interesse') {
       if (lead.archiv_kategorie !== 'Kein Interesse') return false;
+    } else if (activeTab === 'falsche_daten') {
+      if (lead.archiv_kategorie !== 'Falsche Daten') return false;
     }
 
     // Benutzertyp-Filter
@@ -820,7 +822,7 @@ export default function Leads() {
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="aktiv">
                 Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
               </TabsTrigger>
@@ -838,6 +840,9 @@ export default function Leads() {
               </TabsTrigger>
               <TabsTrigger value="kein_interesse">
                 Kein Interesse ({leads.filter(l => l.archiv_kategorie === 'Kein Interesse').length})
+              </TabsTrigger>
+              <TabsTrigger value="falsche_daten">
+                Falsche Daten ({leads.filter(l => l.archiv_kategorie === 'Falsche Daten').length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
