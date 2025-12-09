@@ -857,7 +857,7 @@ export default function Leads() {
         <Card className="border-0 shadow-md bg-blue-50 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <span className="font-semibold text-blue-900">
+              <span className="font-semibold text-blue-900 text-lg">
                 {selectedLeads.length} Lead(s) ausgewählt
               </span>
               <div className="flex gap-2 items-center flex-1">
@@ -879,6 +879,21 @@ export default function Leads() {
                   className="bg-blue-900 hover:bg-blue-800"
                 >
                   Zuweisen
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    if (confirm(`${selectedLeads.length} Lead(s) wirklich löschen?`)) {
+                      for (const leadId of selectedLeads) {
+                        await deleteMutation.mutateAsync(leadId);
+                      }
+                      setSelectedLeads([]);
+                      alert(`${selectedLeads.length} Lead(s) gelöscht!`);
+                    }
+                  }}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Löschen ({selectedLeads.length})
                 </Button>
               </div>
               <Button variant="outline" onClick={() => setSelectedLeads([])}>
