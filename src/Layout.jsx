@@ -28,6 +28,9 @@ export default function Layout({ children, currentPageName }) {
   const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
     return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
   });
+  const [teamleiterAnsicht, setTeamleiterAnsicht] = useState(() => {
+    return localStorage.getItem('teamleiterAnsicht') === 'true';
+  });
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -37,6 +40,12 @@ export default function Layout({ children, currentPageName }) {
     setSelectedBenutzertyp(value);
     localStorage.setItem('selectedBenutzertyp', value);
     window.dispatchEvent(new Event('benutzertypChanged'));
+  };
+
+  const handleTeamleiterAnsichtChange = (value) => {
+    setTeamleiterAnsicht(value);
+    localStorage.setItem('teamleiterAnsicht', value);
+    window.dispatchEvent(new Event('teamleiterAnsichtChanged'));
   };
 
   const navigation = [
@@ -244,6 +253,21 @@ export default function Layout({ children, currentPageName }) {
                 <TabsTrigger value="Partner 5">Partner 5</TabsTrigger>
               </TabsList>
             </Tabs>
+          </div>
+        )}
+
+        {/* Teamleiter Ansicht Umschaltung */}
+        {user?.rolle === 'Teamleiter' && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-200 px-4 sm:px-6 lg:px-8 py-3 sticky top-0 z-30">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-purple-900">Ansicht:</span>
+              <Tabs value={teamleiterAnsicht ? 'teamleiter' : 'mitarbeiter'} onValueChange={(val) => handleTeamleiterAnsichtChange(val === 'teamleiter')}>
+                <TabsList className="bg-white">
+                  <TabsTrigger value="mitarbeiter">Meine Leads (Mitarbeiter)</TabsTrigger>
+                  <TabsTrigger value="teamleiter">Team-Übersicht (Teamleiter)</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
         )}
         <div className="px-4 py-8 sm:px-6 lg:px-8">

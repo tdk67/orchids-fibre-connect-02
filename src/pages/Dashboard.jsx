@@ -21,6 +21,9 @@ export default function Dashboard() {
   const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
     return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
   });
+  const [teamleiterAnsicht, setTeamleiterAnsicht] = useState(() => {
+    return localStorage.getItem('teamleiterAnsicht') === 'true';
+  });
 
   useEffect(() => {
     base44.auth.me().then((u) => {
@@ -34,8 +37,16 @@ export default function Dashboard() {
       setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
     };
 
+    const handleTeamleiterAnsichtChange = () => {
+      setTeamleiterAnsicht(localStorage.getItem('teamleiterAnsicht') === 'true');
+    };
+
     window.addEventListener('benutzertypChanged', handleBenutzertypChange);
-    return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
+    window.addEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
+    return () => {
+      window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
+      window.removeEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
+    };
   }, []);
 
   const { data: allLeads = [] } = useQuery({
@@ -99,11 +110,39 @@ export default function Dashboard() {
   
   const leads = isInternalAdmin
     ? allLeads.filter(l => l.benutzertyp === selectedBenutzertyp && l.pool_status !== 'im_pool')
-    : allLeads.filter(lead => lead.assigned_to_email === user?.email && lead.benutzertyp === userBenutzertyp && lead.pool_status !== 'im_pool');
+    : allLeads.filter(lead => {
+        // Pool-Leads niemals anzeigen
+        if (lead.pool_status === 'im_pool') return false;
+        // Benutzertyp prüfen
+        if (lead.benutzertyp !== userBenutzertyp) return false;
+        // Teamleiter in Mitarbeiter-Ansicht: nur eigene
+        if (isTeamleiter && !teamleiterAnsicht) {
+          return lead.assigned_to_email === user?.email;
+        }
+        // Teamleiter in Team-Ansicht: alle
+        if (isTeamleiter && teamleiterAnsicht) {
+          return true;
+        }
+        // Normaler Mitarbeiter: nur eigene
+        return lead.assigned_to_email === user?.email;
+      });
 
   const sales = isInternalAdmin
     ? allSales.filter(s => s.benutzertyp === selectedBenutzertyp)
-    : allSales.filter(sale => sale.employee_id === user?.email && sale.benutzertyp === userBenutzertyp);
+    : allSales.filter(sale => {
+        // Benutzertyp prüfen
+        if (sale.benutzertyp !== userBenutzertyp) return false;
+        // Teamleiter in Mitarbeiter-Ansicht: nur eigene
+        if (isTeamleiter && !teamleiterAnsicht) {
+          return sale.employee_id === user?.email;
+        }
+        // Teamleiter in Team-Ansicht: alle
+        if (isTeamleiter && teamleiterAnsicht) {
+          return true;
+        }
+        // Normaler Mitarbeiter: nur eigene
+        return sale.employee_id === user?.email;
+      });
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthSales = sales.filter(s => s.sale_date?.startsWith(currentMonth));

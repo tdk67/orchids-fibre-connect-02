@@ -75,6 +75,10 @@ export default function Leads() {
 
   const queryClient = useQueryClient();
 
+  const [teamleiterAnsicht, setTeamleiterAnsicht] = useState(() => {
+    return localStorage.getItem('teamleiterAnsicht') === 'true';
+  });
+
   useEffect(() => {
     base44.auth.me().then((u) => {
       setUser(u);
@@ -87,8 +91,16 @@ export default function Leads() {
       setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
     };
 
+    const handleTeamleiterAnsichtChange = () => {
+      setTeamleiterAnsicht(localStorage.getItem('teamleiterAnsicht') === 'true');
+    };
+
     window.addEventListener('benutzertypChanged', handleBenutzertypChange);
-    return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
+    window.addEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
+    return () => {
+      window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
+      window.removeEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
+    };
   }, []);
 
   const { data: leads = [], isLoading } = useQuery({
@@ -693,7 +705,17 @@ export default function Leads() {
     // Employee-Filter: Partner-Admins sehen alle Leads ihres Benutzertyps, interne Admins mit Filter
     let employeeMatch = true;
     if (!isInternalAdmin && user?.role !== 'admin') {
-      employeeMatch = lead.assigned_to_email === user?.email;
+      // Teamleiter: Ansicht-abhängig
+      if (user?.rolle === 'Teamleiter' && !teamleiterAnsicht) {
+        // Als Mitarbeiter: nur eigene Leads
+        employeeMatch = lead.assigned_to_email === user?.email;
+      } else if (user?.rolle === 'Teamleiter' && teamleiterAnsicht) {
+        // Als Teamleiter: alle Team-Leads
+        employeeMatch = true; // Alle Leads sehen
+      } else {
+        // Normaler Mitarbeiter: nur eigene
+        employeeMatch = lead.assigned_to_email === user?.email;
+      }
     } else if (isInternalAdmin && selectedEmployee !== 'all') {
       employeeMatch = lead.assigned_to === selectedEmployee;
     }
