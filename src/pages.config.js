@@ -9,7 +9,6 @@ import Leads from './pages/Leads';
 import LeadStatusSettings from './pages/LeadStatusSettings';
 import Verkaufschancen from './pages/Verkaufschancen';
 import Provisionsregeln from './pages/Provisionsregeln';
-import PVP from './pages/PVP';
 import Unternehmenssuche from './pages/Unternehmenssuche';
 import Bestandskunden from './pages/Bestandskunden';
 import Kalender from './pages/Kalender';
@@ -30,7 +29,6 @@ export const PAGES = {
     "LeadStatusSettings": LeadStatusSettings,
     "Verkaufschancen": Verkaufschancen,
     "Provisionsregeln": Provisionsregeln,
-    "PVP": PVP,
     "Unternehmenssuche": Unternehmenssuche,
     "Bestandskunden": Bestandskunden,
     "Kalender": Kalender,
