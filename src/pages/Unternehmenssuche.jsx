@@ -156,7 +156,9 @@ Liste ALLE gefundenen Unternehmen auf - auch wenn es viele sind!`,
       });
 
       const companies = result.companies || [];
-      const companiesWithSource = companies.map(c => ({
+      // Nur Unternehmen mit mindestens Telefon oder E-Mail
+      const companiesFiltered = companies.filter(c => c.telefon || c.email);
+      const companiesWithSource = companiesFiltered.map(c => ({
         ...c,
         source_address: address,
         id: `${Date.now()}-${Math.random()}`
