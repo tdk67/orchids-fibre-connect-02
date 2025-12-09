@@ -59,25 +59,27 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
   const isPremium = lead.produkt?.toLowerCase().includes('premium');
 
   return (
-    <div className="bg-white p-8 max-w-4xl mx-auto" id="angebot-content">
+    <div className="bg-white p-8 max-w-4xl mx-auto" id="angebot-content" style={{ color: '#1e3a8a' }}>
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">CAREER AGENTS</h1>
-          <p className="text-sm text-slate-600">EINFACH ERFOLGREICH</p>
+          <img 
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/b7bf2362a_EE-logo-1-1e3f66-1024x576.png"
+            alt="Career Agents"
+            className="h-20"
+          />
         </div>
         <div className="text-right">
           <img 
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/1%261_Versatel_logo.svg/2560px-1%261_Versatel_logo.svg.png"
-            alt="1&1 Versatel"
-            className="h-12 mb-2"
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/fcca19aef_1und1-Versatel-Partner-Logo.jpg"
+            alt="1&1 Versatel Partner"
+            className="h-20"
           />
-          <p className="text-xs text-slate-500">PARTNER</p>
         </div>
       </div>
 
       {/* Absender */}
-      <p className="text-xs text-slate-500 mb-6">
+      <p className="text-xs mb-6" style={{ color: '#6b7280' }}>
         Career Agents – Bottroper Straße 8 - 70376 Stuttgart
       </p>
 
@@ -95,8 +97,8 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
 
       {/* Titel */}
       <div className="mb-6">
-        <h2 className="text-xl font-bold mb-2">Angebot</h2>
-        <h3 className="text-lg font-semibold text-slate-700">
+        <h2 className="text-xl font-bold mb-2" style={{ color: '#1e3a8a' }}>Angebot</h2>
+        <h3 className="text-lg font-semibold" style={{ color: '#1e3a8a' }}>
           Glasfaseranschluss für Ihr Unternehmen
         </h3>
       </div>
@@ -114,8 +116,8 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
       {/* Produkte */}
       <div className="mb-8 space-y-4">
         {template.options.map((option, index) => (
-          <div key={index} className="border-l-4 border-blue-900 pl-4">
-            <h4 className="font-bold text-slate-900 mb-2">
+          <div key={index} className="border-l-4 pl-4" style={{ borderColor: '#1e3a8a' }}>
+            <h4 className="font-bold mb-2" style={{ color: '#1e3a8a' }}>
               {template.title} {option.speed.split('/')[0]} - Download {option.speed.split('/')[0]} MBit/s und Upload {option.speed.split('/')[1]} Mbit/s
             </h4>
             <p className="text-sm mb-1">Laufzeit: 36/48/60 Monate</p>
@@ -146,7 +148,7 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
 
       {/* Servicepaket */}
       <div className="mb-8">
-        <h4 className="font-bold text-slate-900 mb-2 underline">Unser Servicepaket</h4>
+        <h4 className="font-bold mb-2 underline" style={{ color: '#1e3a8a' }}>Unser Servicepaket</h4>
         <p className="text-sm text-justify leading-relaxed">
           {template.servicepaket}
         </p>
@@ -154,7 +156,7 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
 
       {/* Weitere Angebotsbestimmungen */}
       <div className="mb-8">
-        <h4 className="font-bold text-slate-900 mb-2 underline">Weitere Angebotsbestimmungen</h4>
+        <h4 className="font-bold mb-2 underline" style={{ color: '#1e3a8a' }}>Weitere Angebotsbestimmungen</h4>
         <p className="text-sm">
           Alle Preise sind Nettopreise und verstehen sich zzgl. der jeweils gültigen gesetzlichen Mehrwertsteuer.
         </p>
@@ -167,8 +169,8 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
       </div>
 
       {/* Footer */}
-      <div className="border-t pt-4 text-center text-xs text-slate-500">
-        <p className="font-bold">CAREER AGENTS</p>
+      <div className="border-t pt-4 text-center text-xs" style={{ color: '#6b7280', borderColor: '#1e3a8a' }}>
+        <p className="font-bold" style={{ color: '#1e3a8a' }}>CAREER AGENTS</p>
         <p>Bottroper Str. 8, 70376 Stuttgart, Germany</p>
         <p>Telefon: 0171 8197956 / E-Mail: oezdemir@career-agents.de</p>
         <p>Geschäftsführung: Emirhan Özdemir</p>
