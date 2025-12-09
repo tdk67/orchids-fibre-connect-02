@@ -200,7 +200,21 @@ export default function Verkaufschancen() {
   };
 
   const handleUpdateDetails = (field, value) => {
-    setEditingLead({ ...editingLead, [field]: value });
+    const updatedLead = { ...editingLead, [field]: value };
+    
+    // Provision neu berechnen wenn Produkt, Bandbreite oder Laufzeit geändert werden
+    if (field === 'produkt' || field === 'bandbreite' || field === 'laufzeit_monate') {
+      const { provision, bonus } = calculateProvision(
+        field === 'produkt' ? value : updatedLead.produkt,
+        field === 'bandbreite' ? value : updatedLead.bandbreite,
+        field === 'laufzeit_monate' ? value : updatedLead.laufzeit_monate,
+        updatedLead.assigned_to
+      );
+      updatedLead.berechnete_provision = provision;
+      updatedLead.teamleiter_bonus = bonus;
+    }
+    
+    setEditingLead(updatedLead);
   };
 
   const handleSave = () => {
