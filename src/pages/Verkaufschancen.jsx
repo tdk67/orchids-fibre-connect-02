@@ -534,26 +534,66 @@ export default function Verkaufschancen() {
                 </div>
               </div>
 
-              {/* Lead Details */}
-              <div className="grid grid-cols-4 gap-4 bg-blue-50 p-4 rounded-lg">
-                <div>
-                  <Label className="text-xs text-slate-600">Produkt & Bandbreite</Label>
-                  <p className="font-semibold text-slate-900">{editingLead.produkt || '-'}</p>
-                  <p className="text-sm text-slate-600">{editingLead.bandbreite || '-'}</p>
+              {/* Lead Details - Editierbar */}
+              <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-600">Produkt</Label>
+                    <Select value={editingLead.produkt} onValueChange={(value) => handleUpdateDetails('produkt', value)}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Produkt wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Office Fast And Secure">Office Fast And Secure</SelectItem>
+                        <SelectItem value="Connect Basic">Connect Basic</SelectItem>
+                        <SelectItem value="Premium">Premium</SelectItem>
+                        <SelectItem value="Premium Pug 2">Premium Pug 2</SelectItem>
+                        <SelectItem value="Premium Pug 3">Premium Pug 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-600">Bandbreite</Label>
+                    <Input
+                      value={editingLead.bandbreite || ''}
+                      onChange={(e) => handleUpdateDetails('bandbreite', e.target.value)}
+                      placeholder="z.B. 300/100"
+                      className="bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-600">Laufzeit (Monate)</Label>
+                    <Select value={editingLead.laufzeit_monate?.toString()} onValueChange={(value) => handleUpdateDetails('laufzeit_monate', parseInt(value))}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="36">36 Monate</SelectItem>
+                        <SelectItem value="48">48 Monate</SelectItem>
+                        <SelectItem value="60">60 Monate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs text-slate-600">Laufzeit</Label>
-                  <p className="font-semibold text-slate-900">{editingLead.laufzeit_monate ? `${editingLead.laufzeit_monate} Monate` : '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-600">Sparte</Label>
-                  <Badge className={editingLead.sparte === 'Telekom' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}>
-                    {editingLead.sparte}
-                  </Badge>
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-600">Zugewiesen an</Label>
-                  <p className="font-semibold text-slate-900">{editingLead.assigned_to || '-'}</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs text-slate-600">Sparte</Label>
+                    <Badge className={editingLead.sparte === 'Telekom' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}>
+                      {editingLead.sparte}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-600">Zugewiesen an</Label>
+                    <p className="font-semibold text-slate-900">{editingLead.assigned_to || '-'}</p>
+                  </div>
+                  {editingLead.berechnete_provision > 0 && (
+                    <div>
+                      <Label className="text-xs text-slate-600">Provision</Label>
+                      <p className="font-semibold text-green-600">
+                        {editingLead.berechnete_provision.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
