@@ -633,7 +633,7 @@ export default function Leads() {
   };
 
   const handlePasteImport = async () => {
-    if (!pastedData.trim() || !importStatus) return;
+    if (!pastedData.trim()) return;
 
     setIsImporting(true);
 
@@ -662,7 +662,7 @@ export default function Leads() {
           assigned_to: assignedEmployee?.full_name || '',
           assigned_to_email: assignedEmployee?.email || '',
           sparte: '1&1 Versatel',
-          status: importStatus,
+          status: 'Neu',
           benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
         };
       }).filter(lead => lead.firma);
@@ -689,7 +689,6 @@ export default function Leads() {
       queryClient.invalidateQueries(['leads']);
       setIsImportDialogOpen(false);
       setPastedData('');
-      setImportStatus('');
       setImportAssignedTo('');
       alert(`Import erfolgreich!\n${imported} neue Leads erstellt\n${merged} Duplikate zusammengeführt`);
     } catch (error) {
@@ -843,21 +842,7 @@ export default function Leads() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Status für Leads</Label>
-                    <Select value={importStatus} onValueChange={setImportStatus}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Status wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {leadStatuses.map((status) => (
-                          <SelectItem key={status.id} value={status.name}>
-                            {status.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
                 </div>
                 <p className="text-xs text-slate-500 bg-blue-50 p-2 rounded">
                   Alle importierten Leads werden als <strong>1&1 Versatel</strong> mit dem gewählten Status und Mitarbeiter importiert
@@ -885,7 +870,7 @@ export default function Leads() {
                   </Button>
                   <Button 
                     onClick={handlePasteImport}
-                    disabled={!pastedData.trim() || !importStatus || !importAssignedTo || isImporting}
+                    disabled={!pastedData.trim() || !importAssignedTo || isImporting}
                     className="bg-blue-900 hover:bg-blue-800"
                   >
                     {isImporting ? 'Importiere...' : 'Importieren'}
@@ -1075,7 +1060,6 @@ export default function Leads() {
                       className="w-4 h-4"
                     />
                   </TableHead>
-                  <TableHead>Lead-Nr / Cluster</TableHead>
                   <TableHead>Firma</TableHead>
                   <TableHead>Stadt</TableHead>
                   <TableHead>PLZ / Adresse</TableHead>
@@ -1110,12 +1094,6 @@ export default function Leads() {
                         }
                         className="w-4 h-4"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs">
-                        {lead.leadnummer && <div className="font-mono font-semibold text-blue-900">{lead.leadnummer}</div>}
-                        {lead.cluster_id && <div className="font-mono text-slate-600">{lead.cluster_id}</div>}
-                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
