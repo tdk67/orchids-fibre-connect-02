@@ -35,6 +35,7 @@ export default function Leads() {
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(location.search);
     return params.get('tab') || 'aktiv';
@@ -75,7 +76,6 @@ export default function Leads() {
     });
 
   const queryClient = useQueryClient();
-  const location = useLocation();
 
   useEffect(() => {
     base44.auth.me().then((u) => {
