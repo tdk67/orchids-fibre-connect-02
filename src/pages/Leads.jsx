@@ -611,18 +611,20 @@ export default function Leads() {
   const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
   
   const filteredLeads = leads.filter((lead) => {
-    // Verstecke Leads die bereits zu Verkaufschancen wurden
-    if (lead.verkaufschance_status) return false;
-    
     // Benutzertyp-Filter
     if (isInternalAdmin) {
       if (lead.benutzertyp !== selectedBenutzertyp) return false;
     } else {
       if (lead.benutzertyp !== userBenutzertyp) return false;
     }
-    
+
     // Tab-basierte Filterung
-    if (activeTab === 'aktiv' && lead.archiv_kategorie) return false;
+    if (activeTab === 'aktiv') {
+      if (lead.archiv_kategorie || lead.verkaufschance_status) return false;
+    }
+    if (activeTab === 'angebote') {
+      if (!lead.verkaufschance_status) return false;
+    }
     if (activeTab === 'nicht_erreicht' && lead.archiv_kategorie !== 'Nicht erreicht') return false;
     if (activeTab === 'anderer_provider' && lead.archiv_kategorie !== 'Anderer Provider') return false;
     if (activeTab === 'kein_interesse' && lead.archiv_kategorie !== 'Kein Interesse') return false;
@@ -814,9 +816,12 @@ export default function Leads() {
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="aktiv">
                 Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status).length})
+              </TabsTrigger>
+              <TabsTrigger value="angebote">
+                Angebote ({leads.filter(l => l.verkaufschance_status).length})
               </TabsTrigger>
               <TabsTrigger value="nicht_erreicht">
                 Nicht erreicht ({leads.filter(l => l.archiv_kategorie === 'Nicht erreicht').length})
@@ -865,6 +870,7 @@ export default function Leads() {
         <CardHeader className="border-b border-slate-100">
           <CardTitle>
             {activeTab === 'aktiv' && `Aktive Leads (${filteredLeads.length})`}
+            {activeTab === 'angebote' && `Angebote (${filteredLeads.length})`}
             {activeTab === 'nicht_erreicht' && `Nicht erreicht (${filteredLeads.length})`}
             {activeTab === 'anderer_provider' && `Anderer Provider (${filteredLeads.length})`}
             {activeTab === 'kein_interesse' && `Kein Interesse (${filteredLeads.length})`}
