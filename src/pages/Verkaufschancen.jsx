@@ -345,9 +345,11 @@ export default function Verkaufschancen() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Firma</TableHead>
+                  <TableHead>Kontakt</TableHead>
+                  <TableHead>Adresse</TableHead>
                   <TableHead>Produkt / Bandbreite</TableHead>
                   <TableHead>Provision</TableHead>
-                  <TableHead>Closer</TableHead>
+                  <TableHead>Zugewiesen an</TableHead>
                   <TableHead>Wahrscheinlichkeit</TableHead>
                   <TableHead>Abschlussdatum</TableHead>
                   <TableHead>Status</TableHead>
@@ -366,8 +368,27 @@ export default function Verkaufschancen() {
                         <Building2 className="h-4 w-4 text-slate-400" />
                         <div>
                           <p className="font-semibold text-slate-900">{lead.firma}</p>
-                          <p className="text-xs text-slate-500">{lead.ansprechpartner}</p>
+                          <Badge className={lead.sparte === 'Telekom' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}>
+                            {lead.sparte}
+                          </Badge>
                         </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <p className="font-medium">{lead.ansprechpartner || '-'}</p>
+                        {lead.telefon && <p className="text-xs text-slate-600">{lead.telefon}</p>}
+                        {lead.email && <p className="text-xs text-slate-600">{lead.email}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {lead.strasse_hausnummer && <p>{lead.strasse_hausnummer}</p>}
+                        {(lead.postleitzahl || lead.stadt) && (
+                          <p className="text-xs text-slate-600">
+                            {lead.postleitzahl} {lead.stadt}
+                          </p>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -389,7 +410,7 @@ export default function Verkaufschancen() {
                       {(lead.berechnete_provision || lead.erwarteter_wert || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-slate-600">{lead.closer_name || '-'}</span>
+                      <span className="text-sm text-slate-600">{lead.assigned_to || '-'}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -461,7 +482,18 @@ export default function Verkaufschancen() {
                     <div>
                       <h3 className="font-semibold text-lg text-slate-900">{editingLead.firma}</h3>
                       <p className="text-sm text-slate-600">{editingLead.ansprechpartner}</p>
-                      <p className="text-xs text-slate-500">{editingLead.stadt} • {editingLead.email}</p>
+                      <p className="text-xs text-slate-500">
+                        {editingLead.strasse_hausnummer && `${editingLead.strasse_hausnummer}, `}
+                        {editingLead.postleitzahl} {editingLead.stadt}
+                      </p>
+                      <div className="flex gap-2 mt-1">
+                        {editingLead.telefon && (
+                          <p className="text-xs text-slate-500">📞 {editingLead.telefon}</p>
+                        )}
+                        {editingLead.email && (
+                          <p className="text-xs text-slate-500">✉️ {editingLead.email}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {editingLead.berechnete_provision > 0 && (
@@ -475,7 +507,7 @@ export default function Verkaufschancen() {
                 </div>
               </div>
 
-              {/* Provisions-Details */}
+              {/* Lead Details */}
               <div className="grid grid-cols-4 gap-4 bg-blue-50 p-4 rounded-lg">
                 <div>
                   <Label className="text-xs text-slate-600">Produkt & Bandbreite</Label>
@@ -487,40 +519,24 @@ export default function Verkaufschancen() {
                   <p className="font-semibold text-slate-900">{editingLead.laufzeit_monate ? `${editingLead.laufzeit_monate} Monate` : '-'}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-600">Closer</Label>
-                  <p className="font-semibold text-slate-900">{editingLead.closer_name || '-'}</p>
+                  <Label className="text-xs text-slate-600">Sparte</Label>
+                  <Badge className={editingLead.sparte === 'Telekom' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}>
+                    {editingLead.sparte}
+                  </Badge>
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-600">Setter</Label>
-                  <p className="font-semibold text-slate-900">{editingLead.setter_name || '-'}</p>
+                  <Label className="text-xs text-slate-600">Zugewiesen an</Label>
+                  <p className="font-semibold text-slate-900">{editingLead.assigned_to || '-'}</p>
                 </div>
               </div>
 
-              {/* Call Qualifizierung */}
-              <div className="space-y-2 bg-amber-50 p-4 rounded-lg border border-amber-200">
-                <Label>Call Qualifizierung</Label>
-                <div className="flex gap-3">
-                  <Button
-                    variant={editingLead.qualifizierter_call === true ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleUpdateDetails('qualifizierter_call', true)}
-                    className={editingLead.qualifizierter_call === true ? 'bg-green-600 hover:bg-green-700' : 'border-green-600 text-green-600'}
-                  >
-                    ✓ Qualifizierter Call
-                  </Button>
-                  <Button
-                    variant={editingLead.qualifizierter_call === false ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleUpdateDetails('qualifizierter_call', false)}
-                    className={editingLead.qualifizierter_call === false ? 'bg-red-600 hover:bg-red-700' : 'border-red-600 text-red-600'}
-                  >
-                    ✗ Nicht qualifiziert
-                  </Button>
+              {/* Notizen */}
+              {editingLead.infobox && (
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                  <Label className="text-xs text-slate-600">Notizen</Label>
+                  <p className="text-sm text-slate-900 mt-1 whitespace-pre-wrap">{editingLead.infobox}</p>
                 </div>
-                <p className="text-xs text-slate-600">
-                  Nur bei qualifizierten Calls wird die Setter-Provision berechnet
-                </p>
-              </div>
+              )}
 
               {/* Status Buttons */}
               <div className="space-y-2">
