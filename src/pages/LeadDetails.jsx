@@ -136,23 +136,8 @@ export default function LeadDetails() {
     },
   });
 
-  const generateLeadnummer = () => {
-    const random = Math.floor(Math.random() * 900) + 100;
-    const year = new Date().getFullYear();
-    return `LD${random}${year}`;
-  };
-
-  const generateClusterID = () => {
-    const random = Math.floor(Math.random() * 9000) + 1000;
-    return `C${random}${Math.floor(Math.random() * 900) + 100}`;
-  };
-
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Lead.create({
-      ...data,
-      leadnummer: generateLeadnummer(),
-      cluster_id: generateClusterID()
-    }),
+    mutationFn: (data) => base44.entities.Lead.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['leads']);
       navigate(createPageUrl('Leads'));

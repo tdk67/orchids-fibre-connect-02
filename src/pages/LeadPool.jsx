@@ -78,17 +78,6 @@ export default function LeadPool() {
     };
   });
 
-  const generateLeadnummer = () => {
-    const random = Math.floor(Math.random() * 900) + 100;
-    const year = new Date().getFullYear();
-    return `LD${random}${year}`;
-  };
-
-  const generateClusterID = () => {
-    const random = Math.floor(Math.random() * 9000) + 1000;
-    return `C${random}${Math.floor(Math.random() * 900) + 100}`;
-  };
-
   const findDuplicateLead = (newLead, existingLeads) => {
     return existingLeads.find(existing => {
       const sameCompany = existing.firma?.toLowerCase() === newLead.firma?.toLowerCase();
@@ -126,15 +115,17 @@ export default function LeadPool() {
       const parsedLeads = lines.map(line => {
         const columns = line.split('\t');
         return {
-          firma: columns[0] || '',
-          ansprechpartner: columns[1] || '',
-          stadt: columns[2] || '',
-          postleitzahl: columns[3] || '',
-          strasse_hausnummer: columns[4] || '',
-          telefon: columns[5] || '',
-          telefon2: columns[6] || '',
-          email: columns[7] || '',
-          infobox: columns[8] || '',
+          leadnummer: columns[0] || '',
+          cluster_id: columns[1] || '',
+          firma: columns[2] || '',
+          ansprechpartner: columns[3] || '',
+          stadt: columns[4] || '',
+          postleitzahl: columns[5] || '',
+          strasse_hausnummer: columns[6] || '',
+          telefon: columns[7] || '',
+          telefon2: columns[8] || '',
+          email: columns[9] || '',
+          infobox: columns[10] || '',
           pool_status: 'im_pool',
           sparte: '1&1 Versatel',
           benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
@@ -155,11 +146,7 @@ export default function LeadPool() {
           await base44.entities.Lead.update(duplicate.id, mergedData);
           merged++;
         } else {
-          await base44.entities.Lead.create({
-            ...newLead,
-            leadnummer: generateLeadnummer(),
-            cluster_id: generateClusterID()
-          });
+          await base44.entities.Lead.create(newLead);
           imported++;
         }
       }
@@ -251,7 +238,7 @@ export default function LeadPool() {
                     <li>Optimal für große Mengen (z.B. 5000 Leads)</li>
                   </ul>
                   <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Spaltenreihenfolge:</p>
-                  <p className="text-xs text-blue-800">Firma | Ansprechpartner | Stadt | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox</p>
+                  <p className="text-xs text-blue-800">Leadnummer | Cluster-ID | Firma | Ansprechpartner | Stadt | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Daten aus Excel einfügen</Label>
