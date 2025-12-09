@@ -610,16 +610,53 @@ export default function Leads() {
     });
   };
 
+  const generateLeadnummer = () => {
+    const random = Math.floor(Math.random() * 900) + 100;
+    const year = new Date().getFullYear();
+    return `LD${random}${year}`;
+  };
+
+  const generateClusterID = () => {
+    const random = Math.floor(Math.random() * 9000) + 1000;
+    return `C${random}${Math.floor(Math.random() * 900) + 100}`;
+  };
+
+  const findDuplicateLead = (newLead, existingLeads) => {
+    return existingLeads.find(existing => {
+      const sameCompany = existing.firma?.toLowerCase() === newLead.firma?.toLowerCase();
+      const sameAddress = existing.postleitzahl === newLead.postleitzahl && 
+                          existing.strasse_hausnummer?.toLowerCase() === newLead.strasse_hausnummer?.toLowerCase();
+      const samePhone = existing.telefon && newLead.telefon && existing.telefon === newLead.telefon;
+
+      return sameCompany && (sameAddress || samePhone);
+    });
+  };
+
+  const mergeDuplicateData = (existing, newData) => {
+    return {
+      ...existing,
+      ansprechpartner: newData.ansprechpartner || existing.ansprechpartner,
+      telefon: newData.telefon || existing.telefon,
+      telefon2: newData.telefon2 || existing.telefon2 || newData.telefon,
+      email: newData.email || existing.email,
+      infobox: `${existing.infobox || ''}\n\n[Import ${new Date().toLocaleDateString('de-DE')}] Duplikat erkannt und zusammengeführt:\n${newData.ansprechpartner ? `Ansprechpartner: ${newData.ansprechpartner}\n` : ''}${newData.telefon ? `Telefon: ${newData.telefon}\n` : ''}${newData.telefon2 ? `Telefon2: ${newData.telefon2}\n` : ''}${newData.email ? `Email: ${newData.email}` : ''}`.trim()
+    };
+  };
+
   const handlePasteImport = async () => {
     if (!pastedData.trim() || !importStatus) return;
-    
+
     setIsImporting(true);
-    
+
     try {
-      // Parse pasted data (Tab-separated from Excel)
       const lines = pastedData.trim().split('\n');
       const assignedEmployee = employees.find(e => e.full_name === importAssignedTo);
-      const leadsToImport = lines.map(line => {
+      const existingLeads = await base44.entities.Lead.list();
+
+      let imported = 0;
+      let merged = 0;
+
+      const parsedLeads = lines.map(line => {
         const columns = line.split('\t');
         return {
           firma: columns[0] || '',
@@ -634,23 +671,40 @@ export default function Leads() {
           assigned_to: assignedEmployee?.full_name || '',
           assigned_to_email: assignedEmployee?.email || '',
           sparte: '1&1 Versatel',
-          status: importStatus
+          status: importStatus,
+          benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
         };
-      }).filter(lead => lead.firma); // Only import rows with a company name
+      }).filter(lead => lead.firma);
 
-      if (leadsToImport.length === 0) {
+      if (parsedLeads.length === 0) {
         alert('Keine gültigen Daten gefunden');
         setIsImporting(false);
         return;
       }
 
-      await base44.entities.Lead.bulkCreate(leadsToImport);
+      for (const newLead of parsedLeads) {
+        const duplicate = findDuplicateLead(newLead, existingLeads);
+
+        if (duplicate) {
+          const mergedData = mergeDuplicateData(duplicate, newLead);
+          await base44.entities.Lead.update(duplicate.id, mergedData);
+          merged++;
+        } else {
+          await base44.entities.Lead.create({
+            ...newLead,
+            leadnummer: generateLeadnummer(),
+            cluster_id: generateClusterID()
+          });
+          imported++;
+        }
+      }
+
       queryClient.invalidateQueries(['leads']);
       setIsImportDialogOpen(false);
       setPastedData('');
       setImportStatus('');
       setImportAssignedTo('');
-      alert(`${leadsToImport.length} Leads erfolgreich importiert und ${assignedEmployee?.full_name || 'zugewiesen'}!`);
+      alert(`Import erfolgreich!\n${imported} neue Leads erstellt\n${merged} Duplikate zusammengeführt`);
     } catch (error) {
       alert('Fehler beim Import: ' + error.message);
       console.error('Import error:', error);
@@ -1034,6 +1088,7 @@ export default function Leads() {
                       className="w-4 h-4"
                     />
                   </TableHead>
+                  <TableHead>Lead-Nr / Cluster</TableHead>
                   <TableHead>Firma</TableHead>
                   <TableHead>Stadt</TableHead>
                   <TableHead>PLZ / Adresse</TableHead>
@@ -1068,6 +1123,12 @@ export default function Leads() {
                         }
                         className="w-4 h-4"
                       />
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-xs">
+                        {lead.leadnummer && <div className="font-mono font-semibold text-blue-900">{lead.leadnummer}</div>}
+                        {lead.cluster_id && <div className="font-mono text-slate-600">{lead.cluster_id}</div>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

@@ -78,14 +78,52 @@ export default function LeadPool() {
     };
   });
 
+  const generateLeadnummer = () => {
+    const random = Math.floor(Math.random() * 900) + 100;
+    const year = new Date().getFullYear();
+    return `LD${random}${year}`;
+  };
+
+  const generateClusterID = () => {
+    const random = Math.floor(Math.random() * 9000) + 1000;
+    return `C${random}${Math.floor(Math.random() * 900) + 100}`;
+  };
+
+  const findDuplicateLead = (newLead, existingLeads) => {
+    return existingLeads.find(existing => {
+      const sameCompany = existing.firma?.toLowerCase() === newLead.firma?.toLowerCase();
+      const sameAddress = existing.postleitzahl === newLead.postleitzahl && 
+                          existing.strasse_hausnummer?.toLowerCase() === newLead.strasse_hausnummer?.toLowerCase();
+      const samePhone = existing.telefon && newLead.telefon && existing.telefon === newLead.telefon;
+
+      return sameCompany && (sameAddress || samePhone);
+    });
+  };
+
+  const mergeDuplicateData = (existing, newData) => {
+    return {
+      ...existing,
+      ansprechpartner: newData.ansprechpartner || existing.ansprechpartner,
+      telefon: newData.telefon || existing.telefon,
+      telefon2: newData.telefon2 || existing.telefon2 || newData.telefon,
+      email: newData.email || existing.email,
+      infobox: `${existing.infobox || ''}\n\n[Pool-Import ${new Date().toLocaleDateString('de-DE')}] Duplikat erkannt und zusammengeführt:\n${newData.ansprechpartner ? `Ansprechpartner: ${newData.ansprechpartner}\n` : ''}${newData.telefon ? `Telefon: ${newData.telefon}\n` : ''}${newData.telefon2 ? `Telefon2: ${newData.telefon2}\n` : ''}${newData.email ? `Email: ${newData.email}` : ''}`.trim()
+    };
+  };
+
   const handlePoolImport = async () => {
     if (!pastedData.trim()) return;
-    
+
     setIsImporting(true);
-    
+
     try {
       const lines = pastedData.trim().split('\n');
-      const leadsToImport = lines.map(line => {
+      const existingLeads = await base44.entities.Lead.list();
+
+      let imported = 0;
+      let merged = 0;
+
+      const parsedLeads = lines.map(line => {
         const columns = line.split('\t');
         return {
           firma: columns[0] || '',
@@ -103,17 +141,33 @@ export default function LeadPool() {
         };
       }).filter(lead => lead.firma);
 
-      if (leadsToImport.length === 0) {
+      if (parsedLeads.length === 0) {
         alert('Keine gültigen Daten gefunden');
         setIsImporting(false);
         return;
       }
 
-      await base44.entities.Lead.bulkCreate(leadsToImport);
+      for (const newLead of parsedLeads) {
+        const duplicate = findDuplicateLead(newLead, existingLeads);
+
+        if (duplicate) {
+          const mergedData = mergeDuplicateData(duplicate, newLead);
+          await base44.entities.Lead.update(duplicate.id, mergedData);
+          merged++;
+        } else {
+          await base44.entities.Lead.create({
+            ...newLead,
+            leadnummer: generateLeadnummer(),
+            cluster_id: generateClusterID()
+          });
+          imported++;
+        }
+      }
+
       queryClient.invalidateQueries(['leads']);
       setIsImportDialogOpen(false);
       setPastedData('');
-      alert(`${leadsToImport.length} Leads erfolgreich in den Pool importiert!`);
+      alert(`Pool-Import erfolgreich!\n${imported} neue Leads erstellt\n${merged} Duplikate zusammengeführt`);
     } catch (error) {
       alert('Fehler beim Import: ' + error.message);
     } finally {

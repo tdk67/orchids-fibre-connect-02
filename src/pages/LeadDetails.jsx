@@ -136,8 +136,23 @@ export default function LeadDetails() {
     },
   });
 
+  const generateLeadnummer = () => {
+    const random = Math.floor(Math.random() * 900) + 100;
+    const year = new Date().getFullYear();
+    return `LD${random}${year}`;
+  };
+
+  const generateClusterID = () => {
+    const random = Math.floor(Math.random() * 9000) + 1000;
+    return `C${random}${Math.floor(Math.random() * 900) + 100}`;
+  };
+
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Lead.create(data),
+    mutationFn: (data) => base44.entities.Lead.create({
+      ...data,
+      leadnummer: generateLeadnummer(),
+      cluster_id: generateClusterID()
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(['leads']);
       navigate(createPageUrl('Leads'));
@@ -551,6 +566,24 @@ export default function LeadDetails() {
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {lead && (lead.leadnummer || lead.cluster_id) && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex gap-6">
+                  {lead.leadnummer && (
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">Lead-Nummer</p>
+                      <p className="text-lg font-mono font-bold text-blue-900">{lead.leadnummer}</p>
+                    </div>
+                  )}
+                  {lead.cluster_id && (
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">Cluster ID</p>
+                      <p className="text-lg font-mono font-bold text-blue-900">{lead.cluster_id}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Firma *</Label>
