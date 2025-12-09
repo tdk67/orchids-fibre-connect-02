@@ -59,9 +59,9 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
   const isPremium = lead.produkt?.toLowerCase().includes('premium');
 
   return (
-    <div className="bg-white p-8 max-w-4xl mx-auto" id="angebot-content" style={{ color: '#1e3a8a' }}>
+    <div className="bg-white p-6 max-w-4xl mx-auto" id="angebot-content" style={{ color: '#1e3a8a' }}>
       {/* Header */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex justify-between items-start mb-4">
         <div>
           <img 
             src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/b7bf2362a_EE-logo-1-1e3f66-1024x576.png"
@@ -79,69 +79,69 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
       </div>
 
       {/* Absender */}
-      <p className="text-xs mb-6" style={{ color: '#6b7280' }}>
+      <p className="text-xs mb-3" style={{ color: '#6b7280' }}>
         Career Agents – Bottroper Straße 8 - 70376 Stuttgart
       </p>
 
       {/* Empfänger */}
-      <div className="mb-8">
+      <div className="mb-4">
         <p className="font-semibold">{lead.firma}</p>
         <p>{lead.strasse_hausnummer}</p>
         <p>{lead.postleitzahl} {lead.stadt}</p>
       </div>
 
       {/* Datum */}
-      <p className="text-right text-sm mb-8">
+      <p className="text-right text-sm mb-4">
         Stuttgart, {format(new Date(), 'dd.MM.yyyy', { locale: de })}
       </p>
 
       {/* Titel */}
-      <div className="mb-6">
-        <h2 className="text-xl font-bold mb-2" style={{ color: '#1e3a8a' }}>Angebot</h2>
-        <h3 className="text-lg font-semibold" style={{ color: '#1e3a8a' }}>
+      <div className="mb-3">
+        <h2 className="text-lg font-bold mb-1" style={{ color: '#1e3a8a' }}>Angebot</h2>
+        <h3 className="text-base font-semibold" style={{ color: '#1e3a8a' }}>
           Glasfaseranschluss für Ihr Unternehmen
         </h3>
       </div>
 
       {/* Anrede */}
-      <p className="mb-4">
+      <p className="mb-2 text-sm">
         Sehr geehrte Damen und Herren{lead.ansprechpartner ? `, sehr geehrter Herr/Frau ${lead.ansprechpartner}` : ''},
       </p>
 
-      <p className="mb-6">
+      <p className="mb-3 text-sm">
         anbei übersenden wir Ihnen unser Angebot für die Adresse:<br />
         <strong>{lead.strasse_hausnummer}, {lead.postleitzahl} {lead.stadt}</strong>
       </p>
 
       {/* Produkte */}
-      <div className="mb-8 space-y-4">
+      <div className="mb-4 space-y-2">
         {template.options.map((option, index) => (
-          <div key={index} className="border-l-4 pl-4" style={{ borderColor: '#1e3a8a' }}>
-            <h4 className="font-bold mb-2" style={{ color: '#1e3a8a' }}>
+          <div key={index} className="border-l-4 pl-3 py-1" style={{ borderColor: '#1e3a8a' }}>
+            <h4 className="font-bold text-sm mb-1" style={{ color: '#1e3a8a' }}>
               {template.title} {option.speed.split('/')[0]} - Download {option.speed.split('/')[0]} MBit/s und Upload {option.speed.split('/')[1]} Mbit/s
             </h4>
-            <p className="text-sm mb-1">Laufzeit: 36/48/60 Monate</p>
+            <p className="text-xs mb-1">Laufzeit: 36/48/60 Monate</p>
             {!isPremium ? (
               <>
-                <p className="text-sm">
+                <p className="text-xs">
                   Preis 1. Jahr: {option.preis1Jahr} / mtl. 
                   {option.preisAb2Jahr && ` Preis ab dem 2. Jahr ${option.preisAb2Jahr} / mtl.`}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-xs text-slate-600">
                   Einmalgebühr für AVM Fritz!box Hardware: {option.hardware}
                 </p>
               </>
             ) : (
               <>
-                <p className="text-sm mb-2">
+                <p className="text-xs mb-1">
                   Preis: {option.preis} mtl.
                 </p>
                 {option.vermarktung && (
-                  <p className="text-sm font-bold mb-2" style={{ color: '#1e3a8a' }}>
+                  <p className="text-xs font-bold mb-1" style={{ color: '#1e3a8a' }}>
                     Vermarktungspreis: {option.vermarktung} mtl.
                   </p>
                 )}
-                <p className="text-sm text-slate-600">
+                <p className="text-xs text-slate-600">
                   Hardware Premium-Router vom Marktführer {option.router}: einmalig 36 Monate {option.hardware36}, 48 Monate {option.hardware48}, 60 Monate {option.hardware60}
                 </p>
               </>
@@ -151,23 +151,23 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
       </div>
 
       {/* Servicepaket */}
-      <div className="mb-8">
-        <h4 className="font-bold mb-2 underline" style={{ color: '#1e3a8a' }}>Unser Servicepaket</h4>
-        <p className="text-sm text-justify leading-relaxed">
+      <div className="mb-4">
+        <h4 className="font-bold text-sm mb-1 underline" style={{ color: '#1e3a8a' }}>Unser Servicepaket</h4>
+        <p className="text-xs text-justify leading-snug">
           {template.servicepaket}
         </p>
       </div>
 
       {/* Weitere Angebotsbestimmungen */}
-      <div className="mb-8">
-        <h4 className="font-bold mb-2 underline" style={{ color: '#1e3a8a' }}>Weitere Angebotsbestimmungen</h4>
-        <p className="text-sm">
+      <div className="mb-4">
+        <h4 className="font-bold text-sm mb-1 underline" style={{ color: '#1e3a8a' }}>Weitere Angebotsbestimmungen</h4>
+        <p className="text-xs">
           Alle Preise sind Nettopreise und verstehen sich zzgl. der jeweils gültigen gesetzlichen Mehrwertsteuer.
         </p>
       </div>
 
       {/* Footer */}
-      <div className="border-t pt-4 text-center text-xs" style={{ color: '#6b7280', borderColor: '#1e3a8a' }}>
+      <div className="border-t pt-2 text-center text-xs" style={{ color: '#6b7280', borderColor: '#1e3a8a' }}>
         <p className="font-bold" style={{ color: '#1e3a8a' }}>CAREER AGENTS</p>
         <p>Bottroper Str. 8, 70376 Stuttgart, Germany</p>
         <p>Telefon: 0171 8197956 / E-Mail: oezdemir@career-agents.de</p>
