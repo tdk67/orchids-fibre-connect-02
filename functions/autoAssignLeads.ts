@@ -66,11 +66,14 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Zähle aktuelle Leads des Mitarbeiters (zugewiesen, nicht bearbeitet)
+    // Zähle NUR AKTIVE Leads des Mitarbeiters
     const assignedLeads = allLeads.filter(l => 
       l.assigned_to_email === employeeEmail && 
       l.pool_status === 'zugewiesen' &&
-      l.benutzertyp === (user.benutzertyp || 'Interner Mitarbeiter')
+      l.benutzertyp === (user.benutzertyp || 'Interner Mitarbeiter') &&
+      !l.archiv_kategorie &&
+      !l.verkaufschance_status &&
+      !l.verloren
     );
 
     const currentCount = assignedLeads.length;
