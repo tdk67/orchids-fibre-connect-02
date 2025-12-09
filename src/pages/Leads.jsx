@@ -611,31 +611,26 @@ export default function Leads() {
   const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
   
   const filteredLeads = leads.filter((lead) => {
+    // Tab-basierte Filterung ZUERST
+    if (activeTab === 'aktiv') {
+      if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;
+    } else if (activeTab === 'angebote') {
+      if (!lead.verkaufschance_status) return false;
+    } else if (activeTab === 'verloren') {
+      if (!lead.verloren) return false;
+    } else if (activeTab === 'nicht_erreicht') {
+      if (lead.archiv_kategorie !== 'Nicht erreicht') return false;
+    } else if (activeTab === 'anderer_provider') {
+      if (lead.archiv_kategorie !== 'Anderer Provider') return false;
+    } else if (activeTab === 'kein_interesse') {
+      if (lead.archiv_kategorie !== 'Kein Interesse') return false;
+    }
+
     // Benutzertyp-Filter
     if (isInternalAdmin) {
       if (lead.benutzertyp !== selectedBenutzertyp) return false;
     } else {
       if (lead.benutzertyp !== userBenutzertyp) return false;
-    }
-
-    // Tab-basierte Filterung
-    if (activeTab === 'aktiv') {
-      if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;
-    }
-    if (activeTab === 'angebote') {
-      if (!lead.verkaufschance_status) return false;
-    }
-    if (activeTab === 'verloren') {
-      if (!lead.verloren) return false;
-    }
-    if (activeTab === 'nicht_erreicht') {
-      if (lead.archiv_kategorie !== 'Nicht erreicht') return false;
-    }
-    if (activeTab === 'anderer_provider') {
-      if (lead.archiv_kategorie !== 'Anderer Provider') return false;
-    }
-    if (activeTab === 'kein_interesse') {
-      if (lead.archiv_kategorie !== 'Kein Interesse') return false;
     }
     
     const searchMatch = 
