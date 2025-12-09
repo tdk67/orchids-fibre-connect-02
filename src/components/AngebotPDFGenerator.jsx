@@ -162,12 +162,6 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
         </p>
       </div>
 
-      {/* Kontakt */}
-      <div className="mb-8">
-        <p className="font-semibold text-sm">Business Sales Manager</p>
-        <p className="text-sm">{lead.assigned_to || 'Career Agents Team'}</p>
-      </div>
-
       {/* Footer */}
       <div className="border-t pt-4 text-center text-xs" style={{ color: '#6b7280', borderColor: '#1e3a8a' }}>
         <p className="font-bold" style={{ color: '#1e3a8a' }}>CAREER AGENTS</p>
