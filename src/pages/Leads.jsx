@@ -653,6 +653,9 @@ export default function Leads() {
   const isInternalAdmin = user?.role === 'admin' && userBenutzertyp === 'Interner Mitarbeiter';
   
   const filteredLeads = leads.filter((lead) => {
+    // WICHTIG: Pool-Leads (im_pool) niemals anzeigen - nur im Hintergrund
+    if (lead.pool_status === 'im_pool') return false;
+
     // Tab-basierte Filterung ZUERST
     if (activeTab === 'aktiv') {
       if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;

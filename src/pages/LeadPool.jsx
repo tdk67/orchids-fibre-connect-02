@@ -350,11 +350,12 @@ export default function LeadPool() {
           <h3 className="font-bold text-lg mb-3">So funktioniert das Lead-Pool-System:</h3>
           <ul className="space-y-2 text-sm text-slate-700">
             <li>✅ Importieren Sie große Mengen Leads (z.B. 5000) in den Pool</li>
-            <li>✅ Leads werden zunächst als "im_pool" markiert (nicht zugewiesen)</li>
+            <li>✅ Leads werden im Hintergrund als "im_pool" verwaltet (nicht sichtbar)</li>
             <li>✅ Jeder Mitarbeiter soll 50 aktive Leads gleichzeitig haben</li>
             <li>✅ Klicken Sie "Auto-Verteilung" um automatisch zu verteilen</li>
             <li>✅ Wenn ein Mitarbeiter Leads bearbeitet (Status ändert), werden automatisch neue Leads nachgeliefert</li>
             <li>✅ System prüft automatisch: Hat Mitarbeiter {"<"} 50 Leads? → Neue Leads aus Pool zuweisen</li>
+            <li>ℹ️ Pool-Leads werden nicht angezeigt - nur für die automatische Verteilung im Hintergrund</li>
           </ul>
         </CardContent>
       </Card>
