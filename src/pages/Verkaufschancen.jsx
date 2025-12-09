@@ -175,6 +175,7 @@ export default function Verkaufschancen() {
       try {
         await base44.entities.Lead.update(editingLead.id, {
           ...editingLead,
+          status: 'Verloren',
           verkaufschance_status: '',
           verloren: true,
           verloren_am: new Date().toISOString().split('T')[0]
