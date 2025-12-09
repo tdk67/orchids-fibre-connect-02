@@ -617,6 +617,14 @@ export default function Leads() {
     } else {
       if (lead.benutzertyp !== userBenutzertyp) return false;
     }
+
+    // Tab-basierte Filterung
+    if (activeTab === 'aktiv') {
+      if (lead.archiv_kategorie || lead.verkaufschance_status) return false;
+    }
+    if (activeTab === 'angebote') {
+      if (!lead.verkaufschance_status) return false;
+    }
     
     const searchMatch = 
       lead.firma?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -839,7 +847,10 @@ export default function Leads() {
       {/* Leads List */}
       <Card className="border-0 shadow-md">
         <CardHeader className="border-b border-slate-100">
-          <CardTitle>Alle Leads ({filteredLeads.length})</CardTitle>
+          <CardTitle>
+            {activeTab === 'aktiv' && `Aktive Leads (${filteredLeads.length})`}
+            {activeTab === 'angebote' && `Angebote (${filteredLeads.length})`}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
