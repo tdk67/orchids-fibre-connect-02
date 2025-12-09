@@ -45,9 +45,9 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
       'Premium Pug 3': {
         title: '1&1 Glasfaser Premium',
         options: [
-          { speed: '300/300', preis: '449,00€', vermarktung: '350,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Lancom' },
-          { speed: '600/600', preis: '619,00€', vermarktung: '545,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Cisco' },
-          { speed: '1000/1000', preis: '749,00€', vermarktung: '591,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Cisco' }
+          { speed: '300/300', preis: '449,00€', vermarktung: '275,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Lancom' },
+          { speed: '600/600', preis: '619,00€', vermarktung: '410,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Cisco' },
+          { speed: '1000/1000', preis: '749,00€', vermarktung: '475,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Cisco' }
         ],
         servicepaket: 'Unser Internet-Servicepaket beinhaltet eine Internet-Flatrate sowie private IPv4- und IPv6-Adressen. Es fallen keine Baukosten oder Gebühren für den Glasfaser-Gebäudeanschluss an. Kunden haben Zugang zu einer Business-Hotline und profitieren von einem Service-Level-Agreement (SLA) Profi, das eine Entstörzeit von 24 Stunden täglich, 365 Tage im Jahr, sicherstellt. Weitere Dienstleistungen im Paket umfassen CPE Management und symmetrische sowie garantierte Bandbreiten, um eine durchgängige Servicequalität zu gewährleisten.'
       }
