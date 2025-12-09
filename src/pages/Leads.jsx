@@ -155,19 +155,19 @@ export default function Leads() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     let dataToSave = { 
       ...formData,
       benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
     };
-    
+
     // Prüfe ob Status ein Archiv-Status ist
     const archivStatusMapping = {
       'Nicht erreicht': 'Nicht erreicht',
       'Anderer Provider': 'Anderer Provider',
       'Kein Interesse': 'Kein Interesse'
     };
-    
+
     // Setze archiv_kategorie basierend auf Status
     if (archivStatusMapping[dataToSave.status]) {
       dataToSave.archiv_kategorie = archivStatusMapping[dataToSave.status];
@@ -179,6 +179,11 @@ export default function Leads() {
       // Kein Archiv-Status - entferne Archivierung
       dataToSave.archiv_kategorie = '';
       dataToSave.archiviert_am = '';
+    }
+
+    // Wenn Status "Angebot erstellt" ist, setze verkaufschance_status
+    if (dataToSave.status === 'Angebot erstellt') {
+      dataToSave.verkaufschance_status = 'Angebot erstellt';
     }
     
     if (editingLead) {
