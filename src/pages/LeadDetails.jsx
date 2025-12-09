@@ -122,8 +122,12 @@ export default function LeadDetails() {
     onSuccess: async (response, variables) => {
       await queryClient.invalidateQueries(['leads']);
 
-      // Automatische Lead-Nachlieferung triggern
-      base44.functions.invoke('autoCheckAllEmployees', {}).catch(() => {});
+      // Automatische Lead-Nachlieferung für diesen Mitarbeiter
+      if (variables.data.assigned_to_email) {
+        base44.functions.invoke('autoAssignLeads', {
+          employeeEmail: variables.data.assigned_to_email
+        }).catch(() => {});
+      }
 
       // Immer zum aktiv Tab zurück
       setTimeout(() => {

@@ -146,8 +146,12 @@ export default function Leads() {
       // Warte auf Query-Invalidierung
       await queryClient.invalidateQueries(['leads']);
 
-      // Automatische Lead-Nachlieferung triggern
-      base44.functions.invoke('autoCheckAllEmployees', {}).catch(() => {});
+      // Automatische Lead-Nachlieferung für diesen Mitarbeiter
+      if (variables.data.assigned_to_email) {
+        base44.functions.invoke('autoAssignLeads', {
+          employeeEmail: variables.data.assigned_to_email
+        }).catch(() => {});
+      }
 
       // Bestimme den Ziel-Tab basierend auf archiv_kategorie
       let targetTab = 'aktiv';
