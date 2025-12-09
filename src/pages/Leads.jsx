@@ -18,14 +18,13 @@ import AngebotPDFGenerator from '../components/AngebotPDFGenerator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [editingLead, setEditingLead] = useState(null);
+  const navigate = useNavigate();
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [user, setUser] = useState(null);
   const [importFile, setImportFile] = useState(null);
@@ -246,9 +245,7 @@ export default function Leads() {
   };
 
   const handleEdit = (lead) => {
-    setEditingLead(lead);
-    setFormData(lead);
-    setIsDialogOpen(true);
+    navigate(createPageUrl('LeadDetails') + `?id=${lead.id}`);
   };
 
   // Calculate provision based on rules
@@ -750,304 +747,14 @@ export default function Leads() {
               </div>
             </DialogContent>
           </Dialog>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-900 hover:bg-blue-800">
-                <Plus className="h-4 w-4 mr-2" />
-                Neuer Lead
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingLead ? 'Lead bearbeiten' : 'Neuer Lead'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Firma *</Label>
-                    <Input
-                      value={formData.firma}
-                      onChange={(e) => setFormData({ ...formData, firma: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ansprechpartner</Label>
-                    <Input
-                      value={formData.ansprechpartner}
-                      onChange={(e) => setFormData({ ...formData, ansprechpartner: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Stadt</Label>
-                    <Input
-                      value={formData.stadt}
-                      onChange={(e) => setFormData({ ...formData, stadt: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Postleitzahl</Label>
-                    <Input
-                      value={formData.postleitzahl}
-                      onChange={(e) => setFormData({ ...formData, postleitzahl: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Straße und Hausnummer</Label>
-                    <Input
-                      value={formData.strasse_hausnummer}
-                      onChange={(e) => setFormData({ ...formData, strasse_hausnummer: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Telefon</Label>
-                    <Input
-                      value={formData.telefon}
-                      onChange={(e) => setFormData({ ...formData, telefon: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Telefon 2</Label>
-                    <Input
-                      value={formData.telefon2}
-                      onChange={(e) => setFormData({ ...formData, telefon2: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>E-Mail</Label>
-                    <Input
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="Optional"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Sparte</Label>
-                    <Select value={formData.sparte} onValueChange={(value) => setFormData({ ...formData, sparte: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Telekom">Telekom</SelectItem>
-                        <SelectItem value="1&1 Versatel">1&1 Versatel</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select value={formData.status} onValueChange={(value) => {
-                      setFormData({ ...formData, status: value });
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Status wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {leadStatuses.map((status) => (
-                          <SelectItem key={status.id} value={status.name}>
-                            {status.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {(formData.status === 'Nicht erreicht' || formData.status === 'Anderer Provider' || formData.status === 'Kein Interesse') && (
-                      <p className="text-xs text-amber-600 font-medium">
-                        ⚠️ Lead wird archiviert in: {formData.status}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Produkt/Service</Label>
-                    <Select value={formData.produkt} onValueChange={handleProduktChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Produkt wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Office Fast And Secure">Office Fast And Secure</SelectItem>
-                        <SelectItem value="Connect Basic">Connect Basic</SelectItem>
-                        <SelectItem value="Premium">Premium</SelectItem>
-                        <SelectItem value="Premium Pug 2">Premium Pug 2</SelectItem>
-                        <SelectItem value="Premium Pug 3">Premium Pug 3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Bandbreite</Label>
-                    <Select 
-                      value={formData.bandbreite} 
-                      onValueChange={handleBandbreiteChange}
-                      disabled={!formData.produkt}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Bandbreite wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getAvailableBandwidths(formData.produkt).map((bw) => (
-                          <SelectItem key={bw} value={bw}>
-                            {bw}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Vertragslaufzeit</Label>
-                    <Select 
-                      value={formData.laufzeit_monate?.toString()} 
-                      onValueChange={(value) => handleLaufzeitChange(parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="36">36 Monate</SelectItem>
-                        <SelectItem value="48">48 Monate</SelectItem>
-                        <SelectItem value="60">60 Monate</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-{(() => {
-                    const assignedEmp = employees.find(e => e.full_name === formData.assigned_to);
-                    const isTeamleiter = assignedEmp?.rolle === 'Teamleiter';
-                    
-                    return (
-                      <>
-                        {formData.berechnete_provision > 0 && (
-                          <div className="space-y-2">
-                            <Label>Berechnete Provision</Label>
-                            <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-md">
-                              <span className="text-lg font-bold text-green-700">
-                                {formData.berechnete_provision.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        {formData.teamleiter_bonus > 0 && user?.role === 'admin' && (
-                          <div className="space-y-2">
-                            <Label>Teamleiter Bonus</Label>
-                            <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-md">
-                              <span className="text-lg font-bold text-purple-700">
-                                {formData.teamleiter_bonus.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-500">Bonus für zugeordneten Teamleiter</p>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                  <div className="space-y-2 col-span-2">
-                    <Label>Zugewiesen an</Label>
-                    <Input
-                      value={formData.assigned_to}
-                      disabled
-                      className="bg-slate-100"
-                    />
-                    <p className="text-xs text-slate-500">
-                      Automatisch zugewiesen. Teamleiter wird über Mitarbeiter-Einstellungen zugeordnet.
-                    </p>
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label>Google Kalender</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={formData.google_calendar_link}
-                        onChange={(e) => setFormData({ ...formData, google_calendar_link: e.target.value })}
-                        placeholder="https://calendar.google.com/..."
-                      />
-                      {formData.google_calendar_link && (
-                        <Button 
-                          type="button"
-                          onClick={() => window.open(formData.google_calendar_link, '_blank')}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Termin buchen
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      Wird automatisch vom zugewiesenen Mitarbeiter übernommen. Klicken Sie "Termin buchen" um den Kalender zu öffnen.
-                    </p>
-                  </div>
+          <Button 
+            onClick={() => navigate(createPageUrl('LeadDetails'))}
+            className="bg-blue-900 hover:bg-blue-800"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Neuer Lead
+          </Button>
 
-                  <div className="space-y-2 col-span-2">
-                    <Label>Infobox / Notizen</Label>
-                    <Textarea
-                      value={formData.infobox}
-                      onChange={(e) => setFormData({ ...formData, infobox: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                  <div className="flex gap-3">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={async () => {
-                        // Speichere Lead-Daten zuerst
-                        let savedLead = editingLead;
-                        if (editingLead) {
-                          await base44.entities.Lead.update(editingLead.id, formData);
-                          savedLead = { ...editingLead, ...formData };
-                        } else {
-                          const created = await base44.entities.Lead.create({
-                            ...formData,
-                            benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
-                          });
-                          savedLead = created;
-                        }
-                        queryClient.invalidateQueries(['leads']);
-                        setIsDialogOpen(false);
-                        handleTerminClick(savedLead);
-                      }}
-                      className="bg-blue-50 hover:bg-blue-100 text-blue-900"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Termin
-                    </Button>
-                    {formData.produkt && (
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={async () => {
-                          // Speichere Lead-Daten zuerst
-                          let savedLead = editingLead;
-                          if (editingLead) {
-                            await base44.entities.Lead.update(editingLead.id, formData);
-                            savedLead = { ...editingLead, ...formData };
-                          } else {
-                            const created = await base44.entities.Lead.create({
-                              ...formData,
-                              benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
-                            });
-                            savedLead = created;
-                          }
-                          queryClient.invalidateQueries(['leads']);
-                          handleCreateAngebot(savedLead);
-                        }}
-                        className="bg-green-50 hover:bg-green-100 text-green-900"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Angebot erstellen
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex gap-3">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Abbrechen
-                    </Button>
-                    <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                      {editingLead ? 'Speichern' : 'Erstellen'}
-                    </Button>
-                  </div>
-                  </div>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 

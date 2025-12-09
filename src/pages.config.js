@@ -13,6 +13,7 @@ import Unternehmenssuche from './pages/Unternehmenssuche';
 import Bestandskunden from './pages/Bestandskunden';
 import Kalender from './pages/Kalender';
 import Outlook from './pages/Outlook';
+import LeadDetails from './pages/LeadDetails';
 import __Layout from './Layout.jsx';
 
 
@@ -32,6 +33,7 @@ export const PAGES = {
     "Bestandskunden": Bestandskunden,
     "Kalender": Kalender,
     "Outlook": Outlook,
+    "LeadDetails": LeadDetails,
 }
 
 export const pagesConfig = {
