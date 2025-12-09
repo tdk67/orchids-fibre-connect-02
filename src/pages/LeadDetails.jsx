@@ -9,8 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Clock, FileText, Calendar, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock, FileText, Calendar, Trash2, Download } from 'lucide-react';
 import { createPageUrl } from '../utils';
+import { format, parseISO, isSameDay } from 'date-fns';
+import { de } from 'date-fns/locale';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import AngebotPDFGenerator from '../components/AngebotPDFGenerator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function LeadDetails() {
   const [user, setUser] = useState(null);
@@ -18,6 +24,10 @@ export default function LeadDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const [showTerminDialog, setShowTerminDialog] = useState(false);
+  const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   const leadId = new URLSearchParams(location.search).get('id');
 
@@ -62,6 +72,27 @@ export default function LeadDetails() {
   const { data: provisionsregeln = [] } = useQuery({
     queryKey: ['provisionsregeln'],
     queryFn: () => base44.entities.Provisionsregel.list(),
+  });
+
+  const { data: termine = [] } = useQuery({
+    queryKey: ['termine'],
+    queryFn: () => base44.entities.Termin.list(),
+  });
+
+  const createTerminMutation = useMutation({
+    mutationFn: (data) => base44.entities.Termin.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['termine']);
+      setShowTerminDialog(false);
+      alert('Termin erfolgreich erstellt!');
+    },
+  });
+
+  const createAngebotMutation = useMutation({
+    mutationFn: (data) => base44.entities.Angebot.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['angebote']);
+    },
   });
 
   useEffect(() => {
@@ -191,18 +222,27 @@ export default function LeadDetails() {
     return [...new Set(bandwidths)];
   };
 
-  const handleProduktChange = (produkt) => {
+  const handleProduktChange = async (produkt) => {
     const bandwidths = getAvailableBandwidths(produkt);
     const newBandbreite = bandwidths.length > 0 ? bandwidths[0] : '';
     const { provision, bonus } = calculateProvision(produkt, newBandbreite, formData.laufzeit_monate, formData.assigned_to);
     
-    setFormData({
+    const updatedFormData = {
       ...formData,
       produkt,
       bandbreite: newBandbreite,
       berechnete_provision: provision,
       teamleiter_bonus: bonus
-    });
+    };
+    
+    setFormData(updatedFormData);
+    
+    // Automatisch PDF erstellen wenn Produkt gewählt
+    if (produkt && formData.firma) {
+      setTimeout(() => {
+        handleDownloadAngebot(updatedFormData);
+      }, 500);
+    }
   };
 
   const handleBandbreiteChange = (bandbreite) => {
@@ -230,6 +270,136 @@ export default function LeadDetails() {
   const handleDelete = () => {
     if (confirm(`Lead "${formData.firma}" wirklich löschen?`)) {
       deleteMutation.mutate(lead.id);
+    }
+  };
+
+  const getAvailableTimeSlots = () => {
+    const slots = [];
+    const startHour = 9;
+    const endHour = 17;
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const dateStr = format(selectedTerminDate, 'yyyy-MM-dd');
+        const fullDateTime = `${dateStr}T${timeStr}`;
+        
+        const isOccupied = termine.some(t => {
+          if (!t.startzeit) return false;
+          const terminStart = new Date(t.startzeit);
+          const slotStart = new Date(fullDateTime);
+          const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
+          const terminEnd = t.endzeit ? new Date(t.endzeit) : new Date(terminStart.getTime() + 30 * 60000);
+          
+          return (
+            (slotStart >= terminStart && slotStart < terminEnd) ||
+            (slotEnd > terminStart && slotEnd <= terminEnd) ||
+            (slotStart <= terminStart && slotEnd >= terminEnd)
+          );
+        });
+        
+        slots.push({
+          time: timeStr,
+          available: !isOccupied,
+          dateTime: fullDateTime
+        });
+      }
+    }
+    
+    return slots;
+  };
+
+  const handleCreateTermin = () => {
+    if (!selectedTimeSlot) return;
+    
+    const [dateStr, timeStr] = selectedTimeSlot.split('T');
+    const [hour, minute] = timeStr.split(':');
+    const startDate = new Date(selectedTerminDate);
+    startDate.setHours(parseInt(hour), parseInt(minute), 0);
+    
+    const endDate = new Date(startDate.getTime() + 30 * 60000);
+    
+    const terminTyp = formData.status === 'Wiedervorlage' ? 'Wiedervorlage' : 'Termin';
+    
+    createTerminMutation.mutate({
+      titel: `${terminTyp}: ${formData.firma}`,
+      beschreibung: `Kundentermin mit ${formData.ansprechpartner || formData.firma}`,
+      startzeit: startDate.toISOString().slice(0, 16),
+      endzeit: endDate.toISOString().slice(0, 16),
+      mitarbeiter_email: formData.assigned_to_email || user?.email,
+      mitarbeiter_name: formData.assigned_to || user?.full_name,
+      kunde_name: formData.firma,
+      lead_id: lead?.id,
+      typ: terminTyp,
+      status: 'Geplant',
+      benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
+    });
+  };
+
+  const handleDownloadAngebot = async (leadData = formData) => {
+    if (!leadData.produkt || !leadData.firma) return;
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      // Temporäres Element erstellen
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      document.body.appendChild(tempDiv);
+      
+      // React Component rendern
+      const root = document.createElement('div');
+      tempDiv.appendChild(root);
+      
+      // Inline rendering
+      root.innerHTML = `
+        <div id="angebot-temp" style="width: 210mm; padding: 20mm; background: white;">
+          <!-- Content wird von AngebotPDFGenerator kommen -->
+        </div>
+      `;
+      
+      // Warte kurz für Rendering
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const element = document.getElementById('angebot-content');
+      if (element) {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Angebot_${leadData.firma}_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+        // Angebot in DB speichern
+        createAngebotMutation.mutate({
+          lead_id: lead?.id,
+          firma: leadData.firma,
+          ansprechpartner: leadData.ansprechpartner,
+          strasse_hausnummer: leadData.strasse_hausnummer,
+          postleitzahl: leadData.postleitzahl,
+          stadt: leadData.stadt,
+          produkt: leadData.produkt,
+          template_name: leadData.produkt,
+          status: 'Erstellt',
+          erstellt_von: user?.full_name || user?.email,
+          erstellt_datum: new Date().toISOString().split('T')[0],
+          notizen: `Bandbreite: ${leadData.bandbreite || '-'}, Laufzeit: ${leadData.laufzeit_monate || '-'} Monate`
+        });
+      }
+      
+      document.body.removeChild(tempDiv);
+    } catch (error) {
+      alert('Fehler beim Erstellen des PDFs: ' + error.message);
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -486,7 +656,7 @@ export default function LeadDetails() {
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => navigate(createPageUrl('Kalender'))}
+                  onClick={() => setShowTerminDialog(true)}
                   className="bg-blue-50 hover:bg-blue-100 text-blue-900"
                 >
                   <Clock className="h-4 w-4 mr-2" />
@@ -496,10 +666,12 @@ export default function LeadDetails() {
                   <Button 
                     type="button" 
                     variant="outline"
+                    onClick={() => handleDownloadAngebot()}
+                    disabled={isGeneratingPDF}
                     className="bg-green-50 hover:bg-green-100 text-green-900"
                   >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Angebot erstellen
+                    <Download className="h-4 w-4 mr-2" />
+                    {isGeneratingPDF ? 'Erstelle PDF...' : 'Angebot Download'}
                   </Button>
                 )}
               </div>
@@ -519,6 +691,87 @@ export default function LeadDetails() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Hidden Angebot Generator for PDF */}
+      <div style={{ position: 'absolute', left: '-9999px' }}>
+        <AngebotPDFGenerator lead={formData} />
+      </div>
+
+      {/* Termin Dialog */}
+      <Dialog open={showTerminDialog} onOpenChange={setShowTerminDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Termin erstellen für {formData.firma}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Datum wählen</Label>
+              <Input
+                type="date"
+                value={format(selectedTerminDate, 'yyyy-MM-dd')}
+                onChange={(e) => {
+                  setSelectedTerminDate(new Date(e.target.value));
+                  setSelectedTimeSlot('');
+                }}
+                min={format(new Date(), 'yyyy-MM-dd')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Freie Zeitslots (30 Min.)</Label>
+              <div className="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto p-2 border rounded-lg">
+                {getAvailableTimeSlots().map((slot) => (
+                  <Button
+                    key={slot.time}
+                    type="button"
+                    variant={selectedTimeSlot === slot.dateTime ? "default" : "outline"}
+                    className={`${
+                      !slot.available 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : selectedTimeSlot === slot.dateTime
+                        ? 'bg-blue-900'
+                        : 'hover:bg-blue-50'
+                    }`}
+                    disabled={!slot.available}
+                    onClick={() => setSelectedTimeSlot(slot.dateTime)}
+                  >
+                    {slot.time}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">
+                Grau = Besetzt, Weiß = Frei, Blau = Ausgewählt
+              </p>
+            </div>
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm font-semibold text-blue-900">Termindetails:</p>
+              <p className="text-xs text-blue-800 mt-1">
+                {formData.firma} - {formData.ansprechpartner}
+              </p>
+              <p className="text-xs text-blue-800">
+                Zugewiesen: {formData.assigned_to}
+              </p>
+              {selectedTimeSlot && (
+                <p className="text-xs text-blue-800 font-semibold mt-2">
+                  Termin: {format(selectedTerminDate, 'dd.MM.yyyy', { locale: de })} um {selectedTimeSlot.split('T')[1]} (30 Min.)
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setShowTerminDialog(false)}>
+                Abbrechen
+              </Button>
+              <Button 
+                type="button"
+                onClick={handleCreateTermin}
+                disabled={!selectedTimeSlot}
+                className="bg-blue-900 hover:bg-blue-800"
+              >
+                Termin erstellen
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
