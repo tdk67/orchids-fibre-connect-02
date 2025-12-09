@@ -170,6 +170,50 @@ export default function LeadDetails() {
       dataToSave.archiviert_am = '';
     }
 
+    // Wenn Status auf "Falsche Daten" gesetzt wird, automatisch Daten überprüfen
+    if (dataToSave.status === 'Falsche Daten' && lead?.status !== 'Falsche Daten') {
+      const confirmVerify = confirm('Sollen die Daten automatisch über das Internet überprüft und korrigiert werden?');
+      
+      if (confirmVerify) {
+        try {
+          alert('Überprüfe Daten im Internet... Bitte warten.');
+          
+          const { data: result } = await base44.functions.invoke('verifyLeadData', {
+            leadData: dataToSave
+          });
+
+          if (result.success && result.verifiedData) {
+            const verified = result.verifiedData;
+            
+            // Aktualisiere formData mit verifizierten Daten
+            dataToSave = {
+              ...dataToSave,
+              firma: verified.firma || dataToSave.firma,
+              ansprechpartner: verified.ansprechpartner || dataToSave.ansprechpartner,
+              strasse_hausnummer: verified.strasse_hausnummer || dataToSave.strasse_hausnummer,
+              postleitzahl: verified.postleitzahl || dataToSave.postleitzahl,
+              stadt: verified.stadt || dataToSave.stadt,
+              telefon: verified.telefon || dataToSave.telefon,
+              email: verified.email || dataToSave.email,
+              infobox: `${dataToSave.infobox || ''}\n\n[Automatisch überprüft am ${new Date().toLocaleDateString('de-DE')}]\n${verified.notizen || ''}\nUnternehmen existiert: ${verified.existiert ? 'Ja' : 'Nein'}`.trim()
+            };
+
+            // Status zurück auf aktiv setzen wenn Daten verifiziert wurden
+            if (verified.existiert) {
+              dataToSave.status = '';
+              dataToSave.archiv_kategorie = '';
+              dataToSave.archiviert_am = '';
+            }
+
+            setFormData(dataToSave);
+            alert('Daten wurden erfolgreich überprüft und aktualisiert!');
+          }
+        } catch (error) {
+          alert('Fehler bei der Datenüberprüfung: ' + error.message);
+        }
+      }
+    }
+
     // Wenn Status auf Angebot gesetzt wird, zu Verkaufschancen verschieben
     if (dataToSave.status === 'Angebot erstellt' || dataToSave.status === 'Angebot gesendet') {
       dataToSave.verkaufschance_status = dataToSave.status;
