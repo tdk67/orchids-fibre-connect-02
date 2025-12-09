@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock, FileText } from 'lucide-react';
+import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock, FileText, Download, Eye } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import AngebotPDFGenerator from '../components/AngebotPDFGenerator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -37,6 +40,9 @@ export default function Leads() {
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
   const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [showAngebotPreview, setShowAngebotPreview] = useState(false);
+  const [angebotLead, setAngebotLead] = useState(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [selectedBenutzertyp, setSelectedBenutzertyp] = useState(() => {
     return localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter';
   });
@@ -447,23 +453,55 @@ export default function Leads() {
       alert('Bitte wählen Sie zuerst ein Produkt aus.');
       return;
     }
+    
+    setAngebotLead(lead);
+    setShowAngebotPreview(true);
+  };
 
-    const angebotData = {
-      lead_id: lead.id,
-      firma: lead.firma,
-      ansprechpartner: lead.ansprechpartner,
-      strasse_hausnummer: lead.strasse_hausnummer,
-      postleitzahl: lead.postleitzahl,
-      stadt: lead.stadt,
-      produkt: lead.produkt,
-      template_name: lead.produkt,
-      status: 'Erstellt',
-      erstellt_von: user?.full_name || user?.email,
-      erstellt_datum: new Date().toISOString().split('T')[0],
-      notizen: `Bandbreite: ${lead.bandbreite || '-'}, Laufzeit: ${lead.laufzeit_monate || '-'} Monate`
-    };
-
-    createAngebotMutation.mutate(angebotData);
+  const handleDownloadAngebot = async () => {
+    if (!angebotLead) return;
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      const element = document.getElementById('angebot-content');
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Angebot_${angebotLead.firma}_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      // Angebot in DB speichern
+      const angebotData = {
+        lead_id: angebotLead.id,
+        firma: angebotLead.firma,
+        ansprechpartner: angebotLead.ansprechpartner,
+        strasse_hausnummer: angebotLead.strasse_hausnummer,
+        postleitzahl: angebotLead.postleitzahl,
+        stadt: angebotLead.stadt,
+        produkt: angebotLead.produkt,
+        template_name: angebotLead.produkt,
+        status: 'Erstellt',
+        erstellt_von: user?.full_name || user?.email,
+        erstellt_datum: new Date().toISOString().split('T')[0],
+        notizen: `Bandbreite: ${angebotLead.bandbreite || '-'}, Laufzeit: ${angebotLead.laufzeit_monate || '-'} Monate`
+      };
+      
+      createAngebotMutation.mutate(angebotData);
+      
+    } catch (error) {
+      alert('Fehler beim Erstellen des PDFs: ' + error.message);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   const handleEmployeeChange = (employeeName) => {
@@ -933,11 +971,11 @@ export default function Leads() {
                       <Clock className="h-4 w-4 mr-2" />
                       Termin
                     </Button>
-                    {editingLead && editingLead.produkt && (
+                    {formData.produkt && (
                       <Button 
                         type="button" 
                         variant="outline"
-                        onClick={() => handleCreateAngebot(editingLead)}
+                        onClick={() => handleCreateAngebot(editingLead || formData)}
                         className="bg-green-50 hover:bg-green-100 text-green-900"
                       >
                         <FileText className="h-4 w-4 mr-2" />
@@ -1201,6 +1239,33 @@ export default function Leads() {
           )}
         </CardContent>
         </Card>
+
+        {/* Angebot Preview Dialog */}
+        <Dialog open={showAngebotPreview} onOpenChange={setShowAngebotPreview}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Angebotsvorschau - {angebotLead?.firma}</DialogTitle>
+            </DialogHeader>
+            {angebotLead && (
+              <div>
+                <AngebotPDFGenerator lead={angebotLead} />
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setShowAngebotPreview(false)}>
+                    Schließen
+                  </Button>
+                  <Button 
+                    onClick={handleDownloadAngebot}
+                    disabled={isGeneratingPDF}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {isGeneratingPDF ? 'Erstelle PDF...' : 'PDF Download'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Termin Dialog */}
         <Dialog open={showTerminDialog} onOpenChange={setShowTerminDialog}>
