@@ -798,7 +798,7 @@ export default function Leads() {
       {/* Tabs & Filters */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="aktiv">
                 Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status).length})
