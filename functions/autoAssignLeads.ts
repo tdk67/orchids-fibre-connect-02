@@ -115,6 +115,7 @@ Deno.serve(async (req) => {
         pool_status: 'zugewiesen',
         assigned_to: employee.full_name,
         assigned_to_email: employee.email,
+        status: 'Neu',
         google_calendar_link: employee.google_calendar_link || ''
       });
     }
