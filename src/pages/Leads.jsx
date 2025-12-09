@@ -35,6 +35,7 @@ export default function Leads() {
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
+  const [selectedAdresspunkte, setSelectedAdresspunkte] = useState([]);
   const location = useLocation();
   const activeTab = new URLSearchParams(location.search).get('tab') || 'aktiv';
   const [showTerminDialog, setShowTerminDialog] = useState(false);
@@ -375,6 +376,47 @@ export default function Leads() {
     } else {
       setSelectedLeads(filteredLeads.map(l => l.id));
     }
+  };
+
+  const toggleAdresspunkt = (leadId) => {
+    setSelectedAdresspunkte(prev => 
+      prev.includes(leadId) 
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+
+  const toggleAllAdresspunkte = () => {
+    if (selectedAdresspunkte.length === filteredLeads.length) {
+      setSelectedAdresspunkte([]);
+    } else {
+      setSelectedAdresspunkte(filteredLeads.map(l => l.id));
+    }
+  };
+
+  const handleTransferToUnternehmenssuche = async () => {
+    if (selectedAdresspunkte.length === 0) return;
+
+    // Sammle Adressen
+    const addresses = selectedAdresspunkte.map(id => {
+      const lead = leads.find(l => l.id === id);
+      return `${lead.strasse_hausnummer}, ${lead.postleitzahl} ${lead.stadt}`;
+    }).join('\n');
+
+    // Speichere in LocalStorage für Unternehmenssuche
+    const storageKey = `unternehmenssuche_addresses_${user?.email}`;
+    localStorage.setItem(storageKey, addresses);
+
+    // Lösche ausgewählte Leads
+    for (const leadId of selectedAdresspunkte) {
+      await deleteMutation.mutateAsync(leadId);
+    }
+
+    setSelectedAdresspunkte([]);
+    alert(`${selectedAdresspunkte.length} Adresse(n) zur Unternehmenssuche übertragen und gelöscht!`);
+    
+    // Navigation zur Unternehmenssuche
+    navigate(createPageUrl('Unternehmenssuche'));
   };
 
   const handleDelete = (lead) => {
@@ -822,6 +864,30 @@ export default function Leads() {
         </Card>
       )}
 
+      {/* Adresspunkte Bulk Actions */}
+      {activeTab === 'adresspunkte' && selectedAdresspunkte.length > 0 && (
+        <Card className="border-0 shadow-md bg-green-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <span className="font-semibold text-green-900">
+                {selectedAdresspunkte.length} Adresse(n) ausgewählt
+              </span>
+              <div className="flex gap-2 items-center flex-1">
+                <Button 
+                  onClick={handleTransferToUnternehmenssuche}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Zur Unternehmenssuche übertragen & löschen
+                </Button>
+              </div>
+              <Button variant="outline" onClick={() => setSelectedAdresspunkte([])}>
+                Abbrechen
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabs & Filters */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
@@ -907,8 +973,12 @@ export default function Leads() {
                   <TableHead className="w-12">
                     <input
                       type="checkbox"
-                      checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
-                      onChange={toggleAllLeads}
+                      checked={
+                        activeTab === 'adresspunkte'
+                          ? selectedAdresspunkte.length === filteredLeads.length && filteredLeads.length > 0
+                          : selectedLeads.length === filteredLeads.length && filteredLeads.length > 0
+                      }
+                      onChange={activeTab === 'adresspunkte' ? toggleAllAdresspunkte : toggleAllLeads}
                       className="w-4 h-4"
                     />
                   </TableHead>
@@ -934,8 +1004,16 @@ export default function Leads() {
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        checked={selectedLeads.includes(lead.id)}
-                        onChange={() => toggleLeadSelection(lead.id)}
+                        checked={
+                          activeTab === 'adresspunkte'
+                            ? selectedAdresspunkte.includes(lead.id)
+                            : selectedLeads.includes(lead.id)
+                        }
+                        onChange={() => 
+                          activeTab === 'adresspunkte'
+                            ? toggleAdresspunkt(lead.id)
+                            : toggleLeadSelection(lead.id)
+                        }
                         className="w-4 h-4"
                       />
                     </TableCell>
