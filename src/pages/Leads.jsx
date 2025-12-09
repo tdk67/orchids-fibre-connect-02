@@ -826,26 +826,23 @@ export default function Leads() {
                   <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Spaltenreihenfolge:</p>
                   <p className="text-xs text-blue-800">Firma | Ansprechpartner | Stadt | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox | Leadnummer | Cluster-ID</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Mitarbeiter zuweisen *</Label>
-                    <Select value={importAssignedTo} onValueChange={setImportAssignedTo}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Mitarbeiter wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.full_name}>
-                            {emp.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                <div className="space-y-2">
+                  <Label>Mitarbeiter zuweisen *</Label>
+                  <Select value={importAssignedTo} onValueChange={setImportAssignedTo}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Mitarbeiter wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.full_name}>
+                          {emp.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <p className="text-xs text-slate-500 bg-blue-50 p-2 rounded">
-                  Alle importierten Leads werden als <strong>1&1 Versatel</strong> mit dem gewählten Status und Mitarbeiter importiert
+                  Alle importierten Leads werden als <strong>1&1 Versatel</strong> mit Status <strong>"Neu"</strong> importiert
                 </p>
                 <div className="space-y-2">
                   <Label>Daten aus Excel einfügen</Label>
@@ -864,7 +861,6 @@ export default function Leads() {
                   <Button variant="outline" onClick={() => {
                     setIsImportDialogOpen(false);
                     setPastedData('');
-                    setImportStatus('');
                   }}>
                     Abbrechen
                   </Button>
