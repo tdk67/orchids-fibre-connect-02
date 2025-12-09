@@ -47,7 +47,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Mitarbeiter', path: 'Employees', icon: UserCircle, roles: ['admin'], partnerAccess: false },
-    { name: 'Benutzerverwaltung', path: 'Benutzerverwaltung', icon: Shield, roles: ['admin'], partnerAccess: false },
     { name: 'Verkäufe', path: 'Sales', icon: ShoppingCart, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Provisionen', path: 'Commissions', icon: Calculator, roles: ['admin'], partnerAccess: false },
     { name: 'Provisionsregeln', path: 'Provisionsregeln', icon: Settings, roles: ['admin'], partnerAccess: false },

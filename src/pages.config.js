@@ -12,7 +12,6 @@ import Provisionsregeln from './pages/Provisionsregeln';
 import Unternehmenssuche from './pages/Unternehmenssuche';
 import Bestandskunden from './pages/Bestandskunden';
 import Kalender from './pages/Kalender';
-import Benutzerverwaltung from './pages/Benutzerverwaltung';
 import Outlook from './pages/Outlook';
 import __Layout from './Layout.jsx';
 
@@ -32,7 +31,6 @@ export const PAGES = {
     "Unternehmenssuche": Unternehmenssuche,
     "Bestandskunden": Bestandskunden,
     "Kalender": Kalender,
-    "Benutzerverwaltung": Benutzerverwaltung,
     "Outlook": Outlook,
 }
 
