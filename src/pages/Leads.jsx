@@ -982,9 +982,22 @@ export default function Leads() {
                     <Button 
                       type="button" 
                       variant="outline"
-                      onClick={() => {
-                        handleTerminClick(editingLead || formData);
+                      onClick={async () => {
+                        // Speichere Lead-Daten zuerst
+                        let savedLead = editingLead;
+                        if (editingLead) {
+                          await base44.entities.Lead.update(editingLead.id, formData);
+                          savedLead = { ...editingLead, ...formData };
+                        } else {
+                          const created = await base44.entities.Lead.create({
+                            ...formData,
+                            benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
+                          });
+                          savedLead = created;
+                        }
+                        queryClient.invalidateQueries(['leads']);
                         setIsDialogOpen(false);
+                        handleTerminClick(savedLead);
                       }}
                       className="bg-blue-50 hover:bg-blue-100 text-blue-900"
                     >
@@ -995,7 +1008,22 @@ export default function Leads() {
                       <Button 
                         type="button" 
                         variant="outline"
-                        onClick={() => handleCreateAngebot(editingLead || formData)}
+                        onClick={async () => {
+                          // Speichere Lead-Daten zuerst
+                          let savedLead = editingLead;
+                          if (editingLead) {
+                            await base44.entities.Lead.update(editingLead.id, formData);
+                            savedLead = { ...editingLead, ...formData };
+                          } else {
+                            const created = await base44.entities.Lead.create({
+                              ...formData,
+                              benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
+                            });
+                            savedLead = created;
+                          }
+                          queryClient.invalidateQueries(['leads']);
+                          handleCreateAngebot(savedLead);
+                        }}
                         className="bg-green-50 hover:bg-green-100 text-green-900"
                       >
                         <FileText className="h-4 w-4 mr-2" />
