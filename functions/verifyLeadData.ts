@@ -24,10 +24,12 @@ ${leadData.telefon ? `Telefon (zu überprüfen): ${leadData.telefon}` : ''}
 Aufgabe:
 1. Finde die offizielle Webseite und aktuelle Kontaktdaten des Unternehmens
 2. Verifiziere oder korrigiere: Firmenname, vollständige Adresse (Straße, Hausnummer, PLZ, Stadt), Telefonnummer, E-Mail
-3. Finde einen Ansprechpartner wenn möglich
-4. Prüfe ob das Unternehmen noch existiert und aktiv ist
+3. WICHTIG: Finde unbedingt eine aktuelle Telefonnummer des Unternehmens - prüfe mehrere Quellen (Webseite, Google Maps, Branchenverzeichnisse)
+4. Finde einen Ansprechpartner wenn möglich
+5. Prüfe ob das Unternehmen noch existiert und aktiv ist
 
-Wichtig: Gib nur verifizierte, aktuelle Daten zurück. Wenn etwas nicht gefunden werden kann, gib null zurück.
+KRITISCH: Die Telefonnummer ist PFLICHT. Wenn keine aktuelle Telefonnummer gefunden werden kann, setze telefon auf null.
+Gib nur verifizierte, aktuelle Daten zurück. Wenn etwas nicht gefunden werden kann, gib null zurück.
 `;
 
     const result = await base44.integrations.Core.InvokeLLM({
@@ -49,11 +51,9 @@ Wichtig: Gib nur verifizierte, aktuelle Daten zurück. Wenn etwas nicht gefunden
       }
     });
 
-    // Prüfe ob Daten gefunden wurden
-    const dataFound = result && result.existiert && (
+    // Prüfe ob Daten gefunden wurden - Telefonnummer ist PFLICHT
+    const dataFound = result && result.existiert && result.telefon && (
       result.firma || 
-      result.telefon || 
-      result.email || 
       result.strasse_hausnummer
     );
 
