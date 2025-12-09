@@ -119,9 +119,9 @@ export default function LeadDetails() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
-    onSuccess: (response, variables) => {
-      queryClient.invalidateQueries(['leads']);
-      
+    onSuccess: async (response, variables) => {
+      await queryClient.invalidateQueries(['leads']);
+
       // Navigiere zum richtigen Tab basierend auf archiv_kategorie
       let targetTab = 'aktiv';
       if (variables.data.archiv_kategorie === 'Nicht erreicht') {
@@ -131,8 +131,11 @@ export default function LeadDetails() {
       } else if (variables.data.archiv_kategorie === 'Kein Interesse') {
         targetTab = 'kein_interesse';
       }
-      
-      navigate(createPageUrl('Leads') + `?tab=${targetTab}`);
+
+      // Warte kurz damit die Query-Invalidierung durchgeführt wird
+      setTimeout(() => {
+        navigate(createPageUrl('Leads') + `?tab=${targetTab}`);
+      }, 100);
     },
   });
 
