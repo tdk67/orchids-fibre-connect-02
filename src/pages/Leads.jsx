@@ -620,10 +620,13 @@ export default function Leads() {
 
     // Tab-basierte Filterung
     if (activeTab === 'aktiv') {
-      if (lead.archiv_kategorie || lead.verkaufschance_status) return false;
+      if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;
     }
     if (activeTab === 'angebote') {
       if (!lead.verkaufschance_status) return false;
+    }
+    if (activeTab === 'verloren') {
+      if (!lead.verloren) return false;
     }
     
     const searchMatch = 
@@ -813,12 +816,15 @@ export default function Leads() {
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="aktiv">
-                Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status).length})
+                Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
               </TabsTrigger>
               <TabsTrigger value="angebote">
                 Angebote ({leads.filter(l => l.verkaufschance_status).length})
+              </TabsTrigger>
+              <TabsTrigger value="verloren">
+                Verloren ({leads.filter(l => l.verloren).length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -859,6 +865,7 @@ export default function Leads() {
           <CardTitle>
             {activeTab === 'aktiv' && `Aktive Leads (${filteredLeads.length})`}
             {activeTab === 'angebote' && `Angebote (${filteredLeads.length})`}
+            {activeTab === 'verloren' && `Verloren (${filteredLeads.length})`}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">

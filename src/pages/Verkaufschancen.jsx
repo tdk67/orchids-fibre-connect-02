@@ -108,7 +108,7 @@ export default function Verkaufschancen() {
   const handleUpdateStatus = async (newStatus) => {
     if (!editingLead) return;
     
-    // Wenn Status auf "Gewonnen" gesetzt wird, erstelle automatisch einen Verkauf
+    // Wenn Status auf "Gewonnen" gesetzt wird, erstelle automatisch einen Verkauf und lösche Lead
     if (newStatus === 'Gewonnen' && editingLead.verkaufschance_status !== 'Gewonnen') {
       const today = new Date();
       
@@ -158,9 +158,33 @@ export default function Verkaufschancen() {
           }
         }
         
-        alert('Verkaufschance gewonnen! Verkauf wurde automatisch erstellt.');
+        // Lead aus Verkaufschancen löschen
+        await base44.entities.Lead.delete(editingLead.id);
+        queryClient.invalidateQueries(['leads']);
+        setIsDialogOpen(false);
+        alert('Verkaufschance gewonnen! Verkauf wurde erstellt und Lead wurde aus Verkaufschancen entfernt.');
+        return;
       } catch (error) {
         alert('Fehler beim Erstellen des Verkaufs: ' + error.message);
+        return;
+      }
+    }
+    
+    // Wenn Status auf "Verloren" gesetzt wird, Lead zu Leads zurück verschieben
+    if (newStatus === 'Verloren' && editingLead.verkaufschance_status !== 'Verloren') {
+      try {
+        await base44.entities.Lead.update(editingLead.id, {
+          ...editingLead,
+          verkaufschance_status: '',
+          verloren: true,
+          verloren_am: new Date().toISOString().split('T')[0]
+        });
+        queryClient.invalidateQueries(['leads']);
+        setIsDialogOpen(false);
+        alert('Lead wurde als verloren markiert und zurück zu Leads verschoben.');
+        return;
+      } catch (error) {
+        alert('Fehler: ' + error.message);
         return;
       }
     }
@@ -206,6 +230,7 @@ export default function Verkaufschancen() {
       'Verhandlung': 'yellow',
       'Angebot erstellt': 'blue',
       'Angebot gesendet': 'purple',
+      'Auftrag gesendet': 'indigo',
       'Nachfassen': 'orange',
       'Gewonnen': 'green',
       'Verloren': 'red'
@@ -307,6 +332,7 @@ export default function Verkaufschancen() {
                   <SelectItem value="Verhandlung">Verhandlung</SelectItem>
                   <SelectItem value="Angebot erstellt">Angebot erstellt</SelectItem>
                   <SelectItem value="Angebot gesendet">Angebot gesendet</SelectItem>
+                  <SelectItem value="Auftrag gesendet">Auftrag gesendet</SelectItem>
                   <SelectItem value="Nachfassen">Nachfassen</SelectItem>
                   <SelectItem value="Gewonnen">Gewonnen</SelectItem>
                   <SelectItem value="Verloren">Verloren</SelectItem>
@@ -542,7 +568,7 @@ export default function Verkaufschancen() {
               <div className="space-y-2">
                 <Label>Status der Verkaufschance</Label>
                 <div className="flex flex-wrap gap-2">
-                  {['Verhandlung', 'Angebot erstellt', 'Angebot gesendet', 'Nachfassen', 'Gewonnen', 'Verloren'].map((status) => (
+                  {['Verhandlung', 'Angebot erstellt', 'Angebot gesendet', 'Auftrag gesendet', 'Nachfassen', 'Gewonnen', 'Verloren'].map((status) => (
                     <Button
                       key={status}
                       variant={editingLead.verkaufschance_status === status ? 'default' : 'outline'}
