@@ -170,6 +170,11 @@ export default function LeadDetails() {
       dataToSave.archiviert_am = '';
     }
 
+    // Automatisch als "bearbeitet" markieren wenn Status geändert wird
+    if (lead && dataToSave.status !== lead.status && dataToSave.status !== '') {
+      dataToSave.pool_status = 'bearbeitet';
+    }
+
     // Wenn Status auf "Falsche Daten" gesetzt wird, automatisch Daten überprüfen
     if (dataToSave.status === 'Falsche Daten' && lead?.status !== 'Falsche Daten') {
       try {

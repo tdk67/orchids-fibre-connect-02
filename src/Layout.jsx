@@ -43,6 +43,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Kalender', path: 'Kalender', icon: CalendarIcon, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'E-Mail', path: 'Outlook', icon: Mail, roles: ['admin', 'user'], partnerAccess: true },
+    { name: 'Lead Pool', path: 'LeadPool', icon: Shield, roles: ['admin'], partnerAccess: false },
     { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Verkaufschancen', path: 'Verkaufschancen', icon: ShoppingCart, roles: ['admin', 'user'], partnerAccess: true },
