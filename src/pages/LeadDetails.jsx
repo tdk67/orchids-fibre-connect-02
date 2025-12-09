@@ -122,19 +122,27 @@ export default function LeadDetails() {
     onSuccess: async (response, variables) => {
       await queryClient.invalidateQueries(['leads']);
 
-      // Navigiere zum richtigen Tab basierend auf archiv_kategorie
+      // Bestimme den Ziel-Tab basierend auf archiv_kategorie
       let targetTab = 'aktiv';
+      let successMessage = '';
+
       if (variables.data.archiv_kategorie === 'Nicht erreicht') {
         targetTab = 'nicht_erreicht';
+        successMessage = 'Lead wurde in "Nicht erreicht" verschoben!';
       } else if (variables.data.archiv_kategorie === 'Anderer Provider') {
         targetTab = 'anderer_provider';
+        successMessage = 'Lead wurde in "Anderer Provider" verschoben!';
       } else if (variables.data.archiv_kategorie === 'Kein Interesse') {
         targetTab = 'kein_interesse';
+        successMessage = 'Lead wurde in "Kein Interesse" verschoben!';
       }
 
       // Warte kurz damit die Query-Invalidierung durchgeführt wird
       setTimeout(() => {
         navigate(createPageUrl('Leads') + `?tab=${targetTab}`);
+        if (successMessage) {
+          alert(successMessage);
+        }
       }, 100);
     },
   });
