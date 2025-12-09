@@ -66,7 +66,7 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
           <img 
             src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/691d914be3952e3190d4dbb7/b7bf2362a_EE-logo-1-1e3f66-1024x576.png"
             alt="Career Agents"
-            className="h-20"
+            className="h-40"
           />
         </div>
         <div className="text-right">
