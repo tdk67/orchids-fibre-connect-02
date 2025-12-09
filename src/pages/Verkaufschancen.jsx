@@ -50,6 +50,37 @@ export default function Verkaufschancen() {
     queryFn: () => base44.entities.Employee.list(),
   });
 
+  const { data: provisionsregeln = [] } = useQuery({
+    queryKey: ['provisionsregeln'],
+    queryFn: () => base44.entities.Provisionsregel.list(),
+  });
+
+  // Provisionsberechnung
+  const calculateProvision = (produkt, bandbreite, laufzeit, assignedTo) => {
+    if (!produkt || !bandbreite || !laufzeit) return { provision: 0, bonus: 0 };
+    
+    const regel = provisionsregeln.find(r => 
+      r.tarif === produkt && 
+      r.bandbreite === bandbreite && 
+      r.laufzeit_monate === laufzeit
+    );
+    
+    if (!regel) return { provision: 0, bonus: 0 };
+    
+    const assignedEmp = employees.find(e => e.full_name === assignedTo);
+    if (assignedEmp?.rolle === 'Teamleiter') {
+      return { 
+        provision: regel.teamleiter_provision || 0, 
+        bonus: 0 
+      };
+    } else {
+      return { 
+        provision: regel.mitarbeiter_provision || 0, 
+        bonus: regel.teamleiter_bonus_provision || 0 
+      };
+    }
+  };
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
     onSuccess: () => {
