@@ -812,7 +812,16 @@ export default function Leads() {
       {/* Tabs & Filters */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
-
+          <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="aktiv">
+                Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status).length})
+              </TabsTrigger>
+              <TabsTrigger value="angebote">
+                Angebote ({leads.filter(l => l.verkaufschance_status).length})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           <div className="flex gap-4 flex-wrap mt-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
