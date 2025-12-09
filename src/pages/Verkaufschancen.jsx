@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Pencil, Building2, Euro, TrendingUp, Target, Calendar } from 'lucide-react';
+import { Search, Pencil, Building2, Euro, TrendingUp, Target, Calendar, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function Verkaufschancen() {
@@ -56,6 +56,13 @@ export default function Verkaufschancen() {
       queryClient.invalidateQueries(['leads']);
       setIsDialogOpen(false);
       setEditingLead(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Lead.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['leads']);
     },
   });
 
@@ -176,6 +183,12 @@ export default function Verkaufschancen() {
       id: editingLead.id,
       data: editingLead
     });
+  };
+
+  const handleDelete = (lead) => {
+    if (confirm(`Verkaufschance "${lead.firma}" wirklich löschen?`)) {
+      deleteMutation.mutate(lead.id);
+    }
   };
 
   // Statistiken - nutze berechnete_provision statt erwarteter_wert
@@ -405,9 +418,19 @@ export default function Verkaufschancen() {
                       )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(lead)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(lead)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDelete(lead)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
