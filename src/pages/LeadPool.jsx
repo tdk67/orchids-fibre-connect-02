@@ -29,6 +29,9 @@ export default function LeadPool() {
       if (!localStorage.getItem('selectedBenutzertyp')) {
         setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
       }
+      
+      // Automatische Lead-Zuweisung im Hintergrund
+      base44.functions.invoke('autoCheckAllEmployees', {}).catch(() => {});
     }).catch(() => {});
 
     const handleBenutzertypChange = () => {
