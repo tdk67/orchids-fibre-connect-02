@@ -119,8 +119,14 @@ export default function LeadDetails() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
-    onSuccess: () => {
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries(['leads']);
+      
+      // Zeige Hinweis wenn archiviert
+      if (variables.data.archiv_kategorie) {
+        alert(`Lead wurde in "${variables.data.archiv_kategorie}" archiviert.`);
+      }
+      
       navigate(createPageUrl('Leads'));
     },
   });
