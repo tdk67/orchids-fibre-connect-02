@@ -41,6 +41,7 @@ export default function Leads() {
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
   const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [terminTypFromLead, setTerminTypFromLead] = useState('Termin');
   const [showAngebotPreview, setShowAngebotPreview] = useState(false);
   const [angebotLead, setAngebotLead] = useState(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -376,6 +377,7 @@ export default function Leads() {
     setSelectedTimeSlot('');
     // Setze Termintyp basierend auf Lead-Status
     const terminTyp = lead.status === 'Wiedervorlage' ? 'Wiedervorlage' : 'Termin';
+    setTerminTypFromLead(terminTyp);
     setShowTerminDialog(true);
   };
 
@@ -443,11 +445,8 @@ export default function Leads() {
     
     const endDate = new Date(startDate.getTime() + 30 * 60000);
     
-    // Setze Termintyp basierend auf Lead-Status
-    const terminTyp = selectedLeadForTermin.status === 'Wiedervorlage' ? 'Wiedervorlage' : 'Termin';
-    
     createTerminMutation.mutate({
-      titel: `${terminTyp}: ${selectedLeadForTermin.firma}`,
+      titel: `${terminTypFromLead}: ${selectedLeadForTermin.firma}`,
       beschreibung: `Kundentermin mit ${selectedLeadForTermin.ansprechpartner || selectedLeadForTermin.firma}`,
       startzeit: startDate.toISOString().slice(0, 16),
       endzeit: endDate.toISOString().slice(0, 16),
@@ -455,8 +454,9 @@ export default function Leads() {
       mitarbeiter_name: selectedLeadForTermin.assigned_to || user?.full_name,
       kunde_name: selectedLeadForTermin.firma,
       lead_id: selectedLeadForTermin.id,
-      typ: terminTyp,
-      status: 'Geplant'
+      typ: terminTypFromLead,
+      status: 'Geplant',
+      benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
     });
   };
 
