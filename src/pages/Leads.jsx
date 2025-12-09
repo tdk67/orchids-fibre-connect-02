@@ -90,18 +90,6 @@ export default function Leads() {
     return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
   }, []);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const leadId = params.get('openLead');
-    if (leadId && leads.length > 0) {
-      const lead = leads.find(l => l.id === leadId);
-      if (lead) {
-        handleEdit(lead);
-        window.history.replaceState({}, '', '/Leads');
-      }
-    }
-  }, [location.search, leads]);
-
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: () => base44.entities.Lead.list('-created_date'),
@@ -587,6 +575,19 @@ export default function Leads() {
       setIsImporting(false);
     }
   };
+
+  // Open lead from URL parameter (e.g., from calendar)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const leadId = params.get('openLead');
+    if (leadId && leads.length > 0) {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        handleEdit(lead);
+        window.history.replaceState({}, '', '/Leads');
+      }
+    }
+  }, [location.search, leads]);
 
   // Filter leads based on user role, selected employee, active tab, and benutzertyp
   const userBenutzertyp = user?.benutzertyp || 'Interner Mitarbeiter';
