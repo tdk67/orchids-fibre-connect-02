@@ -278,9 +278,26 @@ export default function Kalender() {
       'Telefonat': 'bg-purple-100 text-purple-800',
       'Meeting': 'bg-indigo-100 text-indigo-800',
       'Follow-up': 'bg-orange-100 text-orange-800',
+      'Wiedervorlage': 'bg-yellow-100 text-yellow-800',
       'Sonstiges': 'bg-gray-100 text-gray-800'
     };
     return colors[typ] || 'bg-gray-100 text-gray-800';
+  };
+
+  const { data: allLeads = [] } = useQuery({
+    queryKey: ['leads'],
+    queryFn: () => base44.entities.Lead.list(),
+  });
+
+  const handleTerminClick = (termin) => {
+    if (termin.lead_id) {
+      const lead = allLeads.find(l => l.id === termin.lead_id);
+      if (lead) {
+        window.location.href = `/Leads?openLead=${lead.id}`;
+      }
+    } else {
+      handleEdit(termin);
+    }
   };
 
   return (
@@ -439,7 +456,7 @@ export default function Kalender() {
                       >
                         <div onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(termin);
+                          handleTerminClick(termin);
                         }}>
                           <div className="font-semibold truncate">
                             {format(parseISO(termin.startzeit), 'HH:mm')} {termin.titel}
@@ -503,6 +520,7 @@ export default function Kalender() {
                     <SelectItem value="Telefonat">Telefonat</SelectItem>
                     <SelectItem value="Meeting">Meeting</SelectItem>
                     <SelectItem value="Follow-up">Follow-up</SelectItem>
+                    <SelectItem value="Wiedervorlage">Wiedervorlage</SelectItem>
                     <SelectItem value="Sonstiges">Sonstiges</SelectItem>
                   </SelectContent>
                 </Select>

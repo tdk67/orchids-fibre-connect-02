@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ export default function Leads() {
     });
 
   const queryClient = useQueryClient();
+  const location = useLocation();
 
   useEffect(() => {
     base44.auth.me().then((u) => {
@@ -87,6 +89,18 @@ export default function Leads() {
     window.addEventListener('benutzertypChanged', handleBenutzertypChange);
     return () => window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const leadId = params.get('openLead');
+    if (leadId && leads.length > 0) {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        handleEdit(lead);
+        window.history.replaceState({}, '', '/Leads');
+      }
+    }
+  }, [location.search, leads]);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
