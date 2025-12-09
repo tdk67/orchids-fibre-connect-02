@@ -648,17 +648,17 @@ export default function Leads() {
       const parsedLeads = lines.map(line => {
         const columns = line.split('\t');
         return {
-          leadnummer: columns[0] || '',
-          cluster_id: columns[1] || '',
-          firma: columns[2] || '',
-          ansprechpartner: columns[3] || '',
-          stadt: columns[4] || '',
-          postleitzahl: columns[5] || '',
-          strasse_hausnummer: columns[6] || '',
-          telefon: columns[7] || '',
-          telefon2: columns[8] || '',
-          email: columns[9] || '',
-          infobox: columns[10] || '',
+          firma: columns[0] || '',
+          ansprechpartner: columns[1] || '',
+          stadt: columns[2] || '',
+          postleitzahl: columns[3] || '',
+          strasse_hausnummer: columns[4] || '',
+          telefon: columns[5] || '',
+          telefon2: columns[6] || '',
+          email: columns[7] || '',
+          infobox: columns[8] || '',
+          leadnummer: columns[9] || '',
+          cluster_id: columns[10] || '',
           assigned_to: assignedEmployee?.full_name || '',
           assigned_to_email: assignedEmployee?.email || '',
           sparte: '1&1 Versatel',
@@ -825,7 +825,7 @@ export default function Leads() {
                     <li>Klicken Sie auf "Importieren"</li>
                   </ol>
                   <p className="text-xs text-blue-900 font-medium mt-3 mb-1">Spaltenreihenfolge:</p>
-                  <p className="text-xs text-blue-800">Leadnummer | Cluster-ID | Firma | Ansprechpartner | Stadt | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox</p>
+                  <p className="text-xs text-blue-800">Firma | Ansprechpartner | Stadt | PLZ | Straße & Nr. | Telefon | Telefon2 | Email | Infobox | Leadnummer | Cluster-ID</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
