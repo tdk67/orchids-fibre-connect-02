@@ -77,10 +77,10 @@ Deno.serve(async (req) => {
     );
 
     const currentCount = assignedLeads.length;
-    const targetCount = 50;
-    const minThreshold = 40;
+    const targetCount = 100;
+    const minThreshold = 80;
     
-    // Nur auffüllen wenn unter 40 Leads
+    // Nur auffüllen wenn unter 80 Leads
     if (currentCount >= minThreshold) {
       return Response.json({ 
         success: true, 

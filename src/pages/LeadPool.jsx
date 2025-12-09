@@ -74,7 +74,7 @@ export default function LeadPool() {
     return {
       employee: emp,
       assignedCount: empLeads.length,
-      needsMore: empLeads.length < 50
+      needsMore: empLeads.length < 100
     };
   });
 
@@ -122,7 +122,7 @@ export default function LeadPool() {
   };
 
   const handleAutoAssignAll = async () => {
-    if (!confirm('Automatisch Leads an alle Mitarbeiter verteilen die weniger als 50 Leads haben?')) {
+    if (!confirm('Automatisch Leads an alle Mitarbeiter verteilen die weniger als 100 Leads haben?')) {
       return;
     }
 
@@ -289,7 +289,7 @@ export default function LeadPool() {
       {/* Mitarbeiter Übersicht */}
       <Card className="border-0 shadow-md">
         <CardHeader className="border-b border-slate-100">
-          <CardTitle>Mitarbeiter Lead-Übersicht (Ziel: 50 Leads pro Mitarbeiter)</CardTitle>
+          <CardTitle>Mitarbeiter Lead-Übersicht (Ziel: 100 Leads pro Mitarbeiter)</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -317,20 +317,20 @@ export default function LeadPool() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-lg">{assignedCount}</span>
-                        <span className="text-slate-500">/ 50</span>
+                        <span className="text-slate-500">/ 100</span>
                         <div className="w-24 bg-slate-200 rounded-full h-2">
                           <div 
-                            className={`h-2 rounded-full ${assignedCount >= 50 ? 'bg-green-500' : 'bg-blue-500'}`}
-                            style={{ width: `${Math.min((assignedCount / 50) * 100, 100)}%` }}
+                            className={`h-2 rounded-full ${assignedCount >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                            style={{ width: `${Math.min((assignedCount / 100) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      {assignedCount >= 50 ? (
+                      {assignedCount >= 100 ? (
                         <Badge className="bg-green-100 text-green-800">Voll</Badge>
                       ) : (
-                        <Badge className="bg-amber-100 text-amber-800">Braucht {50 - assignedCount} mehr</Badge>
+                        <Badge className="bg-amber-100 text-amber-800">Braucht {100 - assignedCount} mehr</Badge>
                       )}
                     </TableCell>
                     <TableCell>
@@ -358,11 +358,11 @@ export default function LeadPool() {
           <ul className="space-y-2 text-sm text-slate-700">
             <li>✅ Importieren Sie große Mengen Leads (z.B. 5000) in den Pool</li>
             <li>✅ Leads werden im Hintergrund als "im_pool" verwaltet (nicht sichtbar)</li>
-            <li>✅ Jeder Mitarbeiter soll 50 aktive Leads gleichzeitig haben</li>
+            <li>✅ Jeder Mitarbeiter soll 100 aktive Leads gleichzeitig haben</li>
             <li>✅ Klicken Sie "Auto-Verteilung" um automatisch zu verteilen</li>
             <li>✅ Wenn ein Mitarbeiter Leads bearbeitet (Status ändert), werden automatisch neue Leads nachgeliefert</li>
             <li>⚠️ <strong>Limit-Regel:</strong> Bei ≥10 "Bearbeitet", ≥10 "Adresspunkte" oder ≥50 "Nicht erreicht" keine neuen Leads</li>
-            <li>✅ System prüft automatisch: Hat Mitarbeiter {"<"} 50 Leads? → Neue Leads aus Pool zuweisen</li>
+            <li>✅ System prüft automatisch: Hat Mitarbeiter {"<"} 100 Leads? → Neue Leads aus Pool zuweisen</li>
             <li>ℹ️ Pool-Leads werden nicht angezeigt - nur für die automatische Verteilung im Hintergrund</li>
           </ul>
         </CardContent>
