@@ -179,15 +179,17 @@ export default function Leads() {
       });
 
       const deleteAllLeads = async () => {
-        if (!confirm('Möchten Sie wirklich ALLE Leads löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
+        if (!confirm('Möchten Sie wirklich ALLE Leads (inkl. Lead Pool) löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
           return;
         }
         try {
-          for (const lead of leads) {
+          // Hole ALLE Leads inkl. Pool-Leads
+          const allLeadsToDelete = await base44.entities.Lead.list();
+          for (const lead of allLeadsToDelete) {
             await base44.entities.Lead.delete(lead.id);
           }
           queryClient.invalidateQueries(['leads']);
-          alert(`${leads.length} Leads wurden gelöscht.`);
+          alert(`${allLeadsToDelete.length} Leads (inkl. Pool) wurden gelöscht.`);
         } catch (error) {
           alert('Fehler beim Löschen: ' + error.message);
         }
