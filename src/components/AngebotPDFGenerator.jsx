@@ -34,7 +34,7 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
         servicepaket: 'Unser Internet-Servicepaket beinhaltet eine Internet-Flatrate sowie private IPv4- und IPv6-Adressen. Es fallen keine Baukosten oder Gebühren für den Glasfaser-Gebäudeanschluss an. Kunden haben Zugang zu einer Business-Hotline und profitieren von einem Service-Level-Agreement (SLA) Profi, das eine Entstörzeit von 24 Stunden täglich, 365 Tage im Jahr, sicherstellt. Weitere Dienstleistungen im Paket umfassen CPE Management und symmetrische sowie garantierte Bandbreiten, um eine durchgängige Servicequalität zu gewährleisten.'
       },
       'Premium Pug 2': {
-        title: '1&1 Glasfaser Premium PUG 2',
+        title: '1&1 Glasfaser Premium',
         options: [
           { speed: '300/300', preis: '449,00€', vermarktung: '275,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Lancom' },
           { speed: '600/600', preis: '619,00€', vermarktung: '410,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Cisco' },
@@ -43,7 +43,7 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
         servicepaket: 'Unser Internet-Servicepaket beinhaltet eine Internet-Flatrate sowie private IPv4- und IPv6-Adressen. Es fallen keine Baukosten oder Gebühren für den Glasfaser-Gebäudeanschluss an. Kunden haben Zugang zu einer Business-Hotline und profitieren von einem Service-Level-Agreement (SLA) Profi, das eine Entstörzeit von 24 Stunden täglich, 365 Tage im Jahr, sicherstellt. Weitere Dienstleistungen im Paket umfassen CPE Management und symmetrische sowie garantierte Bandbreiten, um eine durchgängige Servicequalität zu gewährleisten.'
       },
       'Premium Pug 3': {
-        title: '1&1 Glasfaser Premium PUG 3',
+        title: '1&1 Glasfaser Premium',
         options: [
           { speed: '300/300', preis: '449,00€', vermarktung: '350,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Lancom' },
           { speed: '600/600', preis: '619,00€', vermarktung: '545,00€', hardware36: '1500€', hardware48: '1000€', hardware60: '0€', router: 'Cisco' },
@@ -133,10 +133,14 @@ export default function AngebotPDFGenerator({ lead, onClose }) {
               </>
             ) : (
               <>
-                <p className="text-sm">
+                <p className="text-sm mb-2">
                   Preis: {option.preis} mtl.
-                  {option.vermarktung && ` Vermarktungspreis: ${option.vermarktung} mtl.`}
                 </p>
+                {option.vermarktung && (
+                  <p className="text-sm font-bold mb-2" style={{ color: '#1e3a8a' }}>
+                    Vermarktungspreis: {option.vermarktung} mtl.
+                  </p>
+                )}
                 <p className="text-sm text-slate-600">
                   Hardware Premium-Router vom Marktführer {option.router}: einmalig 36 Monate {option.hardware36}, 48 Monate {option.hardware48}, 60 Monate {option.hardware60}
                 </p>
