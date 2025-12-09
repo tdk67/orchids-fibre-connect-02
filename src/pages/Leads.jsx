@@ -36,10 +36,7 @@ export default function Leads() {
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get('tab') || 'aktiv';
-  });
+  const [activeTab, setActiveTab] = useState('aktiv');
   const [showTerminDialog, setShowTerminDialog] = useState(false);
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
   const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
