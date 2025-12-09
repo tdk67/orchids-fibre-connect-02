@@ -165,6 +165,26 @@ export default function LeadDetails() {
       if (!lead?.archiv_kategorie || lead.archiv_kategorie !== dataToSave.archiv_kategorie) {
         dataToSave.archiviert_am = new Date().toISOString().split('T')[0];
       }
+
+      // Spezielle Logik für "Nicht erreicht"
+      if (dataToSave.status === 'Nicht erreicht') {
+        const currentCount = lead?.nicht_erreicht_count || 0;
+        dataToSave.nicht_erreicht_count = currentCount + 1;
+
+        // Bei 2x "Nicht erreicht": zurück in Pool und anderem MA zuweisen
+        if (dataToSave.nicht_erreicht_count >= 2) {
+          dataToSave.pool_status = 'im_pool';
+          dataToSave.vorheriger_mitarbeiter = lead?.assigned_to_email || '';
+          dataToSave.assigned_to = '';
+          dataToSave.assigned_to_email = '';
+          dataToSave.archiv_kategorie = '';
+          dataToSave.archiviert_am = '';
+          dataToSave.nicht_erreicht_count = 0;
+          dataToSave.infobox = `${dataToSave.infobox || ''}\n\n[${new Date().toLocaleDateString('de-DE')}] 2x nicht erreicht - zurück in Pool zur Neuverteilung`.trim();
+
+          alert('Lead wurde 2x nicht erreicht und zurück in den Pool geschickt für Neuverteilung an anderen Mitarbeiter.');
+        }
+      }
     } else {
       dataToSave.archiv_kategorie = '';
       dataToSave.archiviert_am = '';

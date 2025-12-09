@@ -86,10 +86,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Hole unzugewiesene Leads aus Pool
+    // Hole unzugewiesene Leads aus Pool (schließe Leads vom vorherigen MA aus)
     const poolLeads = allLeads.filter(l => 
       l.pool_status === 'im_pool' &&
-      l.benutzertyp === (user.benutzertyp || 'Interner Mitarbeiter')
+      l.benutzertyp === (user.benutzertyp || 'Interner Mitarbeiter') &&
+      l.vorheriger_mitarbeiter !== employeeEmail
     ).slice(0, needsAssignment);
 
     if (poolLeads.length === 0) {
