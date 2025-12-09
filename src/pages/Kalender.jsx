@@ -274,11 +274,13 @@ export default function Kalender() {
 
   const getTypColor = (typ) => {
     const colors = {
-      'Termin': 'bg-blue-100 text-blue-800',
+      'Termin': 'bg-slate-100 text-slate-800',
       'Telefonat': 'bg-purple-100 text-purple-800',
       'Meeting': 'bg-indigo-100 text-indigo-800',
       'Follow-up': 'bg-orange-100 text-orange-800',
       'Wiedervorlage': 'bg-yellow-100 text-yellow-800',
+      'Angebot': 'bg-blue-100 text-blue-800',
+      'Abschluss': 'bg-blue-100 text-blue-800',
       'Sonstiges': 'bg-gray-100 text-gray-800'
     };
     return colors[typ] || 'bg-gray-100 text-gray-800';
@@ -521,6 +523,8 @@ export default function Kalender() {
                     <SelectItem value="Meeting">Meeting</SelectItem>
                     <SelectItem value="Follow-up">Follow-up</SelectItem>
                     <SelectItem value="Wiedervorlage">Wiedervorlage</SelectItem>
+                    <SelectItem value="Angebot">Angebot</SelectItem>
+                    <SelectItem value="Abschluss">Abschluss</SelectItem>
                     <SelectItem value="Sonstiges">Sonstiges</SelectItem>
                   </SelectContent>
                 </Select>
