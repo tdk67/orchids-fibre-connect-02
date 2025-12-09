@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, UserCircle, Mail, Phone, Percent } from 'lucide-react';
+import { Plus, Pencil, UserCircle, Mail, Phone, Percent, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function Employees() {
@@ -61,6 +61,13 @@ export default function Employees() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Employee.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['employees']);
+    },
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (editingEmployee) {
@@ -106,6 +113,12 @@ export default function Employees() {
     setEditingEmployee(employee);
     setFormData(employee);
     setIsDialogOpen(true);
+  };
+
+  const handleDelete = (employee) => {
+    if (confirm(`Mitarbeiter "${employee.full_name}" wirklich löschen?`)) {
+      deleteMutation.mutate(employee.id);
+    }
   };
 
   return (
@@ -498,9 +511,19 @@ export default function Employees() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDelete(employee)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
