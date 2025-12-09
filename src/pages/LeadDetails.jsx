@@ -181,7 +181,22 @@ export default function LeadDetails() {
           if (result.dataFound && result.verifiedData) {
             // Daten wurden gefunden - Status auf "Bearbeitet"
             const verified = result.verifiedData;
-            
+
+            // Erstelle Hinweise für Infobox
+            let hinweise = [];
+            if (verified.mehrere_standorte && verified.standorte_liste) {
+              hinweise.push(`⚠️ MEHRERE STANDORTE:\n${verified.standorte_liste}`);
+            }
+            if (verified.adresse_korrekt === false) {
+              hinweise.push(`⚠️ ADRESSE KORRIGIERT:\nAlt: ${dataToSave.strasse_hausnummer}, ${dataToSave.postleitzahl} ${dataToSave.stadt}\nNeu: ${verified.strasse_hausnummer}, ${verified.postleitzahl} ${verified.stadt}`);
+            }
+
+            const infoboxZusatz = [
+              `[Automatisch überprüft am ${new Date().toLocaleDateString('de-DE')}]`,
+              ...hinweise,
+              verified.notizen || ''
+            ].filter(x => x).join('\n\n');
+
             dataToSave = {
               ...dataToSave,
               firma: verified.firma || dataToSave.firma,
@@ -191,7 +206,7 @@ export default function LeadDetails() {
               stadt: verified.stadt || dataToSave.stadt,
               telefon: verified.telefon || dataToSave.telefon,
               email: verified.email || dataToSave.email,
-              infobox: `${dataToSave.infobox || ''}\n\n[Automatisch überprüft am ${new Date().toLocaleDateString('de-DE')}]\n${verified.notizen || ''}`.trim(),
+              infobox: `${dataToSave.infobox || ''}\n\n${infoboxZusatz}`.trim(),
               status: 'Bearbeitet',
               archiv_kategorie: 'Bearbeitet',
               archiviert_am: new Date().toISOString().split('T')[0]
