@@ -617,17 +617,6 @@ export default function Leads() {
     } else {
       if (lead.benutzertyp !== userBenutzertyp) return false;
     }
-
-    // Tab-basierte Filterung
-    if (activeTab === 'aktiv') {
-      if (lead.archiv_kategorie || lead.verkaufschance_status) return false;
-    }
-    if (activeTab === 'angebote') {
-      if (!lead.verkaufschance_status) return false;
-    }
-    if (activeTab === 'nicht_erreicht' && lead.archiv_kategorie !== 'Nicht erreicht') return false;
-    if (activeTab === 'anderer_provider' && lead.archiv_kategorie !== 'Anderer Provider') return false;
-    if (activeTab === 'kein_interesse' && lead.archiv_kategorie !== 'Kein Interesse') return false;
     
     const searchMatch = 
       lead.firma?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -815,25 +804,7 @@ export default function Leads() {
       {/* Tabs & Filters */}
       <Card className="border-0 shadow-md">
         <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="aktiv">
-                Aktive Leads ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status).length})
-              </TabsTrigger>
-              <TabsTrigger value="angebote">
-                Angebote ({leads.filter(l => l.verkaufschance_status).length})
-              </TabsTrigger>
-              <TabsTrigger value="nicht_erreicht">
-                Nicht erreicht ({leads.filter(l => l.archiv_kategorie === 'Nicht erreicht').length})
-              </TabsTrigger>
-              <TabsTrigger value="anderer_provider">
-                Anderer Provider ({leads.filter(l => l.archiv_kategorie === 'Anderer Provider').length})
-              </TabsTrigger>
-              <TabsTrigger value="kein_interesse">
-                Kein Interesse ({leads.filter(l => l.archiv_kategorie === 'Kein Interesse').length})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+
           <div className="flex gap-4 flex-wrap mt-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -868,13 +839,7 @@ export default function Leads() {
       {/* Leads List */}
       <Card className="border-0 shadow-md">
         <CardHeader className="border-b border-slate-100">
-          <CardTitle>
-            {activeTab === 'aktiv' && `Aktive Leads (${filteredLeads.length})`}
-            {activeTab === 'angebote' && `Angebote (${filteredLeads.length})`}
-            {activeTab === 'nicht_erreicht' && `Nicht erreicht (${filteredLeads.length})`}
-            {activeTab === 'anderer_provider' && `Anderer Provider (${filteredLeads.length})`}
-            {activeTab === 'kein_interesse' && `Kein Interesse (${filteredLeads.length})`}
-          </CardTitle>
+          <CardTitle>Alle Leads ({filteredLeads.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -897,7 +862,7 @@ export default function Leads() {
                   <TableHead>Produkt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Zugewiesen an</TableHead>
-                  {activeTab !== 'aktiv' && <TableHead>Archiviert am</TableHead>}
+
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -976,13 +941,7 @@ export default function Leads() {
                     <TableCell>
                       <span className="text-sm text-slate-600">{lead.assigned_to || '-'}</span>
                     </TableCell>
-                    {activeTab !== 'aktiv' && (
-                      <TableCell>
-                        <span className="text-xs text-slate-500">
-                          {lead.archiviert_am ? new Date(lead.archiviert_am).toLocaleDateString('de-DE') : '-'}
-                        </span>
-                      </TableCell>
-                    )}
+
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
                         {lead.google_calendar_link && (
