@@ -200,6 +200,19 @@ export default function LeadDetails() {
     // Automatisch als "bearbeitet" markieren wenn Status geändert wird
     if (lead && dataToSave.status !== lead.status && dataToSave.status !== '') {
       dataToSave.pool_status = 'bearbeitet';
+      
+      // Sofort neue Leads zuweisen wenn Status geändert wird
+      setTimeout(() => {
+        if (dataToSave.assigned_to_email) {
+          base44.functions.invoke('autoAssignLeads', {
+            employeeEmail: dataToSave.assigned_to_email
+          }).then(response => {
+            if (response.data.assigned > 0) {
+              console.log(`${response.data.assigned} neue Leads automatisch zugewiesen`);
+            }
+          }).catch(() => {});
+        }
+      }, 500);
     }
 
     // Wenn Status auf "Falsche Daten" gesetzt wird, automatisch Daten überprüfen
