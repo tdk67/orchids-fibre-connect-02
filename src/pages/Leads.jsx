@@ -883,11 +883,11 @@ export default function Leads() {
       {selectedLeads.length > 0 && (
         <Card className="border-0 shadow-md bg-blue-50 border-blue-200">
           <CardContent className="p-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <span className="font-semibold text-blue-900 text-lg">
                 {selectedLeads.length} Lead(s) ausgewählt
               </span>
-              <div className="flex gap-2 items-center flex-1">
+              <div className="flex gap-2 items-center flex-1 flex-wrap">
                 <Select value={bulkAssignEmployee} onValueChange={setBulkAssignEmployee}>
                   <SelectTrigger className="w-48 bg-white">
                     <SelectValue placeholder="Mitarbeiter wählen" />
@@ -907,6 +907,42 @@ export default function Leads() {
                 >
                   Zuweisen
                 </Button>
+                <div className="h-6 w-px bg-blue-300" />
+                <Select value={importStatus} onValueChange={setImportStatus}>
+                  <SelectTrigger className="w-48 bg-white">
+                    <SelectValue placeholder="Status wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leadStatuses.map((status) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={async () => {
+                    if (!importStatus) return;
+                    for (const leadId of selectedLeads) {
+                      const lead = leads.find(l => l.id === leadId);
+                      if (lead) {
+                        await base44.entities.Lead.update(leadId, {
+                          ...lead,
+                          status: importStatus
+                        });
+                      }
+                    }
+                    queryClient.invalidateQueries(['leads']);
+                    setSelectedLeads([]);
+                    setImportStatus('');
+                    alert(`Status von ${selectedLeads.length} Lead(s) geändert!`);
+                  }}
+                  disabled={!importStatus}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Status ändern
+                </Button>
+                <div className="h-6 w-px bg-blue-300" />
                 <Button 
                   onClick={async () => {
                     if (confirm(`${selectedLeads.length} Lead(s) wirklich löschen?`)) {
@@ -920,7 +956,7 @@ export default function Leads() {
                   className="bg-red-600 hover:bg-red-700"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Löschen ({selectedLeads.length})
+                  Löschen
                 </Button>
               </div>
               <Button variant="outline" onClick={() => setSelectedLeads([])}>
