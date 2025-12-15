@@ -14,6 +14,7 @@ import Bestandskunden from './pages/Bestandskunden';
 import Kalender from './pages/Kalender';
 import LeadDetails from './pages/LeadDetails';
 import LeadPool from './pages/LeadPool';
+import Outlook from './pages/Outlook';
 import __Layout from './Layout.jsx';
 
 
@@ -34,6 +35,7 @@ export const PAGES = {
     "Kalender": Kalender,
     "LeadDetails": LeadDetails,
     "LeadPool": LeadPool,
+    "Outlook": Outlook,
 }
 
 export const pagesConfig = {
