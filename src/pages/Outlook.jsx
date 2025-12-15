@@ -20,8 +20,8 @@ export default function Outlook() {
 
   const currentEmployee = employees.find(e => e.email === user?.email);
   const roundcubeUrl = currentEmployee?.email_adresse 
-    ? `https://webmail.ionos.de/?_user=${encodeURIComponent(currentEmployee.email_adresse)}`
-    : 'https://webmail.ionos.de/';
+    ? `https://webmail.career-agents.de/?_user=${encodeURIComponent(currentEmployee.email_adresse)}`
+    : 'https://webmail.career-agents.de/';
 
   const handleRefresh = () => {
     setIframeKey(prev => prev + 1);
@@ -36,7 +36,7 @@ export default function Outlook() {
       <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">E-Mail</h1>
-          <p className="text-slate-500 mt-1">Roundcube Webmail (IONOS)</p>
+          <p className="text-slate-500 mt-1">Roundcube Webmail (Career Agents)</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleRefresh}>
