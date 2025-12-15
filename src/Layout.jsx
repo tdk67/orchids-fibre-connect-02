@@ -13,7 +13,6 @@ import {
   Menu,
   X,
   LogOut,
-  Mail,
   Settings,
   Search,
   Calendar as CalendarIcon,
@@ -51,7 +50,6 @@ export default function Layout({ children, currentPageName }) {
   const navigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Kalender', path: 'Kalender', icon: CalendarIcon, roles: ['admin', 'user'], partnerAccess: true },
-    { name: 'E-Mail', path: 'Outlook', icon: Mail, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Lead Pool', path: 'LeadPool', icon: Shield, roles: ['admin', 'teamleiter'], partnerAccess: false },
     { name: 'Leads', path: 'Leads', icon: Users, roles: ['admin', 'user'], partnerAccess: true },
     { name: 'Unternehmenssuche', path: 'Unternehmenssuche', icon: Search, roles: ['admin', 'user'], partnerAccess: true },
