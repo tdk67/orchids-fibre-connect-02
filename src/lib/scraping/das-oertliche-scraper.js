@@ -7,7 +7,6 @@
 
 import { buildDasOertlicheUrl, wrapWithCorsProxy } from './url-builder';
 import { removeDuplicates } from './duplicate-detection';
-import { base44 } from '../../api/base44Client';
 
 const LEAD_STATUS = {
   NEW: 'Neu',
@@ -276,30 +275,15 @@ export async function fetchStreetLeads(street, city, options = {}) {
 }
 
 /**
- * Geocodes an address using local cache or Nominatim fallback
+ * Geocodes an address using Nominatim
  * @param {string} street - Street name
  * @param {string} streetNumber - Street number
  * @param {string} city - City name
- * @param {string} postalCode - Postal code (optional)
  * @returns {Promise<Object|null>} - {lat, lon} or null
  */
-export async function geocodeAddress(street, streetNumber, city, postalCode = "") {
+export async function geocodeAddress(street, streetNumber, city) {
   try {
-    // 1. Try local geocoding cache first (MASSIVE performance boost)
-    const { data: cached, error: cacheError } = await base44.client
-      .from('geocoding_cache')
-      .select('latitude, longitude')
-      .eq('street', street)
-      .eq('house_number', streetNumber)
-      .eq('city', city)
-      .maybeSingle();
-
-    if (!cacheError && cached) {
-      return { lat: cached.latitude, lon: cached.longitude };
-    }
-
-    // 2. Fallback to Nominatim if not in cache
-    const addressParts = [street, streetNumber, postalCode, city, 'Germany'].filter(Boolean);
+    const addressParts = [street, streetNumber, city, 'Germany'].filter(Boolean);
     const address = addressParts.join(' ').trim();
     
     const controller = new AbortController();
@@ -324,23 +308,11 @@ export async function geocodeAddress(street, streetNumber, city, postalCode = ""
     if (data.length === 0) {
       return null;
     }
-
-    const result = {
+    
+    return {
       lat: parseFloat(data[0].lat),
       lon: parseFloat(data[0].lon),
     };
-
-    // 3. Optional: Store new result in cache for future use
-    await base44.client.from('geocoding_cache').upsert({
-      street,
-      house_number: streetNumber,
-      postcode: postalCode,
-      city,
-      latitude: result.lat,
-      longitude: result.lon
-    }, { onConflict: 'street,house_number,postcode,city' });
-    
-    return result;
   } catch (error) {
     // Silently fail - geocoding is optional
     return null;

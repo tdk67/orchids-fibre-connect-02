@@ -55,22 +55,22 @@ ALTER TABLE areas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE generation_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Allow authenticated users to read all areas
-CREATE POLICY "areas_enable_read_access" ON areas
+CREATE POLICY IF NOT EXISTS "Enable read access for all users" ON areas
   FOR SELECT USING (true);
 
 -- Allow authenticated users to insert/update their own areas  
-CREATE POLICY "areas_enable_insert" ON areas
+CREATE POLICY IF NOT EXISTS "Enable insert for authenticated users" ON areas
   FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "areas_enable_update" ON areas
+CREATE POLICY IF NOT EXISTS "Enable update for authenticated users" ON areas
   FOR UPDATE USING (true);
 
 -- Generation sessions policies
-CREATE POLICY "generation_sessions_enable_read_access" ON generation_sessions
+CREATE POLICY IF NOT EXISTS "Enable read access for all users" ON generation_sessions
   FOR SELECT USING (true);
 
-CREATE POLICY "generation_sessions_enable_insert" ON generation_sessions
+CREATE POLICY IF NOT EXISTS "Enable insert for authenticated users" ON generation_sessions
   FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "generation_sessions_enable_update" ON generation_sessions
+CREATE POLICY IF NOT EXISTS "Enable update for authenticated users" ON generation_sessions
   FOR UPDATE USING (true);
