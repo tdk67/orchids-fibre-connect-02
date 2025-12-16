@@ -17,7 +17,9 @@ export function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await base44.auth.login({ email, password });
+      console.log('Attempting login with:', email);
+      const result = await base44.auth.login({ email, password });
+      console.log('Login successful:', result);
       toast({
         title: 'Erfolgreich angemeldet',
         description: 'Sie werden weitergeleitet...',
@@ -26,6 +28,7 @@ export function Login() {
         window.location.href = '/';
       }, 500);
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: 'Anmeldung fehlgeschlagen',
         description: error.message || 'Bitte überprüfen Sie Ihre Anmeldedaten.',
