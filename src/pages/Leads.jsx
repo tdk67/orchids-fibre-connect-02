@@ -79,32 +79,30 @@ export default function Leads() {
     return localStorage.getItem('teamleiterAnsicht') === 'true';
   });
 
-  useEffect(() => {
-    base44.auth.me().then((u) => {
-      setUser(u);
-      if (!localStorage.getItem('selectedBenutzertyp')) {
-        setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
-      }
-      
-      // Automatische Lead-Zuweisung im Hintergrund
-      base44.functions.invoke('autoCheckAllEmployees', {}).catch(() => {});
-    }).catch(() => {});
+    useEffect(() => {
+      base44.auth.me().then((u) => {
+        setUser(u);
+        if (!localStorage.getItem('selectedBenutzertyp')) {
+          setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+        }
+      }).catch(() => {});
 
-    const handleBenutzertypChange = () => {
-      setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
-    };
+      const handleBenutzertypChange = () => {
+        setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
+      };
 
-    const handleTeamleiterAnsichtChange = () => {
-      setTeamleiterAnsicht(localStorage.getItem('teamleiterAnsicht') === 'true');
-    };
+      const handleTeamleiterAnsichtChange = () => {
+        setTeamleiterAnsicht(localStorage.getItem('teamleiterAnsicht') === 'true');
+      };
 
-    window.addEventListener('benutzertypChanged', handleBenutzertypChange);
-    window.addEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
-    return () => {
-      window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
-      window.removeEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
-    };
-  }, []);
+      window.addEventListener('benutzertypChanged', handleBenutzertypChange);
+      window.addEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
+      return () => {
+        window.removeEventListener('benutzertypChanged', handleBenutzertypChange);
+        window.removeEventListener('teamleiterAnsichtChanged', handleTeamleiterAnsichtChange);
+      };
+    }, []);
+
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
@@ -131,6 +129,72 @@ export default function Leads() {
     queryFn: () => base44.entities.Termin.list(),
   });
 
+  // Lokale Auto-Zuweisung (ersetzt defekte Edge Function)
+  const assignLeadsFromPool = async (employeeEmail) => {
+    if (!employeeEmail || !employees?.length) return 0;
+    const emp = employees.find((e) => e.email === employeeEmail);
+    if (!emp) return 0;
+
+    const allLeads = await base44.entities.Lead.list();
+
+    const bearbeitetCount = allLeads.filter(
+      (l) => l.assigned_to_email === emp.email && l.archiv_kategorie === 'Bearbeitet'
+    ).length;
+    const adresspunkteCount = allLeads.filter(
+      (l) => l.assigned_to_email === emp.email && l.archiv_kategorie === 'Adresspunkte'
+    ).length;
+    const nichtErreichtCount = allLeads.filter(
+      (l) => l.assigned_to_email === emp.email && l.archiv_kategorie === 'Nicht erreicht'
+    ).length;
+
+    if (bearbeitetCount >= 10 || adresspunkteCount >= 10 || nichtErreichtCount >= 50) {
+      return 0;
+    }
+
+    const activeAssigned = allLeads.filter(
+      (l) =>
+        l.assigned_to_email === emp.email &&
+        l.pool_status === 'zugewiesen' &&
+        !l.archiv_kategorie &&
+        !l.verkaufschance_status &&
+        !l.verloren
+    );
+
+    const targetCount = 100;
+    const minThreshold = 80;
+    if (activeAssigned.length >= minThreshold) return 0;
+
+    const needsAssignment = targetCount - activeAssigned.length;
+    const poolLeads = allLeads
+      .filter(
+        (l) =>
+          l.pool_status === 'im_pool' &&
+          l.benutzertyp === emp.benutzertyp &&
+          l.vorheriger_mitarbeiter !== emp.email
+      )
+      .slice(0, needsAssignment);
+
+    for (const lead of poolLeads) {
+      await base44.entities.Lead.update(lead.id, {
+        pool_status: 'zugewiesen',
+        assigned_to: emp.full_name,
+        assigned_to_email: emp.email,
+        status: 'Neu',
+        google_calendar_link: emp.google_calendar_link || '',
+      });
+      // Halte lokale Kopie aktuell, damit nachfolgende Filter nicht doppelt zuweisen
+      lead.pool_status = 'zugewiesen';
+      lead.assigned_to_email = emp.email;
+      lead.assigned_to = emp.full_name;
+    }
+
+    if (poolLeads.length > 0) {
+      await queryClient.invalidateQueries(['leads']);
+    }
+
+    return poolLeads.length;
+  };
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Lead.create(data),
     onSuccess: () => {
@@ -140,20 +204,19 @@ export default function Leads() {
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
-    onSuccess: async (response, variables) => {
-      // Warte auf Query-Invalidierung
-      await queryClient.invalidateQueries(['leads']);
+    const updateMutation = useMutation({
+      mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
+      onSuccess: async (response, variables) => {
+        // Warte auf Query-Invalidierung
+        await queryClient.invalidateQueries(['leads']);
 
-      // Automatische Lead-Nachlieferung für diesen Mitarbeiter
-      if (variables.data.assigned_to_email) {
-        base44.functions.invoke('autoAssignLeads', {
-          employeeEmail: variables.data.assigned_to_email
-        }).catch(() => {});
-      }
+        // Automatische Lead-Nachlieferung für diesen Mitarbeiter (lokal)
+        if (variables.data.assigned_to_email) {
+          await assignLeadsFromPool(variables.data.assigned_to_email);
+        }
 
-      // Bestimme den Ziel-Tab basierend auf archiv_kategorie
+        // Bestimme den Ziel-Tab basierend auf archiv_kategorie
+
       let targetTab = 'aktiv';
       if (variables.data.archiv_kategorie === 'Nicht erreicht') {
         targetTab = 'nicht_erreicht';
