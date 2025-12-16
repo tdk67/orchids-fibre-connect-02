@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   MapContainer,
-  TileLayer,
   Marker,
   Popup,
   Rectangle,
@@ -131,6 +130,10 @@ function dedupeCompanies(list) {
   return clean;
 }
 
+const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
 export default function Unternehmenssuche() {
   const [activeSection, setActiveSection] = useState('map');
   const [addressInput, setAddressInput] = useState('');
@@ -145,6 +148,7 @@ export default function Unternehmenssuche() {
   const [mapZoom, setMapZoom] = useState(12);
   const [mapInstance, setMapInstance] = useState(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const tileLayerRef = useRef(null);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState(null);
@@ -159,6 +163,19 @@ export default function Unternehmenssuche() {
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
+
+  // Add tile layer once map exists (guards against undefined URL errors)
+  useEffect(() => {
+    if (!mapInstance || tileLayerRef.current) return;
+    const layer = L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION });
+    layer.addTo(mapInstance);
+    tileLayerRef.current = layer;
+    return () => {
+      if (mapInstance && layer) {
+        mapInstance.removeLayer(layer);
+      }
+    };
+  }, [mapInstance]);
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
@@ -181,6 +198,10 @@ export default function Unternehmenssuche() {
     });
   }, [allLeads]);
 
+  const foundWithCoordinates = useMemo(() => {
+    return foundCompanies.filter((c) => !isNaN(parseFloat(c.latitude)) && !isNaN(parseFloat(c.longitude)));
+  }, [foundCompanies]);
+
   const geocodeCity = async () => {
     if (!cityInput.trim()) return;
     setIsGeocoding(true);
@@ -191,10 +212,11 @@ export default function Unternehmenssuche() {
       const data = await res.json();
       if (data?.length) {
         const { lat, lon } = data[0];
-        setMapCenter([parseFloat(lat), parseFloat(lon)]);
+        const newCenter = [parseFloat(lat), parseFloat(lon)];
+        setMapCenter(newCenter);
         setMapZoom(13);
         if (mapInstance) {
-          mapInstance.setView([parseFloat(lat), parseFloat(lon)], 13);
+          mapInstance.setView(newCenter, 13);
         }
       } else {
         alert('Keine Ergebnisse für diese Stadt gefunden');
@@ -279,6 +301,9 @@ export default function Unternehmenssuche() {
   const scrapeStreet = async (street, city) => {
     // Try Supabase edge function first; fall back to Overpass when unavailable
     try {
+      if (!base44?.integrations?.Core?.InvokeLLM) {
+        throw new Error('LLM-Integration nicht verfügbar');
+      }
       const result = await base44.integrations.Core.InvokeLLM({
         prompt: `Suche auf "das oertliche" und ähnlichen Quellen ALLE Unternehmen in der Straße ${street}, ${city}. Gib JSON mit firma, strasse_hausnummer, postleitzahl, stadt, telefon, email, branche, webseite, latitude, longitude.`,
         add_context_from_internet: true,
@@ -519,11 +544,6 @@ export default function Unternehmenssuche() {
                   className="z-0"
                   whenCreated={setMapInstance}
                 >
-                  <TileLayer
-                    attribution="&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-
                   <AreaSelector
                     isDrawing={isDrawing}
                     drawStart={drawStart}
@@ -575,6 +595,38 @@ export default function Unternehmenssuche() {
                       </Marker>
                     );
                   })}
+
+                  {foundWithCoordinates.map((company) => {
+                    const lat = parseFloat(company.latitude);
+                    const lng = parseFloat(company.longitude);
+                    return (
+                      <Marker key={company.id} position={[lat, lng]} icon={createCustomIcon(statusColors.Kontaktiert)}>
+                        <Popup>
+                          <div className="p-2">
+                            <h3 className="font-bold text-slate-900">{company.firma || 'Unbekannt'}</h3>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {company.strasse_hausnummer}
+                              {company.postleitzahl && `, ${company.postleitzahl}`}
+                              {company.stadt && ` ${company.stadt}`}
+                            </p>
+                            {company.telefon && (
+                              <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
+                                <Phone className="h-3 w-3" /> {company.telefon}
+                              </p>
+                            )}
+                            {company.email && (
+                              <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
+                                <Mail className="h-3 w-3" /> {company.email}
+                              </p>
+                            )}
+                            <Badge className="mt-2" variant="outline">
+                              Neuer Fund
+                            </Badge>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
                 </MapContainer>
               </div>
               {isLoadingLeads && (
@@ -595,6 +647,10 @@ export default function Unternehmenssuche() {
                       <span className="text-slate-700">{status}</span>
                     </div>
                   ))}
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-white shadow" style={{ backgroundColor: statusColors.Kontaktiert }} />
+                    <span className="text-slate-700">Neu gefundene (Generator)</span>
+                  </div>
                 </div>
               </div>
 
@@ -663,6 +719,11 @@ export default function Unternehmenssuche() {
                 <Building2 className="h-5 w-5 text-green-600" />
                 Gefundene Leads mit Koordinaten ({leadsWithCoordinates.length})
               </CardTitle>
+              {selectedBounds && (
+                <p className="text-sm text-slate-500 mt-1">
+                  Aktive Stadt: {cityInput} · Straßen im Bereich: {streetNames.length}
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               {leadsWithCoordinates.length === 0 ? (
@@ -724,6 +785,9 @@ export default function Unternehmenssuche() {
                 <Search className="h-5 w-5 text-amber-600" />
                 Lead Generator - Unternehmen finden
               </CardTitle>
+              <p className="text-sm text-slate-500">
+                Stadt: {cityInput || '-'} {selectedBounds ? `· Straßen im Bereich: ${streetNames.length}` : ''}
+              </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
