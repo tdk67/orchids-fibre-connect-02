@@ -25,20 +25,18 @@ export default function Dashboard() {
     return localStorage.getItem('teamleiterAnsicht') === 'true';
   });
 
-  useEffect(() => {
-    base44.auth.me().then((u) => {
-      setUser(u);
-      if (!localStorage.getItem('selectedBenutzertyp')) {
-        setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
-      }
-      
-      // Automatische Lead-Zuweisung im Hintergrund
-      base44.functions.invoke('autoCheckAllEmployees', {}).catch(() => {});
-    }).catch(() => {});
+    useEffect(() => {
+      base44.auth.me().then((u) => {
+        setUser(u);
+        if (!localStorage.getItem('selectedBenutzertyp')) {
+          setSelectedBenutzertyp(u?.benutzertyp || 'Interner Mitarbeiter');
+        }
+      }).catch(() => {});
 
-    const handleBenutzertypChange = () => {
-      setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
-    };
+      const handleBenutzertypChange = () => {
+        setSelectedBenutzertyp(localStorage.getItem('selectedBenutzertyp') || 'Interner Mitarbeiter');
+      };
+
 
     const handleTeamleiterAnsichtChange = () => {
       setTeamleiterAnsicht(localStorage.getItem('teamleiterAnsicht') === 'true');

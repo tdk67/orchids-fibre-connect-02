@@ -81,6 +81,71 @@ export default function LeadDetails() {
     queryFn: () => base44.entities.Termin.list(),
   });
 
+  // Lokale Auto-Zuweisung (ersetzt defekte Edge Function)
+  const assignLeadsFromPool = async (employeeEmail) => {
+    if (!employeeEmail || !employees?.length) return 0;
+    const emp = employees.find((e) => e.email === employeeEmail);
+    if (!emp) return 0;
+
+    const allLeads = await base44.entities.Lead.list();
+
+    const bearbeitetCount = allLeads.filter(
+      (l) => l.assigned_to_email === emp.email && l.archiv_kategorie === 'Bearbeitet'
+    ).length;
+    const adresspunkteCount = allLeads.filter(
+      (l) => l.assigned_to_email === emp.email && l.archiv_kategorie === 'Adresspunkte'
+    ).length;
+    const nichtErreichtCount = allLeads.filter(
+      (l) => l.assigned_to_email === emp.email && l.archiv_kategorie === 'Nicht erreicht'
+    ).length;
+
+    if (bearbeitetCount >= 10 || adresspunkteCount >= 10 || nichtErreichtCount >= 50) {
+      return 0;
+    }
+
+    const activeAssigned = allLeads.filter(
+      (l) =>
+        l.assigned_to_email === emp.email &&
+        l.pool_status === 'zugewiesen' &&
+        !l.archiv_kategorie &&
+        !l.verkaufschance_status &&
+        !l.verloren
+    );
+
+    const targetCount = 100;
+    const minThreshold = 80;
+    if (activeAssigned.length >= minThreshold) return 0;
+
+    const needsAssignment = targetCount - activeAssigned.length;
+    const poolLeads = allLeads
+      .filter(
+        (l) =>
+          l.pool_status === 'im_pool' &&
+          l.benutzertyp === emp.benutzertyp &&
+          l.vorheriger_mitarbeiter !== emp.email
+      )
+      .slice(0, needsAssignment);
+
+    for (const lead of poolLeads) {
+      await base44.entities.Lead.update(lead.id, {
+        pool_status: 'zugewiesen',
+        assigned_to: emp.full_name,
+        assigned_to_email: emp.email,
+        status: 'Neu',
+        google_calendar_link: emp.google_calendar_link || '',
+      });
+      lead.pool_status = 'zugewiesen';
+      lead.assigned_to_email = emp.email;
+      lead.assigned_to = emp.full_name;
+    }
+
+    if (poolLeads.length > 0) {
+      await queryClient.invalidateQueries(['leads']);
+    }
+
+    return poolLeads.length;
+  };
+
   const createTerminMutation = useMutation({
     mutationFn: (data) => base44.entities.Termin.create(data),
     onSuccess: () => {
@@ -124,12 +189,11 @@ export default function LeadDetails() {
     onSuccess: async (response, variables) => {
       await queryClient.invalidateQueries(['leads']);
 
-      // Automatische Lead-Nachlieferung für diesen Mitarbeiter
-      if (variables.data.assigned_to_email) {
-        base44.functions.invoke('autoAssignLeads', {
-          employeeEmail: variables.data.assigned_to_email
-        }).catch(() => {});
-      }
+        // Automatische Lead-Nachlieferung für diesen Mitarbeiter (lokal)
+        if (variables.data.assigned_to_email) {
+          await assignLeadsFromPool(variables.data.assigned_to_email);
+        }
+
 
       // Immer zum aktiv Tab zurück
       setTimeout(() => {
@@ -204,15 +268,9 @@ export default function LeadDetails() {
       dataToSave.pool_status = 'bearbeitet';
       
       // Sofort neue Leads zuweisen wenn Status geändert wird
-      setTimeout(() => {
+      setTimeout(async () => {
         if (dataToSave.assigned_to_email) {
-          base44.functions.invoke('autoAssignLeads', {
-            employeeEmail: dataToSave.assigned_to_email
-          }).then(response => {
-            if (response.data.assigned > 0) {
-              console.log(`${response.data.assigned} neue Leads automatisch zugewiesen`);
-            }
-          }).catch(() => {});
+          await assignLeadsFromPool(dataToSave.assigned_to_email);
         }
       }, 500);
     }
