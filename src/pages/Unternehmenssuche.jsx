@@ -1,11 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {
-  MapContainer,
-  Marker,
-  Popup,
-  Rectangle,
-  useMapEvents,
-} from 'react-leaflet';
+import React, { useState, useEffect, useMemo } from 'react';
+import { MapContainer, Marker, Popup, Rectangle, TileLayer, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { base44 } from '@/api/base44Client';
@@ -148,7 +142,6 @@ export default function Unternehmenssuche() {
   const [mapZoom, setMapZoom] = useState(12);
   const [mapInstance, setMapInstance] = useState(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const tileLayerRef = useRef(null);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState(null);
@@ -663,15 +656,18 @@ const TILE_ATTRIBUTION =
               )}
             </CardHeader>
             <CardContent>
-              <div className="h-[600px] w-full rounded-lg overflow-hidden border-2 border-slate-200">
-                <MapContainer
-                  center={mapCenter}
-                  zoom={mapZoom}
-                  style={{ height: '100%', width: '100%' }}
-                  className="z-0"
-                  whenCreated={setMapInstance}
-                >
-                  <AreaSelector
+                <div className="h-[600px] w-full rounded-lg overflow-hidden border-2 border-slate-200">
+                  <MapContainer
+                    center={mapCenter}
+                    zoom={mapZoom}
+                    style={{ height: '100%', width: '100%' }}
+                    className="z-0"
+                    whenCreated={setMapInstance}
+                  >
+                    <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+
+                    <AreaSelector
+
                     isDrawing={isDrawing}
                     drawStart={drawStart}
                     setDrawStart={setDrawStart}
