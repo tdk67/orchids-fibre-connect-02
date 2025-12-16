@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext.jsx';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { Button } from "@/components/ui/button";
 import { createPageUrl } from './utils';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -52,10 +53,9 @@ const AuthenticatedApp = () => {
               <h1 className="text-2xl font-semibold text-slate-900">Anmeldung erforderlich</h1>
               <p className="text-slate-600">Bitte melden Sie sich an, um fortzufahren.</p>
             </div>
-              <Button className="w-full" onClick={() => navigate('/login', { replace: true })}>
-                Zum Login
-              </Button>
-
+            <Button className="w-full" onClick={() => navigateToLogin()}>
+              Zum Login
+            </Button>
           </div>
         </div>
       );
