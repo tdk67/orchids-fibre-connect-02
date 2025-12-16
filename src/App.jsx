@@ -1,11 +1,12 @@
 import './App.css'
+import { useEffect } from 'react'
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -22,7 +23,15 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isLoadingAuth && authError?.type === 'auth_required' && location.pathname !== '/login') {
+      navigate('/login', { replace: true });
+    }
+  }, [isLoadingAuth, authError, location.pathname, navigate]);
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -45,9 +54,10 @@ const AuthenticatedApp = () => {
               <h1 className="text-2xl font-semibold text-slate-900">Anmeldung erforderlich</h1>
               <p className="text-slate-600">Bitte melden Sie sich an, um fortzufahren.</p>
             </div>
-            <Button className="w-full" onClick={() => navigateToLogin()}>
-              Zum Login
-            </Button>
+              <Button className="w-full" onClick={() => navigate('/login', { replace: true })}>
+                Zum Login
+              </Button>
+
           </div>
         </div>
       );
