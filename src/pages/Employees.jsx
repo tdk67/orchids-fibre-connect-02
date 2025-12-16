@@ -68,28 +68,34 @@ export default function Employees() {
     },
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    if (editingEmployee) {
-      updateMutation.mutate({ id: editingEmployee.id, data: formData });
-    } else {
-      // Automatische Mitarbeiternummer generieren
-      const existingNumbers = employees
-        .map(e => e.employee_number)
-        .filter(num => num && num.startsWith('MA'))
-        .map(num => parseInt(num.replace('MA', '')))
-        .filter(num => !isNaN(num));
+    const handleSubmit = (e) => {
+      e.preventDefault();
       
-      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      const employeeNumber = `MA${nextNumber.toString().padStart(3, '0')}`;
-      
-      createMutation.mutate({
+      // Clean up data: convert empty strings to null for UUID fields
+      const cleanedData = {
         ...formData,
-        employee_number: employeeNumber
-      });
-    }
-  };
+        teamleiter_id: formData.teamleiter_id || null,
+      };
+      
+      if (editingEmployee) {
+        updateMutation.mutate({ id: editingEmployee.id, data: cleanedData });
+      } else {
+        // Automatische Mitarbeiternummer generieren
+        const existingNumbers = employees
+          .map(e => e.employee_number)
+          .filter(num => num && num.startsWith('MA'))
+          .map(num => parseInt(num.replace('MA', '')))
+          .filter(num => !isNaN(num));
+        
+        const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+        const employeeNumber = `MA${nextNumber.toString().padStart(3, '0')}`;
+        
+        createMutation.mutate({
+          ...cleanedData,
+          employee_number: employeeNumber
+        });
+      }
+    };
 
   const resetForm = () => {
     setFormData({
