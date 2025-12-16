@@ -9,6 +9,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { Button } from "@/components/ui/button";
 import { createPageUrl } from './utils';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -36,9 +37,19 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+          <div className="w-full max-w-md bg-white border border-slate-200 shadow-sm rounded-xl p-6 space-y-4 text-center">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold text-slate-900">Anmeldung erforderlich</h1>
+              <p className="text-slate-600">Bitte melden Sie sich an, um fortzufahren.</p>
+            </div>
+            <Button className="w-full" onClick={() => navigateToLogin()}>
+              Zum Login
+            </Button>
+          </div>
+        </div>
+      );
     }
   }
 
