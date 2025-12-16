@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -17,9 +17,7 @@ export function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      console.log('Attempting login with:', email);
-      const result = await base44.auth.login({ email, password });
-      console.log('Login successful:', result);
+      await base44.auth.login({ email, password });
       toast({
         title: 'Erfolgreich angemeldet',
         description: 'Sie werden weitergeleitet...',
@@ -28,7 +26,6 @@ export function Login() {
         window.location.href = '/';
       }, 500);
     } catch (error) {
-      console.error('Login error:', error);
       toast({
         title: 'Anmeldung fehlgeschlagen',
         description: error.message || 'Bitte überprüfen Sie Ihre Anmeldedaten.',
