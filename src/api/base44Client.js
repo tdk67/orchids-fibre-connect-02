@@ -104,17 +104,20 @@ export const base44 = {
 
   auth: {
     async me() {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data?.user) throw error || new Error('Not authenticated');
-      const profile = await fetchProfile(data.user.id);
-      return mapProfileFromUser(data.user, profile);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const sessionUser = sessionData?.session?.user;
+      if (!sessionUser) throw new Error('Not authenticated');
+      const profile = await fetchProfile(sessionUser.id);
+      return mapProfileFromUser(sessionUser, profile);
     },
 
     async login({ email, password }) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      const profile = await fetchProfile(data.user?.id);
-      return mapProfileFromUser(data.user, profile);
+      const sessionUser = data?.user ?? data?.session?.user;
+      const profile = await fetchProfile(sessionUser?.id);
+      return mapProfileFromUser(sessionUser, profile);
     },
 
     async logout(redirectUrl) {
