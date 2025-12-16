@@ -163,52 +163,183 @@ export default function LeadPool() {
     }
   };
 
-  const handleAutoAssignAll = async () => {
-    if (!confirm('Automatisch Leads an alle Mitarbeiter verteilen die weniger als 100 Leads haben?')) {
-      return;
-    }
+    const handleAutoAssignAll = async () => {
+      if (!confirm('Automatisch Leads an alle Mitarbeiter verteilen die weniger als 100 Leads haben?')) {
+        return;
+      }
 
-    setIsAutoAssigning(true);
-    let totalAssigned = 0;
+      setIsAutoAssigning(true);
+      let totalAssigned = 0;
 
-    try {
-      for (const emp of employees) {
-        const { data: result } = await base44.functions.invoke('autoAssignLeads', {
-          employeeEmail: emp.email
-        });
+      try {
+        const allLeads = await base44.entities.Lead.list();
+        
+        for (const emp of employees) {
+          // Check critical archive categories
+          const bearbeitetCount = allLeads.filter(l => 
+            l.assigned_to_email === emp.email && 
+            l.archiv_kategorie === 'Bearbeitet'
+          ).length;
+          
+          const adresspunkteCount = allLeads.filter(l => 
+            l.assigned_to_email === emp.email && 
+            l.archiv_kategorie === 'Adresspunkte'
+          ).length;
+          
+          const nichtErreichtCount = allLeads.filter(l => 
+            l.assigned_to_email === emp.email && 
+            l.archiv_kategorie === 'Nicht erreicht'
+          ).length;
+          
+          // Skip if limits exceeded
+          if (bearbeitetCount >= 10 || adresspunkteCount >= 10 || nichtErreichtCount >= 50) {
+            console.log(`${emp.full_name}: Limits überschritten (B:${bearbeitetCount}, A:${adresspunkteCount}, NE:${nichtErreichtCount})`);
+            continue;
+          }
+          
+          // Count only active leads
+          const assignedLeads = allLeads.filter(l => 
+            l.assigned_to_email === emp.email && 
+            l.pool_status === 'zugewiesen' &&
+            !l.archiv_kategorie &&
+            !l.verkaufschance_status &&
+            !l.verloren
+          );
 
-        if (result.success) {
-          totalAssigned += result.assigned;
-        } else if (result.message) {
-          console.log(`${emp.full_name}: ${result.message}`);
+          const currentCount = assignedLeads.length;
+          const targetCount = 100;
+          const minThreshold = 80;
+          
+          // Only assign if below threshold
+          if (currentCount >= minThreshold) {
+            console.log(`${emp.full_name}: Hat ${currentCount} Leads (Schwelle: ${minThreshold})`);
+            continue;
+          }
+          
+          const needsAssignment = targetCount - currentCount;
+
+          // Get unassigned leads from pool
+          const poolLeads = allLeads.filter(l => 
+            l.pool_status === 'im_pool' &&
+            l.benutzertyp === emp.benutzertyp &&
+            l.vorheriger_mitarbeiter !== emp.email
+          ).slice(0, needsAssignment);
+
+          if (poolLeads.length === 0) {
+            console.log(`${emp.full_name}: Keine Leads mehr im Pool`);
+            continue;
+          }
+
+          // Assign leads
+          for (const lead of poolLeads) {
+            await base44.entities.Lead.update(lead.id, {
+              pool_status: 'zugewiesen',
+              assigned_to: emp.full_name,
+              assigned_to_email: emp.email,
+              status: 'Neu',
+              google_calendar_link: emp.google_calendar_link || ''
+            });
+            totalAssigned++;
+          }
         }
+
+        queryClient.invalidateQueries(['leads']);
+        alert(`${totalAssigned} Leads automatisch zugewiesen!`);
+      } catch (error) {
+        alert('Fehler bei automatischer Zuweisung: ' + error.message);
+      } finally {
+        setIsAutoAssigning(false);
       }
+    };
 
-      queryClient.invalidateQueries(['leads']);
-      alert(`${totalAssigned} Leads automatisch zugewiesen!`);
-    } catch (error) {
-      alert('Fehler bei automatischer Zuweisung: ' + error.message);
-    } finally {
-      setIsAutoAssigning(false);
-    }
-  };
+    const handleManualAssign = async (employeeEmail) => {
+      try {
+        const emp = employees.find(e => e.email === employeeEmail);
+        if (!emp) return;
 
-  const handleManualAssign = async (employeeEmail) => {
-    try {
-      const { data: result } = await base44.functions.invoke('autoAssignLeads', {
-        employeeEmail
-      });
+        const allLeads = await base44.entities.Lead.list();
+        
+        // Check critical archive categories
+        const bearbeitetCount = allLeads.filter(l => 
+          l.assigned_to_email === emp.email && 
+          l.archiv_kategorie === 'Bearbeitet'
+        ).length;
+        
+        const adresspunkteCount = allLeads.filter(l => 
+          l.assigned_to_email === emp.email && 
+          l.archiv_kategorie === 'Adresspunkte'
+        ).length;
+        
+        const nichtErreichtCount = allLeads.filter(l => 
+          l.assigned_to_email === emp.email && 
+          l.archiv_kategorie === 'Nicht erreicht'
+        ).length;
+        
+        // Check if limits exceeded
+        if (bearbeitetCount >= 10) {
+          alert(`Hat ${bearbeitetCount} Leads in "Bearbeitet". Erst diese bearbeiten!`);
+          return;
+        }
+        
+        if (adresspunkteCount >= 10) {
+          alert(`Hat ${adresspunkteCount} Leads in "Adresspunkte". Erst diese bearbeiten!`);
+          return;
+        }
+        
+        if (nichtErreichtCount >= 50) {
+          alert(`Hat ${nichtErreichtCount} Leads in "Nicht erreicht". Erst diese bearbeiten!`);
+          return;
+        }
+        
+        // Count only active leads
+        const assignedLeads = allLeads.filter(l => 
+          l.assigned_to_email === emp.email && 
+          l.pool_status === 'zugewiesen' &&
+          !l.archiv_kategorie &&
+          !l.verkaufschance_status &&
+          !l.verloren
+        );
 
-      queryClient.invalidateQueries(['leads']);
-      if (result.success) {
-        alert(result.message);
-      } else if (result.message) {
-        alert(result.message);
+        const currentCount = assignedLeads.length;
+        const targetCount = 100;
+        const minThreshold = 80;
+        
+        if (currentCount >= minThreshold) {
+          alert(`Mitarbeiter hat ${currentCount} Leads (Schwelle: ${minThreshold})`);
+          return;
+        }
+        
+        const needsAssignment = targetCount - currentCount;
+
+        // Get unassigned leads from pool
+        const poolLeads = allLeads.filter(l => 
+          l.pool_status === 'im_pool' &&
+          l.benutzertyp === emp.benutzertyp &&
+          l.vorheriger_mitarbeiter !== emp.email
+        ).slice(0, needsAssignment);
+
+        if (poolLeads.length === 0) {
+          alert('Keine Leads mehr im Pool');
+          return;
+        }
+
+        // Assign leads
+        for (const lead of poolLeads) {
+          await base44.entities.Lead.update(lead.id, {
+            pool_status: 'zugewiesen',
+            assigned_to: emp.full_name,
+            assigned_to_email: emp.email,
+            status: 'Neu',
+            google_calendar_link: emp.google_calendar_link || ''
+          });
+        }
+
+        queryClient.invalidateQueries(['leads']);
+        alert(`${poolLeads.length} Leads erfolgreich zugewiesen`);
+      } catch (error) {
+        alert('Fehler bei Zuweisung: ' + error.message);
       }
-    } catch (error) {
-      alert('Fehler bei Zuweisung: ' + error.message);
-    }
-  };
+    };
 
   return (
     <div className="space-y-6">
