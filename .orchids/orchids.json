@@ -3,7 +3,5 @@
   "createdAt": 1765843137268,
   "startupCommands": [
     "npm install; node_modules\\.bin\\vite"
-  ],
-  "vercelProjectId": "prj_RDaVcM6kbZxkgJ1TZmAoL1hOSgwz",
-  "deployedWithUserToken": false
+  ]
 }
