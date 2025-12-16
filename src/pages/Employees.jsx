@@ -10,31 +10,81 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, UserCircle, Mail, Phone, Percent, Trash2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+const defaultFormData = {
+  employee_number: '',
+  full_name: '',
+  email: '',
+  phone: '',
+  address: '',
+  city: '',
+  postal_code: '',
+  sparte: 'Telekom',
+  rolle: 'Mitarbeiter',
+  titel: 'Mitarbeiter',
+  teamleiter_id: '',
+  commission_rate: 0,
+  fixed_commission: 0,
+  bank_details: '',
+  tax_id: '',
+  google_calendar_link: '',
+  email_adresse: '',
+  smtp_server: '',
+  smtp_port: 465,
+  smtp_username: '',
+  smtp_password: '',
+  imap_server: '',
+  imap_port: 993,
+  imap_username: '',
+  imap_password: '',
+  status: 'Aktiv'
+};
+
+const normalizeEmployeeData = (data = {}) => {
+  const textFields = [
+    'employee_number',
+    'full_name',
+    'email',
+    'phone',
+    'address',
+    'city',
+    'postal_code',
+    'bank_details',
+    'tax_id',
+    'google_calendar_link',
+    'email_adresse',
+    'smtp_server',
+    'smtp_username',
+    'smtp_password',
+    'imap_server',
+    'imap_username',
+    'imap_password',
+  ];
+
+  const result = { ...defaultFormData, ...data };
+  textFields.forEach((key) => {
+    result[key] = data?.[key] ?? '';
+  });
+
+  result.teamleiter_id = data?.teamleiter_id ?? '';
+  result.sparte = data?.sparte ?? 'Telekom';
+  result.rolle = data?.rolle ?? 'Mitarbeiter';
+  result.titel = data?.titel ?? 'Mitarbeiter';
+  result.status = data?.status ?? 'Aktiv';
+
+  result.commission_rate = Number(data?.commission_rate) || 0;
+  result.fixed_commission = Number(data?.fixed_commission) || 0;
+  result.smtp_port = Number(data?.smtp_port) || 465;
+  result.imap_port = Number(data?.imap_port) || 993;
+
+  return result;
+};
 
 export default function Employees() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [formData, setFormData] = useState({
-    employee_number: '',
-    full_name: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    postal_code: '',
-    sparte: 'Telekom',
-    rolle: 'Mitarbeiter',
-    titel: 'Mitarbeiter',
-    teamleiter_id: '',
-    commission_rate: 0,
-    fixed_commission: 0,
-    bank_details: '',
-    tax_id: '',
-    google_calendar_link: '',
-    email_adresse: '',
-    status: 'Aktiv'
-  });
+  const [formData, setFormData] = useState(() => normalizeEmployeeData());
 
   const queryClient = useQueryClient();
 
@@ -98,40 +148,13 @@ export default function Employees() {
     };
 
   const resetForm = () => {
-    setFormData({
-      employee_number: '',
-      full_name: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      postal_code: '',
-      sparte: 'Telekom',
-      rolle: 'Mitarbeiter',
-      titel: 'Mitarbeiter',
-      teamleiter_id: '',
-      commission_rate: 0,
-      fixed_commission: 0,
-      bank_details: '',
-      tax_id: '',
-      google_calendar_link: '',
-      email_adresse: '',
-      smtp_server: '',
-      smtp_port: 465,
-      smtp_username: '',
-      smtp_password: '',
-      imap_server: '',
-      imap_port: 993,
-      imap_username: '',
-      imap_password: '',
-      status: 'Aktiv'
-    });
+    setFormData(normalizeEmployeeData());
     setEditingEmployee(null);
   };
 
   const handleEdit = (employee) => {
     setEditingEmployee(employee);
-    setFormData(employee);
+    setFormData(normalizeEmployeeData(employee));
     setIsDialogOpen(true);
   };
 
@@ -159,11 +182,13 @@ export default function Employees() {
               Neuer Mitarbeiter
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingEmployee ? 'Mitarbeiter bearbeiten' : 'Neuer Mitarbeiter'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingEmployee ? 'Mitarbeiter bearbeiten' : 'Neuer Mitarbeiter'}</DialogTitle>
+                <DialogDescription>Name, Rolle und Sparte sind Pflichtfelder.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Name *</Label>
