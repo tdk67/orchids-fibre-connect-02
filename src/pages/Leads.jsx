@@ -984,22 +984,10 @@ export default function Leads() {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent">Leads</h1>
             <p className="text-slate-600 mt-1">Verwalten Sie Ihre Lead-Datenbank</p>
           </div>
-            <div className="flex gap-3">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          const params = new URLSearchParams();
-                          if (filterCity !== 'all') params.set('city', filterCity);
-                          navigate(`${createPageUrl('Unternehmenssuche')}?${params.toString()}`);
-                        }}
-                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                      >
-                        <Zap className="h-4 w-4 mr-2" />
-                        Lead-Generierung
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={deleteAllLeads}
+          <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={deleteAllLeads}
                       className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -1209,114 +1197,65 @@ export default function Leads() {
         {/* Tabs & Filters */}
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
-              <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-                  <TabsList className="grid w-full grid-cols-10 bg-slate-100 p-1.5 gap-1">
-                    <TabsTrigger value="aktiv" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                      Aktiv ({leads.filter(l => l.pool_status !== 'im_pool' && !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
-                    </TabsTrigger>
-                    <TabsTrigger value="pool" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white">
-                      Pool ({leads.filter(l => l.pool_status === 'im_pool').length})
-                    </TabsTrigger>
-                    <TabsTrigger value="angebote" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-                      Angebote ({leads.filter(l => l.pool_status !== 'im_pool' && l.verkaufschance_status).length})
-                    </TabsTrigger>
-                  <TabsTrigger value="bearbeitet" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                    Bearbeitet ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Bearbeitet').length})
-                  </TabsTrigger>
-                  <TabsTrigger value="adresspunkte" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                    Adresspunkte ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Adresspunkte').length})
-                  </TabsTrigger>
-                  <TabsTrigger value="verloren" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-                    Verloren ({leads.filter(l => l.pool_status !== 'im_pool' && l.verloren).length})
-                  </TabsTrigger>
-                  <TabsTrigger value="nicht_erreicht" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                    Nicht erreicht ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Nicht erreicht').length})
-                  </TabsTrigger>
-                  <TabsTrigger value="anderer_provider" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
-                    Anderer Provider ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Anderer Provider').length})
-                  </TabsTrigger>
-                  <TabsTrigger value="kein_interesse" className="data-[state=active]:bg-slate-600 data-[state=active]:text-white">
-                    Kein Interesse ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Kein Interesse').length})
-                  </TabsTrigger>
-                  <TabsTrigger value="falsche_daten" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white">
-                    Falsche Daten ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Falsche Daten').length})
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <div className="space-y-3 mt-4">
-                <div className="flex gap-4 flex-wrap">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      placeholder="Lead suchen..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 border-slate-300"
-                    />
-                  </div>
-                  {(user?.role === 'admin' || user?.rolle === 'Teamleiter') && (
-                    <div className="min-w-[200px]">
-                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                        <SelectTrigger className="border-slate-300">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Alle Mitarbeiter</SelectItem>
-                          {employees.map((emp) => (
-                            <SelectItem key={emp.id} value={emp.full_name}>
-                              {emp.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-                  <div className="flex gap-4 flex-wrap">
-                    <div className="min-w-[160px] flex-1">
-                      <Input
-                        placeholder="Stadt filtern..."
-                        value={filterCity}
-                        onChange={(e) => setFilterCity(e.target.value)}
-                        className="border-slate-300"
-                      />
-                    </div>
-                    <div className="min-w-[200px] flex-1">
-                      <Select value={filterAreaId} onValueChange={setFilterAreaId}>
-                        <SelectTrigger className="border-slate-300">
-                          <SelectValue placeholder="Bereich auswählen" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Alle Bereiche</SelectItem>
-                          {savedAreas.filter(a => !filterCity || a.city?.toLowerCase().includes(filterCity.toLowerCase())).map((area) => (
-                            <SelectItem key={area.id} value={area.id}>
-                              {area.name} ({area.city})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="relative min-w-[200px] flex-1">
-                      <Input
-                        placeholder="Straßenname (optional)..."
-                        value={filterStreet}
-                        onChange={(e) => setFilterStreet(e.target.value)}
-                        className="border-slate-300"
-                      />
-                    </div>
-                    <div className="min-w-[180px]">
-                      <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger className="border-slate-300">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="name">Sortieren nach Name</SelectItem>
-                          <SelectItem value="address">Sortieren nach Adresse</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+            <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-9 bg-slate-100 p-1.5 gap-1">
+                <TabsTrigger value="aktiv" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  Aktiv ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
+                </TabsTrigger>
+                <TabsTrigger value="angebote" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                  Angebote ({leads.filter(l => l.verkaufschance_status).length})
+                </TabsTrigger>
+                <TabsTrigger value="bearbeitet" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+                  Bearbeitet ({leads.filter(l => l.archiv_kategorie === 'Bearbeitet').length})
+                </TabsTrigger>
+                <TabsTrigger value="adresspunkte" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                  Adresspunkte ({leads.filter(l => l.archiv_kategorie === 'Adresspunkte').length})
+                </TabsTrigger>
+                <TabsTrigger value="verloren" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                  Verloren ({leads.filter(l => l.verloren).length})
+                </TabsTrigger>
+                <TabsTrigger value="nicht_erreicht" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+                  Nicht erreicht ({leads.filter(l => l.archiv_kategorie === 'Nicht erreicht').length})
+                </TabsTrigger>
+                <TabsTrigger value="anderer_provider" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+                  Anderer Provider ({leads.filter(l => l.archiv_kategorie === 'Anderer Provider').length})
+                </TabsTrigger>
+                <TabsTrigger value="kein_interesse" className="data-[state=active]:bg-slate-600 data-[state=active]:text-white">
+                  Kein Interesse ({leads.filter(l => l.archiv_kategorie === 'Kein Interesse').length})
+                </TabsTrigger>
+                <TabsTrigger value="falsche_daten" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white">
+                  Falsche Daten ({leads.filter(l => l.archiv_kategorie === 'Falsche Daten').length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="flex gap-4 flex-wrap mt-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Lead suchen..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 border-slate-300"
+                />
               </div>
+              {(user?.role === 'admin' || user?.rolle === 'Teamleiter') && (
+                <div className="min-w-[200px]">
+                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                    <SelectTrigger className="border-slate-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle Mitarbeiter</SelectItem>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.full_name}>
+                          {emp.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
