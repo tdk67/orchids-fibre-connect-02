@@ -184,7 +184,11 @@ export default function Unternehmenssuche() {
 
   async function loadAreas() {
     try {
-      const areas = await base44.sql(`SELECT * FROM areas ORDER BY created_at DESC`);
+      const { data: areas, error } = await base44.client
+        .from('areas')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
       setSavedAreas(areas || []);
     } catch (err) {
       console.error('Failed to load areas:', err);
@@ -221,11 +225,17 @@ export default function Unternehmenssuche() {
         color: '#3b82f6',
       };
 
-      await base44.sql(
-        `INSERT INTO areas (name, city, bounds, streets, color) 
-         VALUES ($1, $2, $3::jsonb, $4::jsonb, $5)`,
-        [areaData.name, areaData.city, areaData.bounds, areaData.streets, areaData.color]
-      );
+      const { error: insertError } = await base44.client
+        .from('areas')
+        .insert({
+          name: areaData.name,
+          city: areaData.city,
+          bounds: newAreaBounds,
+          streets: streetNames,
+          color: areaData.color,
+        });
+      
+      if (insertError) throw insertError;
 
       await loadAreas();
       setShowAreaDialog(false);
