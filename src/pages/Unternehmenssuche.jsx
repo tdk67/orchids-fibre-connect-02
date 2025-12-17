@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
 import {
   Search,
   MapPin,
@@ -52,9 +53,9 @@ const statusColors = {
 const createCustomIcon = (color) =>
   L.divIcon({
     className: 'custom-div-icon',
-    html: `<div style="background-color: ${color}; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
-    iconSize: [25, 25],
-    iconAnchor: [12, 12],
+    html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
   });
 
 function DrawingHandler({ isDrawing, onDrawComplete }) {
@@ -128,6 +129,7 @@ const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export default function Unternehmenssuche() {
+  const { toast } = useToast();
   const [activeSection, setActiveSection] = useState('map');
   const [user, setUser] = useState(null);
   
@@ -239,15 +241,22 @@ export default function Unternehmenssuche() {
       
       if (insertError) throw insertError;
 
-      await loadAreas();
-      setShowAreaDialog(false);
-      setNewAreaName('');
-      setNewAreaBounds(null);
-      alert(`Bereich "${areaData.name}" mit ${streetNames.length} Straßen gespeichert!`);
-    } catch (err) {
-      alert('Fehler beim Speichern: ' + err.message);
+        await loadAreas();
+        setShowAreaDialog(false);
+        setNewAreaName('');
+        setNewAreaBounds(null);
+        toast({
+          title: "Bereich gespeichert",
+          description: `Bereich "${areaData.name}" mit ${streetNames.length} Straßen gespeichert!`,
+        });
+      } catch (err) {
+        toast({
+          title: "Fehler",
+          description: 'Fehler beim Speichern: ' + err.message,
+          variant: "destructive",
+        });
+      }
     }
-  }
 
   async function handleDrawComplete(bounds) {
     setIsDrawing(false);
@@ -283,10 +292,14 @@ export default function Unternehmenssuche() {
       ? JSON.parse(selectedArea.streets) 
       : selectedArea.streets || [];
     
-    if (streets.length === 0) {
-      alert('Keine Straßen in diesem Bereich gefunden');
-      return;
-    }
+      if (streets.length === 0) {
+        toast({
+          title: "Warnung",
+          description: 'Keine Straßen in diesem Bereich gefunden',
+          variant: "destructive",
+        });
+        return;
+      }
 
     setGeneratingArea(selectedArea.id);
     setGenerationProgress({});
@@ -323,12 +336,15 @@ export default function Unternehmenssuche() {
       }
     }
 
-    setFoundCompanies([...foundCompanies, ...allLeads]);
-    setGeneratingArea(null);
-    setGenerationProgress({});
-    setActiveSection('generator');
-    alert(`${allLeads.length} Unternehmen gefunden!`);
-  }
+      setFoundCompanies([...foundCompanies, ...allLeads]);
+      setGeneratingArea(null);
+      setGenerationProgress({});
+      setActiveSection('generator');
+      toast({
+        title: "Erfolgreich",
+        description: `${allLeads.length} Unternehmen gefunden!`,
+      });
+    }
 
   async function geocodeCity() {
     if (!cityInput.trim()) return;
@@ -341,27 +357,43 @@ export default function Unternehmenssuche() {
       if (data?.length) {
         const { lat, lon } = data[0];
         const newCenter = [parseFloat(lat), parseFloat(lon)];
-        setMapCenter(newCenter);
-        setMapZoom(13);
-      } else {
-        alert('Keine Ergebnisse für diese Stadt gefunden');
+          setMapCenter(newCenter);
+          setMapZoom(13);
+        } else {
+          toast({
+            title: "Nicht gefunden",
+            description: 'Keine Ergebnisse für diese Stadt gefunden',
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        toast({
+          title: "Fehler",
+          description: 'Stadt-Suche fehlgeschlagen',
+          variant: "destructive",
+        });
+      } finally {
+        setIsGeocoding(false);
       }
-    } catch (err) {
-      alert('Stadt-Suche fehlgeschlagen');
-    } finally {
-      setIsGeocoding(false);
     }
-  }
 
-  async function addCompaniesToLeads() {
-    if (foundCompanies.length === 0) {
-      alert('Keine Unternehmen zum Hinzufügen vorhanden');
-      return;
-    }
-    if (!assignEmployee) {
-      alert('Bitte wählen Sie einen Mitarbeiter aus');
-      return;
-    }
+    async function addCompaniesToLeads() {
+      if (foundCompanies.length === 0) {
+        toast({
+          title: "Warnung",
+          description: 'Keine Unternehmen zum Hinzufügen vorhanden',
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!assignEmployee) {
+        toast({
+          title: "Warnung",
+          description: 'Bitte wählen Sie einen Mitarbeiter aus',
+          variant: "destructive",
+        });
+        return;
+      }
     
     const employee = employees.find((e) => e.full_name === assignEmployee);
     const leadsToCreate = foundCompanies.map((company) => ({
@@ -381,15 +413,22 @@ export default function Unternehmenssuche() {
     }));
     
     try {
-      await base44.entities.Lead.bulkCreate(leadsToCreate);
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['allLeads']);
-      setFoundCompanies([]);
-      alert(`${leadsToCreate.length} Leads erfolgreich erstellt und ${employee?.full_name} zugewiesen!`);
-    } catch (error) {
-      alert('Fehler beim Erstellen: ' + error.message);
+        await base44.entities.Lead.bulkCreate(leadsToCreate);
+        queryClient.invalidateQueries(['leads']);
+        queryClient.invalidateQueries(['allLeads']);
+        setFoundCompanies([]);
+        toast({
+          title: "Erfolgreich",
+          description: `${leadsToCreate.length} Leads erstellt und ${employee?.full_name} zugewiesen!`,
+        });
+      } catch (error) {
+        toast({
+          title: "Fehler",
+          description: 'Fehler beim Erstellen: ' + error.message,
+          variant: "destructive",
+        });
+      }
     }
-  }
 
   const removeCompany = (companyId) => {
     setFoundCompanies((prev) => prev.filter((c) => c.id !== companyId));
@@ -506,33 +545,44 @@ export default function Unternehmenssuche() {
                           );
                         })}
 
-                        {leadsWithCoordinates.map((lead) => {
-                          const lat = parseFloat(lead.latitude);
-                          const lng = parseFloat(lead.longitude);
-                          const statusColor = statusColors[lead.status] || statusColors['Neu'];
-                          return (
-                            <Marker key={lead.id} position={[lat, lng]} icon={createCustomIcon(statusColor)}>
-                              <Popup>
-                                <div className="p-2">
-                                  <h3 className="font-bold text-slate-900">{lead.firma || 'Unbekannt'}</h3>
-                                  <p className="text-sm text-slate-600 mt-1">
-                                    {lead.strasse_hausnummer}
-                                    {lead.postleitzahl && `, ${lead.postleitzahl}`}
-                                    {lead.stadt && ` ${lead.stadt}`}
-                                  </p>
-                                  {lead.telefon && (
-                                    <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
-                                      <Phone className="h-3 w-3" /> {lead.telefon}
+                          {leadsWithCoordinates.map((lead) => {
+                            const lat = parseFloat(lead.latitude);
+                            const lng = parseFloat(lead.longitude);
+                            return (
+                              <Marker key={lead.id} position={[lat, lng]} icon={createCustomIcon('#3b82f6')}>
+                                <Popup>
+                                  <div className="p-3">
+                                    <h3 className="font-bold text-slate-900 mb-2">{lead.firma || 'Unbekannt'}</h3>
+                                    {lead.ansprechpartner && (
+                                      <p className="text-sm text-slate-700 font-medium">
+                                        {lead.ansprechpartner}
+                                      </p>
+                                    )}
+                                    <p className="text-sm text-slate-600 mt-1">
+                                      {lead.strasse_hausnummer}
+                                      {lead.postleitzahl && `, ${lead.postleitzahl}`}
+                                      {lead.stadt && ` ${lead.stadt}`}
                                     </p>
-                                  )}
-                                  <Badge className="mt-2" style={{ backgroundColor: statusColor }}>
-                                    {lead.status}
-                                  </Badge>
-                                </div>
-                              </Popup>
-                            </Marker>
-                          );
-                        })}
+                                    {lead.telefon && (
+                                      <p className="text-sm text-blue-600 flex items-center gap-1 mt-2">
+                                        <Phone className="h-3 w-3" /> {lead.telefon}
+                                      </p>
+                                    )}
+                                    {lead.email && (
+                                      <p className="text-sm text-blue-600 flex items-center gap-1 mt-1">
+                                        <Mail className="h-3 w-3" /> {lead.email}
+                                      </p>
+                                    )}
+                                    {lead.status && (
+                                      <Badge className="mt-2 bg-blue-100 text-blue-800">
+                                        {lead.status}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </Popup>
+                              </Marker>
+                            );
+                          })}
 
                         {foundWithCoordinates.map((company) => {
                           const lat = parseFloat(company.latitude);
@@ -579,6 +629,10 @@ export default function Unternehmenssuche() {
                         {savedAreas.map((area) => {
                           const streets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
                           const isSelected = area.id === selectedAreaId;
+                          const areaLeads = allLeads.filter(lead => 
+                            lead.stadt?.toLowerCase() === area.city?.toLowerCase() ||
+                            lead.postleitzahl?.startsWith(area.city?.split(' ')[0])
+                          );
                           return (
                             <div
                               key={area.id}
@@ -598,14 +652,34 @@ export default function Unternehmenssuche() {
                               <p className="text-xs text-slate-600 mb-2">
                                 <span className="font-medium">{area.city}</span>
                               </p>
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <MapPin className="h-3 w-3" />
-                                <span>{streets.length} Straßen</span>
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{streets.length} Straßen</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-blue-600 font-medium">
+                                  <Building2 className="h-3 w-3" />
+                                  <span>{areaLeads.length} Leads</span>
+                                </div>
                               </div>
+                              {areaLeads.length > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full mt-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveSection('leads');
+                                  }}
+                                >
+                                  <List className="h-3 w-3 mr-1" />
+                                  Leads ansehen
+                                </Button>
+                              )}
                               {isSelected && (
                                 <Button
                                   size="sm"
-                                  className="w-full mt-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm"
+                                  className="w-full mt-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     navigateToGenerator();
