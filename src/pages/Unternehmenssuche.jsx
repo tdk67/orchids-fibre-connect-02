@@ -271,7 +271,7 @@ export default function Unternehmenssuche() {
       const bounds = typeof area.bounds === 'string' ? JSON.parse(area.bounds) : area.bounds;
       const center = [(bounds.north + bounds.south) / 2, (bounds.east + bounds.west) / 2];
       setMapCenter(center);
-      setMapZoom(14);
+      setMapZoom(16);
     }
   }
 
