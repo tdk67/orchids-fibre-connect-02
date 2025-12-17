@@ -28,40 +28,22 @@ export default function Leads() {
   const navigate = useNavigate();
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [user, setUser] = useState(null);
-    const [filterCity, setFilterCity] = useState('');
-    const [filterAreaId, setFilterAreaId] = useState('all');
-    const [filterStreet, setFilterStreet] = useState('');
-    const [sortBy, setSortBy] = useState('name');
-    
-    const { data: savedAreas = [] } = useQuery({
-      queryKey: ['areas'],
-      queryFn: async () => {
-        const { data, error } = await base44.client.from('areas').select('*');
-        if (error) throw error;
-        return data || [];
-      },
-    });
-
-    const [importFile, setImportFile] = useState(null);
-    const [isImporting, setIsImporting] = useState(false);
-    const [importStatus, setImportStatus] = useState('');
-    const [pastedData, setPastedData] = useState('');
-    const [importAssignedTo, setImportAssignedTo] = useState('');
-    const [selectedLeads, setSelectedLeads] = useState([]);
-    const [showBulkAssign, setShowBulkAssign] = useState(false);
-    const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
-    const [selectedAdresspunkte, setSelectedAdresspunkte] = useState([]);
-    const location = useLocation();
-    const activeTab = new URLSearchParams(location.search).get('tab') || 'aktiv';
-    const cityParam = new URLSearchParams(location.search).get('city');
-    const areaIdParam = new URLSearchParams(location.search).get('areaId');
-
-    useEffect(() => {
-      if (cityParam) setFilterCity(cityParam);
-      if (areaIdParam) setFilterAreaId(areaIdParam);
-    }, [cityParam, areaIdParam]);
-
-    const [showTerminDialog, setShowTerminDialog] = useState(false);
+  const [filterCity, setFilterCity] = useState('all');
+  const [filterArea, setFilterArea] = useState('all');
+  const [filterStreet, setFilterStreet] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [importFile, setImportFile] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
+  const [pastedData, setPastedData] = useState('');
+  const [importAssignedTo, setImportAssignedTo] = useState('');
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
+  const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
+  const [selectedAdresspunkte, setSelectedAdresspunkte] = useState([]);
+  const location = useLocation();
+  const activeTab = new URLSearchParams(location.search).get('tab') || 'aktiv';
+  const [showTerminDialog, setShowTerminDialog] = useState(false);
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
   const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
@@ -833,69 +815,35 @@ export default function Leads() {
     const isInternalAdmin = (user?.role === 'admin' || isTeamleiter) && userBenutzertyp === 'Interner Mitarbeiter';
     
     let filteredLeads = leads.filter((lead) => {
-      // Tab-basierte Filterung ZUERST
-      if (activeTab === "aktiv") {
-          if (
-            lead.pool_status === "im_pool" ||
-            lead.archiv_kategorie ||
-            lead.verkaufschance_status ||
-            lead.verloren
-          )
-            return false;
-        } else if (activeTab === "pool") {
-          if (lead.pool_status !== "im_pool") return false;
-        } else if (activeTab === "angebote") {
-          if (lead.pool_status === "im_pool" || !lead.verkaufschance_status)
-            return false;
-        } else if (activeTab === "bearbeitet") {
-          if (
-            lead.pool_status === "im_pool" ||
-            lead.archiv_kategorie !== "Bearbeitet"
-          )
-            return false;
-        } else if (activeTab === "adresspunkte") {
-          if (
-            lead.pool_status === "im_pool" ||
-            lead.archiv_kategorie !== "Adresspunkte"
-          )
-            return false;
-        } else if (activeTab === "verloren") {
-          if (lead.pool_status === "im_pool" || !lead.verloren) return false;
-        } else if (activeTab === "nicht_erreicht") {
-          if (
-            lead.pool_status === "im_pool" ||
-            lead.archiv_kategorie !== "Nicht erreicht"
-          )
-            return false;
-        } else if (activeTab === "anderer_provider") {
-          if (
-            lead.pool_status === "im_pool" ||
-            lead.archiv_kategorie !== "Anderer Provider"
-          )
-            return false;
-        } else if (activeTab === "kein_interesse") {
-          if (
-            lead.pool_status === "im_pool" ||
-            lead.archiv_kategorie !== "Kein Interesse"
-          )
-            return false;
-        } else if (activeTab === "falsche_daten") {
-          if (
-            lead.pool_status === "im_pool" ||
-            lead.archiv_kategorie !== "Falsche Daten"
-          )
-            return false;
-        }
+      // WICHTIG: Pool-Leads (im_pool) niemals anzeigen - nur im Hintergrund
+      if (lead.pool_status === 'im_pool') return false;
 
-      // Benutzertyp-Filter - Allow leads explicitly assigned to the user regardless of benutzertyp
-      const isAssignedToMe = lead.assigned_to_email === user?.email;
-      
-      if (!isAssignedToMe) {
-        if (isInternalAdmin) {
-          if (lead.benutzertyp && lead.benutzertyp !== selectedBenutzertyp) return false;
-        } else {
-          if (lead.benutzertyp && lead.benutzertyp !== userBenutzertyp) return false;
-        }
+      // Tab-basierte Filterung ZUERST
+      if (activeTab === 'aktiv') {
+        if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;
+      } else if (activeTab === 'angebote') {
+        if (!lead.verkaufschance_status) return false;
+      } else if (activeTab === 'bearbeitet') {
+        if (lead.archiv_kategorie !== 'Bearbeitet') return false;
+      } else if (activeTab === 'adresspunkte') {
+        if (lead.archiv_kategorie !== 'Adresspunkte') return false;
+      } else if (activeTab === 'verloren') {
+        if (!lead.verloren) return false;
+      } else if (activeTab === 'nicht_erreicht') {
+        if (lead.archiv_kategorie !== 'Nicht erreicht') return false;
+      } else if (activeTab === 'anderer_provider') {
+        if (lead.archiv_kategorie !== 'Anderer Provider') return false;
+      } else if (activeTab === 'kein_interesse') {
+        if (lead.archiv_kategorie !== 'Kein Interesse') return false;
+      } else if (activeTab === 'falsche_daten') {
+        if (lead.archiv_kategorie !== 'Falsche Daten') return false;
+      }
+
+      // Benutzertyp-Filter
+      if (isInternalAdmin) {
+        if (lead.benutzertyp !== selectedBenutzertyp) return false;
+      } else {
+        if (lead.benutzertyp !== userBenutzertyp) return false;
       }
       
       const searchMatch = 
@@ -914,42 +862,17 @@ export default function Leads() {
         employeeMatch = lead.assigned_to === selectedEmployee;
       }
       
-        // City filter
-        const cityMatch = !filterCity || lead.stadt?.toLowerCase().includes(filterCity.toLowerCase());
-        
-      // Area (area_id) filter
-      let areaMatch = true;
-      if (filterAreaId !== 'all') {
-        const area = savedAreas.find(a => a.id === filterAreaId);
-        if (area) {
-          if (lead.area_id === area.id) {
-            areaMatch = true;
-          } else {
-            const leadCity = lead.stadt?.toLowerCase();
-            const areaCity = area.city?.toLowerCase();
-            if (leadCity !== areaCity) {
-              areaMatch = false;
-            } else {
-              const streetName = lead.strasse_hausnummer?.split(/\s\d/)[0]?.trim()?.toLowerCase();
-              if (!streetName) {
-                areaMatch = false;
-              } else {
-                const areaStreets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
-                areaMatch = areaStreets.some(s => {
-                  const aStreetName = (typeof s === 'string' ? s : s.name)?.toLowerCase();
-                  return aStreetName && (streetName.includes(aStreetName) || aStreetName.includes(streetName));
-                });
-              }
-            }
-          }
-        }
-      }
-        
-        // Street filter
-        const streetMatch = !filterStreet || lead.strasse_hausnummer?.toLowerCase().includes(filterStreet.toLowerCase());
-        
-        return searchMatch && employeeMatch && cityMatch && areaMatch && streetMatch;
-      });
+      // City filter
+      const cityMatch = filterCity === 'all' || lead.stadt === filterCity;
+      
+      // Area (postleitzahl) filter
+      const areaMatch = filterArea === 'all' || lead.postleitzahl === filterArea;
+      
+      // Street filter
+      const streetMatch = !filterStreet || lead.strasse_hausnummer?.toLowerCase().includes(filterStreet.toLowerCase());
+      
+      return searchMatch && employeeMatch && cityMatch && areaMatch && streetMatch;
+    });
     
     // Apply sorting
     filteredLeads = [...filteredLeads].sort((a, b) => {
@@ -1228,34 +1151,87 @@ export default function Leads() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <div className="flex gap-4 flex-wrap mt-4">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Lead suchen..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-slate-300"
-                />
-              </div>
-              {(user?.role === 'admin' || user?.rolle === 'Teamleiter') && (
-                <div className="min-w-[200px]">
-                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                    <SelectTrigger className="border-slate-300">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Alle Mitarbeiter</SelectItem>
-                      {employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.full_name}>
-                          {emp.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-3 mt-4">
+                <div className="flex gap-4 flex-wrap">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Lead suchen..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 border-slate-300"
+                    />
+                  </div>
+                  {(user?.role === 'admin' || user?.rolle === 'Teamleiter') && (
+                    <div className="min-w-[200px]">
+                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                        <SelectTrigger className="border-slate-300">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Alle Mitarbeiter</SelectItem>
+                          {employees.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.full_name}>
+                              {emp.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+                <div className="flex gap-4 flex-wrap">
+                  <div className="min-w-[160px]">
+                    <Select value={filterCity} onValueChange={setFilterCity}>
+                      <SelectTrigger className="border-slate-300">
+                        <SelectValue placeholder="Stadt auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle Städte</SelectItem>
+                        {uniqueCities.map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="min-w-[160px]">
+                    <Select value={filterArea} onValueChange={setFilterArea}>
+                      <SelectTrigger className="border-slate-300">
+                        <SelectValue placeholder="PLZ auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle PLZ</SelectItem>
+                        {uniqueAreas.map((area) => (
+                          <SelectItem key={area} value={area}>
+                            {area}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="relative min-w-[200px]">
+                    <Input
+                      placeholder="Straßenname (optional)..."
+                      value={filterStreet}
+                      onChange={(e) => setFilterStreet(e.target.value)}
+                      className="border-slate-300"
+                    />
+                  </div>
+                  <div className="min-w-[180px]">
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="border-slate-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Sortieren nach Name</SelectItem>
+                        <SelectItem value="address">Sortieren nach Adresse</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
           </CardContent>
         </Card>
 
