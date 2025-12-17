@@ -157,19 +157,6 @@ export default function Unternehmenssuche() {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  // Add tile layer once map exists (guards against undefined URL errors)
-  useEffect(() => {
-    if (!mapInstance || tileLayerRef.current) return;
-    const layer = L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION });
-    layer.addTo(mapInstance);
-    tileLayerRef.current = layer;
-    return () => {
-      if (mapInstance && layer) {
-        mapInstance.removeLayer(layer);
-      }
-    };
-  }, [mapInstance]);
-
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list(),
