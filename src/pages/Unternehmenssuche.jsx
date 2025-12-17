@@ -32,7 +32,7 @@ import {
   Clock,
   FileText,
 } from 'lucide-react';
-import { fetchStreetLeads } from '@/lib/scraping/das-oertliche-scraper';
+import { fetchStreetLeads, geocodeAddress } from '@/lib/scraping/das-oertliche-scraper';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -316,24 +316,37 @@ export default function Unternehmenssuche() {
         street: streetName,
       });
 
-      try {
-        const leads = await fetchStreetLeads(streetName, selectedArea.city || cityInput, {
-          maxPages: 5,
-        });
-        
-        const withMeta = leads.map((lead) => ({
-          ...lead,
-          id: `${Date.now()}-${Math.random()}`,
-          area_id: selectedArea.id,
-          source_address: `${streetName}, ${selectedArea.city || cityInput}`,
-        }));
-        
-        allLeads = [...allLeads, ...withMeta];
-        
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      } catch (err) {
-        console.error(`Error scraping ${streetName}:`, err);
-      }
+        try {
+          const leads = await fetchStreetLeads(streetName, selectedArea.city || cityInput, {
+            maxPages: 5,
+          });
+          
+          // Geocode each lead to get coordinates
+          const withCoordinates = await Promise.all(
+            leads.map(async (lead) => {
+              const coords = await geocodeAddress(
+                lead.street_name || streetName,
+                lead.street_number || '',
+                selectedArea.city || cityInput
+              );
+              
+              return {
+                ...lead,
+                id: `${Date.now()}-${Math.random()}`,
+                area_id: selectedArea.id,
+                source_address: `${streetName}, ${selectedArea.city || cityInput}`,
+                latitude: coords?.lat?.toString() || '',
+                longitude: coords?.lon?.toString() || '',
+              };
+            })
+          );
+          
+          allLeads = [...allLeads, ...withCoordinates];
+          
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        } catch (err) {
+          console.error(`Error scraping ${streetName}:`, err);
+        }
     }
 
       setFoundCompanies([...foundCompanies, ...allLeads]);
@@ -779,18 +792,18 @@ export default function Unternehmenssuche() {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             <div className="xl:col-span-2">
               <Card className="border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-amber-600 to-amber-700 text-white">
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <Zap className="h-5 w-5" />
                         Lead Generator
                       </CardTitle>
-                      {selectedArea && (
-                        <p className="text-sm text-amber-100 mt-1">
-                          {selectedArea.name} · {selectedArea.city}
-                        </p>
-                      )}
+                        {selectedArea && (
+                          <p className="text-sm text-blue-100 mt-1">
+                            {selectedArea.name} · {selectedArea.city}
+                          </p>
+                        )}
                     </div>
                     <Button variant="secondary" size="sm" onClick={navigateToMap}>
                       <MapIcon className="h-4 w-4 mr-1" />
@@ -829,12 +842,12 @@ export default function Unternehmenssuche() {
                               : selectedArea.streets?.length || 0} Straßen
                           </Badge>
                         </div>
-                        <Button
-                          onClick={generateLeadsForArea}
-                          disabled={generatingArea === selectedArea.id}
-                          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md"
-                          size="lg"
-                        >
+                          <Button
+                            onClick={generateLeadsForArea}
+                            disabled={generatingArea === selectedArea.id}
+                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md"
+                            size="lg"
+                          >
                           {generatingArea === selectedArea.id ? (
                             <>
                               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -958,15 +971,15 @@ export default function Unternehmenssuche() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  {generatingArea ? (
-                    <div className="space-y-3">
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
-                          <span className="font-semibold text-amber-900">Generierung läuft...</span>
-                        </div>
-                        {generationProgress.street && (
-                          <div className="text-sm text-amber-800 space-y-1">
+                    {generatingArea ? (
+                      <div className="space-y-3">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                            <span className="font-semibold text-blue-900">Generierung läuft...</span>
+                          </div>
+                          {generationProgress.street && (
+                            <div className="text-sm text-blue-800 space-y-1">
                             <p>
                               <span className="font-medium">Fortschritt:</span> {generationProgress.current}/{generationProgress.total}
                             </p>
