@@ -4,6 +4,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,6 +132,7 @@ const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyrigh
 
 export default function Unternehmenssuche() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('map');
   const [user, setUser] = useState(null);
   
@@ -151,6 +154,15 @@ export default function Unternehmenssuche() {
   const [assignEmployee, setAssignEmployee] = useState('');
   
   const queryClient = useQueryClient();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const city = params.get('city');
+    if (city) {
+      setCityInput(city);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -324,6 +336,24 @@ export default function Unternehmenssuche() {
           // Geocode each lead to get coordinates
           const withCoordinates = await Promise.all(
             leads.map(async (lead) => {
+              // Double check if lead is already in database
+              const isDuplicate = allLeads.some(existing => 
+                existing.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
+                (existing.strasse_hausnummer?.toLowerCase() === lead.strasse_hausnummer?.toLowerCase() || 
+                 existing.telefon === lead.telefon)
+              );
+
+              if (isDuplicate) return null;
+
+              // Also check if already in foundCompanies (local state)
+              const isAlreadyFound = foundCompanies.some(found => 
+                found.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
+                (found.strasse_hausnummer?.toLowerCase() === lead.strasse_hausnummer?.toLowerCase() || 
+                 found.telefon === lead.telefon)
+              );
+
+              if (isAlreadyFound) return null;
+
               const coords = await geocodeAddress(
                 lead.street_name || streetName,
                 lead.street_number || '',
@@ -341,7 +371,8 @@ export default function Unternehmenssuche() {
             })
           );
           
-          allLeads = [...allLeads, ...withCoordinates];
+          const filteredNewLeads = withCoordinates.filter(Boolean);
+          allLeads = [...allLeads, ...filteredNewLeads];
           
           await new Promise((resolve) => setTimeout(resolve, 1500));
         } catch (err) {
@@ -670,25 +701,36 @@ export default function Unternehmenssuche() {
                                   <MapPin className="h-3 w-3" />
                                   <span>{streets.length} Straßen</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-blue-600 font-medium">
-                                  <Building2 className="h-3 w-3" />
-                                  <span>{areaLeads.length} Leads</span>
+                                  <div 
+                                    className="flex items-center gap-2 text-xs text-blue-600 font-medium cursor-pointer hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const params = new URLSearchParams();
+                                      params.set('city', area.city || '');
+                                      // If PLZ is available, use it, otherwise use city
+                                      navigate(`${createPageUrl('Leads')}?${params.toString()}`);
+                                    }}
+                                  >
+                                    <Building2 className="h-3 w-3" />
+                                    <span>{areaLeads.length} Leads</span>
+                                  </div>
                                 </div>
-                              </div>
-                              {areaLeads.length > 0 && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="w-full mt-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveSection('leads');
-                                  }}
-                                >
-                                  <List className="h-3 w-3 mr-1" />
-                                  Leads ansehen
-                                </Button>
-                              )}
+                                {areaLeads.length > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full mt-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const params = new URLSearchParams();
+                                      params.set('city', area.city || '');
+                                      navigate(`${createPageUrl('Leads')}?${params.toString()}`);
+                                    }}
+                                  >
+                                    <List className="h-3 w-3 mr-1" />
+                                    Leads ansehen
+                                  </Button>
+                                )}
                               {isSelected && (
                                 <Button
                                   size="sm"
@@ -869,18 +911,26 @@ export default function Unternehmenssuche() {
                       {foundCompanies.length > 0 && (
                         <div className="bg-white rounded-xl border-2 border-green-200 p-6 shadow-sm">
                           <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                              <Building2 className="h-5 w-5 text-green-600" />
-                              Gefundene Unternehmen
-                              <Badge className="bg-green-600 text-white">{foundCompanies.length}</Badge>
-                            </h3>
-                            <Button variant="outline" size="sm" onClick={clearAllCompanies}>
-                              <X className="h-4 w-4 mr-1" />
-                              Liste leeren
-                            </Button>
-                          </div>
+                          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                                <Building2 className="h-5 w-5 text-green-600" />
+                                Gefundene Unternehmen
+                                <Badge className="bg-green-600 text-white">{foundCompanies.length}</Badge>
+                              </h3>
+                              <Button variant="outline" size="sm" onClick={clearAllCompanies}>
+                                <X className="h-4 w-4 mr-1" />
+                                Liste leeren
+                              </Button>
+                            </div>
 
-                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-lg mb-4 border border-green-200">
+                            {selectedArea && allLeads.filter(l => l.area_id === selectedArea.id).length > 0 && (
+                              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-sm text-blue-800 font-medium">
+                                  {allLeads.filter(l => l.area_id === selectedArea.id).length} Leads bereits in der Datenbank für diesen Bereich.
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-lg mb-4 border border-green-200">
                             <Label className="text-green-900 font-semibold mb-2 block">Mitarbeiter zuweisen</Label>
                             <Select value={assignEmployee} onValueChange={setAssignEmployee}>
                               <SelectTrigger className="bg-white">

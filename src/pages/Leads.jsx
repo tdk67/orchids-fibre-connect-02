@@ -40,9 +40,17 @@ export default function Leads() {
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
   const [selectedAdresspunkte, setSelectedAdresspunkte] = useState([]);
-  const location = useLocation();
-  const activeTab = new URLSearchParams(location.search).get('tab') || 'aktiv';
-  const [showTerminDialog, setShowTerminDialog] = useState(false);
+    const location = useLocation();
+    const activeTab = new URLSearchParams(location.search).get('tab') || 'aktiv';
+    const cityParam = new URLSearchParams(location.search).get('city');
+    const plzParam = new URLSearchParams(location.search).get('plz');
+
+    useEffect(() => {
+      if (cityParam) setFilterCity(cityParam);
+      if (plzParam) setFilterArea(plzParam);
+    }, [cityParam, plzParam]);
+
+    const [showTerminDialog, setShowTerminDialog] = useState(false);
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
   const [selectedTerminDate, setSelectedTerminDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
@@ -881,10 +889,22 @@ export default function Leads() {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent">Leads</h1>
             <p className="text-slate-600 mt-1">Verwalten Sie Ihre Lead-Datenbank</p>
           </div>
-          <div className="flex gap-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={deleteAllLeads}
+            <div className="flex gap-3">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          const params = new URLSearchParams();
+                          if (filterCity !== 'all') params.set('city', filterCity);
+                          navigate(`${createPageUrl('Unternehmenssuche')}?${params.toString()}`);
+                        }}
+                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Lead-Generierung
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={deleteAllLeads}
                       className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
