@@ -9,7 +9,7 @@ import Leads from './pages/Leads';
 import LeadStatusSettings from './pages/LeadStatusSettings';
 import Verkaufschancen from './pages/Verkaufschancen';
 import Provisionsregeln from './pages/Provisionsregeln';
-import Unternehmenssuche from './pages/Unternehmenssuche';
+// import Unternehmenssuche from './pages/Unternehmenssuche';
 import Bestandskunden from './pages/Bestandskunden';
 import Kalender from './pages/Kalender';
 import LeadDetails from './pages/LeadDetails';
@@ -30,7 +30,7 @@ export const PAGES = {
     "LeadStatusSettings": LeadStatusSettings,
     "Verkaufschancen": Verkaufschancen,
     "Provisionsregeln": Provisionsregeln,
-    "Unternehmenssuche": Unternehmenssuche,
+    // "Unternehmenssuche": Unternehmenssuche,
     "Bestandskunden": Bestandskunden,
     "Kalender": Kalender,
     "LeadDetails": LeadDetails,
