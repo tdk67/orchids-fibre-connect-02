@@ -143,6 +143,8 @@ export default function Unternehmenssuche() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [savedAreas, setSavedAreas] = useState([]);
   const [selectedAreaId, setSelectedAreaId] = useState(null);
+  const [filterCity, setFilterCity] = useState('all');
+  const [filterArea, setFilterArea] = useState('all');
 
   const selectedArea = useMemo(() => {
     return savedAreas.find((a) => a.id === selectedAreaId);
@@ -152,9 +154,7 @@ export default function Unternehmenssuche() {
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaBounds, setNewAreaBounds] = useState(null);
   const [cityInput, setCityInput] = useState('Berlin');
-  const [filterCity, setFilterCity] = useState('all');
-  const [filterArea, setFilterArea] = useState('all');
-  const [filterPLZ, setFilterPLZ] = useState('all');
+  const [genAreaFilter, setGenAreaFilter] = useState('all');
   
   const [generatingArea, setGeneratingArea] = useState(null);
   const [generationProgress, setGenerationProgress] = useState({});
@@ -167,8 +167,14 @@ export default function Unternehmenssuche() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const city = params.get('city');
+    const area = params.get('area') || params.get('plz');
     if (city) {
       setCityInput(city);
+      setFilterCity(city);
+    }
+    if (area) {
+      setGenAreaFilter(area);
+      setFilterArea(area);
     }
   }, [location.search]);
 
@@ -218,17 +224,21 @@ export default function Unternehmenssuche() {
     return foundCompanies.filter((c) => !isNaN(parseFloat(c.latitude)) && !isNaN(parseFloat(c.longitude)));
   }, [foundCompanies]);
 
-  const selectedArea = useMemo(() => {
-    return savedAreas.find((a) => a.id === selectedAreaId);
-  }, [savedAreas, selectedAreaId]);
-
   const selectedAreaLeads = useMemo(() => {
-    if (!selectedArea) return [];
-    return allLeads.filter(lead => 
-      lead.area_id === selectedArea.id || 
-      (lead.stadt === selectedArea.city && (typeof selectedArea.streets === 'string' ? selectedArea.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false))
-    );
-  }, [allLeads, selectedArea]);
+    return allLeads.filter(lead => {
+      const cityMatch = cityInput === 'all' || lead.stadt === cityInput;
+      const areaMatch = genAreaFilter === 'all' || lead.postleitzahl === genAreaFilter;
+      
+      // If we have a selectedArea (from map), prioritize its logic
+      if (selectedArea) {
+        return lead.area_id === selectedArea.id || 
+               (lead.stadt === selectedArea.city && 
+                (typeof selectedArea.streets === 'string' ? selectedArea.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
+      }
+      
+      return cityMatch && areaMatch;
+    });
+  }, [allLeads, selectedArea, cityInput, genAreaFilter]);
 
   async function loadAreas() {
     try {
@@ -795,17 +805,25 @@ export default function Unternehmenssuche() {
                     <Building2 className="h-5 w-5" />
                     Leads Liste ({filteredLeads.length})
                   </CardTitle>
-                  <div className="flex flex-wrap gap-2">
-                    <Select value={filterCity} onValueChange={setFilterCity}>
-                      <SelectTrigger className="w-40 bg-white text-slate-900">
-                        <SelectValue placeholder="Stadt" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Alle Städte</SelectItem>
-                        {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={filterArea} onValueChange={setFilterArea}>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex gap-2">
+                        <Select value={filterCity} onValueChange={setFilterCity}>
+                          <SelectTrigger className="w-40 bg-white text-slate-900">
+                            <SelectValue placeholder="Stadt" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Alle Städte</SelectItem>
+                            {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Input 
+                          value={filterCity === 'all' ? '' : filterCity} 
+                          onChange={(e) => setFilterCity(e.target.value || 'all')} 
+                          className="w-32 bg-white text-slate-900"
+                          placeholder="Manuell..."
+                        />
+                      </div>
+                      <Select value={filterArea} onValueChange={setFilterArea}>
                       <SelectTrigger className="w-40 bg-white text-slate-900">
                         <SelectValue placeholder="PLZ" />
                       </SelectTrigger>
@@ -906,32 +924,56 @@ export default function Unternehmenssuche() {
                   </div>
                 </CardHeader>
                   <CardContent className="p-6">
-                    <div className="mb-6 flex flex-wrap gap-4 items-end">
-                      <div className="space-y-2">
-                        <Label>Bereich auswählen</Label>
-                        <Select value={selectedAreaId || "none"} onValueChange={(val) => val !== "none" && handleAreaSelect(val)}>
-                          <SelectTrigger className="w-64">
-                            <SelectValue placeholder="Wählen Sie einen Bereich..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Kein Bereich ausgewählt</SelectItem>
-                            {savedAreas.map((area) => (
-                              <SelectItem key={area.id} value={area.id}>
-                                {area.name} ({area.city})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div className="space-y-2">
+                          <Label>Bereich auswählen</Label>
+                          <Select value={selectedAreaId || "none"} onValueChange={(val) => val !== "none" && handleAreaSelect(val)}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Wählen Sie einen Bereich..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Kein Bereich ausgewählt</SelectItem>
+                              {savedAreas.map((area) => (
+                                <SelectItem key={area.id} value={area.id}>
+                                  {area.name} ({area.city})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Stadt (Filter / Neue Suche)</Label>
+                          <div className="flex gap-2">
+                            <Select value={cityInput} onValueChange={setCityInput}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Stadt wählen" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                <SelectItem value="Berlin">Berlin (Standard)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input 
+                              value={cityInput} 
+                              onChange={(e) => setCityInput(e.target.value)} 
+                              className="w-32"
+                              placeholder="Manuell..."
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>PLZ Filter</Label>
+                          <Select value={genAreaFilter} onValueChange={setGenAreaFilter}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="PLZ wählen" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Alle PLZ</SelectItem>
+                              {uniqueAreas.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Stadt (für neue Suche)</Label>
-                        <Input 
-                          value={cityInput} 
-                          onChange={(e) => setCityInput(e.target.value)} 
-                          className="w-48"
-                        />
-                      </div>
-                    </div>
 
                     {!selectedArea ? (
                     <div className="text-center py-16">
@@ -1001,13 +1043,29 @@ export default function Unternehmenssuche() {
                               </Button>
                             </div>
 
-                            {selectedArea && selectedAreaLeads.length > 0 && (
-                              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p className="text-sm text-blue-800 font-medium">
-                                  {selectedAreaLeads.length} Leads bereits in der Datenbank für diesen Bereich.
-                                </p>
-                              </div>
-                            )}
+                              {selectedAreaLeads.length > 0 && (
+                                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-sm text-blue-800 font-bold">
+                                      {selectedAreaLeads.length} Leads bereits in der Datenbank:
+                                    </p>
+                                    <Badge variant="outline" className="bg-white">{selectedAreaLeads.length}</Badge>
+                                  </div>
+                                  <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+                                    {selectedAreaLeads.slice(0, 10).map(lead => (
+                                      <div key={lead.id} className="text-xs p-2 bg-white rounded border border-blue-100 flex justify-between items-center">
+                                        <span className="font-medium truncate mr-2">{lead.firma}</span>
+                                        <span className="text-slate-500 flex-shrink-0">{lead.strasse_hausnummer}</span>
+                                      </div>
+                                    ))}
+                                    {selectedAreaLeads.length > 10 && (
+                                      <p className="text-[10px] text-center text-blue-600 font-medium">
+                                        + {selectedAreaLeads.length - 10} weitere Leads (siehe Leads tab)
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
 
                             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-lg mb-4 border border-green-200">
                             <Label className="text-green-900 font-semibold mb-2 block">Mitarbeiter zuweisen</Label>
