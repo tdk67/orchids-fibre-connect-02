@@ -25,14 +25,21 @@ Prevent duplicate leads in the database. A lead is considered a duplicate if:
 
 Deduplication MUST happen automatically during generation and import. The user should not have to manually trigger a cleanup.
 
-## 6. Map Integration & Geocoding
-- **Local Geocoding Cache**: To avoid Nominatim rate limits (1 query/sec), the system uses a local `geocoding_cache` table. 
+## 6. Map Integration & Geocoding (OSM Data)
+- **Data Source**: Mass geocoding data is downloaded from **OpenStreetMap (OSM)** via the **Overpass API**. The system specifically queries for all buildings with `addr:street` and `addr:housenumber` tags within a city's administrative boundaries.
+- **Local Geocoding Cache**: To avoid Nominatim rate limits (1 query/sec) and reduce external API dependency, the system uses a local `geocoding_cache` table. This cache acts as a "Phonebook of Coordinates" for the entire city.
 - **Mass Data Import (UI)**: In the **Unternehmenssuche** (Map view), you can use the **"OSM Daten"** button.
-  - **Status Check**: The UI shows if a city's data has already been imported.
-  - **Import/Update**: You can trigger a mass import from OpenStreetMap directly in the browser. It uses the Overpass API to fetch building addresses and coordinates.
-  - **No Duplicates**: The import uses an "Upsert" mechanism to update existing entries and add new ones without creating duplicates.
-  - **Actualization**: You can see the date of the last import and re-run it at any time to get the latest OSM data.
-- **Coordinate Assignment**: Coordinates are assigned by checking the local cache first. If missing, it falls back to Nominatim and then saves the result to the cache for future use.
+  - **Status Check**: The UI checks the `osm_imports` table to show if a city's data has already been imported and when.
+  - **Import/Update**: Triggering an import fetches thousands of address points in seconds. This data is stored locally in `geocoding_cache`.
+  - **No Duplicates**: The import uses an "Upsert" mechanism (Unique constraint on `street, house_number, postcode, city`) to update existing entries and add new ones without creating duplicates.
+  - **Actualization**: You can see the date of the last import. Since OSM is frequently updated by the community, re-running the import keeps your local cache actualized.
+- **Lead Validation**:
+  - The OSM data provides a "Ground Truth" for physical addresses. 
+  - If a lead generated from other sources (like "Das Örtliche") exists at an address found in the OSM building data, it increases the confidence that the lead corresponds to a real physical location.
+- **Coordinate Assignment (Geocoding)**: 
+  - When a lead is generated or imported, the system looks up its address in the `geocoding_cache`.
+  - If a match is found, the `latitude` and `longitude` are assigned instantly.
+  - This local lookup is 100x faster than external geocoding and allows for real-time map plotting of thousands of leads.
 - **Consistency**: The system ensures "Same Address = Same Coordinates" by using exact matches in the cache.
 - **Display**: ALL leads in the database with valid latitude/longitude are displayed on the map.
 
