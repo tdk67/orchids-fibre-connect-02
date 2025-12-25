@@ -176,7 +176,7 @@ export default function Unternehmenssuche() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [savedAreas, setSavedAreas] = useState([]);
   const [selectedAreaId, setSelectedAreaId] = useState(null);
-  const [filterCity, setFilterCity] = useState("Berlin");
+  const [filterCity, setFilterCity] = useState("");
   const [filterAreaId, setFilterAreaId] = useState("all");
   const [genAreaId, setGenAreaId] = useState("all");
 
@@ -224,14 +224,14 @@ export default function Unternehmenssuche() {
     queryFn: () => base44.entities.Employee.list(),
   });
 
-  const {
+    const {
     data: allLeads = [],
     isLoading: isLoadingLeads,
     refetch: refetchAllLeads,
   } = useQuery({
     queryKey: ["allLeads"],
     queryFn: async () => {
-      const leads = await base44.entities.Lead.list("-created_at", 2000);
+      const leads = await base44.entities.Lead.list("-created_date", 2000);
       return leads;
     },
   });

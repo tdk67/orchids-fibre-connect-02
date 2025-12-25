@@ -857,11 +857,15 @@ export default function Leads() {
         if (lead.archiv_kategorie !== 'Falsche Daten') return false;
       }
 
-      // Benutzertyp-Filter
-      if (isInternalAdmin) {
-        if (lead.benutzertyp !== selectedBenutzertyp) return false;
-      } else {
-        if (lead.benutzertyp !== userBenutzertyp) return false;
+      // Benutzertyp-Filter - Allow leads explicitly assigned to the user regardless of benutzertyp
+      const isAssignedToMe = lead.assigned_to_email === user?.email;
+      
+      if (!isAssignedToMe) {
+        if (isInternalAdmin) {
+          if (lead.benutzertyp && lead.benutzertyp !== selectedBenutzertyp) return false;
+        } else {
+          if (lead.benutzertyp && lead.benutzertyp !== userBenutzertyp) return false;
+        }
       }
       
       const searchMatch = 

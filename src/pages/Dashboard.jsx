@@ -111,7 +111,7 @@ export default function Dashboard() {
   
     const leads = isInternalAdmin
       ? allLeads.filter(l => 
-          l.benutzertyp === selectedBenutzertyp && 
+          (l.benutzertyp === selectedBenutzertyp || l.assigned_to_email === user?.email) && 
           l.pool_status !== 'im_pool' &&
           !l.archiv_kategorie &&
           !l.verkaufschance_status &&
@@ -123,18 +123,20 @@ export default function Dashboard() {
           // Nur aktive Leads zählen (keine archivierten, keine Angebote, nicht verloren)
           if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;
           
-          // Benutzertyp prüfen
-          if (lead.benutzertyp !== userBenutzertyp) return false;
+          // Benutzertyp prüfen - Allow leads explicitly assigned to the user
+          const isAssignedToMe = lead.assigned_to_email === user?.email;
+          if (!isAssignedToMe && lead.benutzertyp !== userBenutzertyp) return false;
+
           // Teamleiter in Mitarbeiter-Ansicht: nur eigene
           if (isTeamleiter && !teamleiterAnsicht) {
-            return lead.assigned_to_email === user?.email;
+            return isAssignedToMe;
           }
           // Teamleiter in Team-Ansicht: alle
           if (isTeamleiter && teamleiterAnsicht) {
             return true;
           }
           // Normaler Mitarbeiter: nur eigene
-          return lead.assigned_to_email === user?.email;
+          return isAssignedToMe;
         });
 
   const sales = isInternalAdmin
