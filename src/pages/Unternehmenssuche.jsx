@@ -141,20 +141,17 @@ export default function Unternehmenssuche() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   
   const [isDrawing, setIsDrawing] = useState(false);
-  const [savedAreas, setSavedAreas] = useState([]);
-  const [selectedAreaId, setSelectedAreaId] = useState(null);
-  const [filterCity, setFilterCity] = useState('Berlin');
-  const [filterAreaId, setFilterAreaId] = useState('all');
+    const [savedAreas, setSavedAreas] = useState([]);
+    const [selectedAreaId, setSelectedAreaId] = useState(null);
+    const [filterCity, setFilterCity] = useState('Berlin');
+    const [filterAreaId, setFilterAreaId] = useState('all');
+    const [genAreaId, setGenAreaId] = useState('all');
+  
+    const selectedArea = useMemo(() => {
+      return savedAreas.find((a) => a.id === selectedAreaId || a.id === filterAreaId || a.id === genAreaId);
+    }, [savedAreas, selectedAreaId, filterAreaId, genAreaId]);
 
-  const selectedArea = useMemo(() => {
-    return savedAreas.find((a) => a.id === selectedAreaId || a.id === filterAreaId);
-  }, [savedAreas, selectedAreaId, filterAreaId]);
-
-  const [showAreaDialog, setShowAreaDialog] = useState(false);
-  const [newAreaName, setNewAreaName] = useState('');
-  const [newAreaBounds, setNewAreaBounds] = useState(null);
-  const [cityInput, setCityInput] = useState('Berlin');
-  const [genAreaId, setGenAreaId] = useState('all');
+    const [showAreaDialog, setShowAreaDialog] = useState(false);
   
   const [generatingArea, setGeneratingArea] = useState(null);
   const [generationProgress, setGenerationProgress] = useState({});
@@ -192,35 +189,46 @@ export default function Unternehmenssuche() {
   const { data: allLeads = [], isLoading: isLoadingLeads } = useQuery({
     queryKey: ['allLeads'],
     queryFn: async () => {
-      const leads = await base44.entities.Lead.list();
+      const leads = await base44.entities.Lead.list('created_at', 2000);
       return leads;
     },
   });
 
   const getAreaLeadMatch = (lead, area) => {
     if (!lead || !area) return false;
+    
+    // Direct match by ID
     if (lead.area_id === area.id) return true;
     
-    const leadCity = lead.stadt?.toLowerCase();
-    const areaCity = area.city?.toLowerCase();
-    if (leadCity !== areaCity) return false;
+    // Geometric match would be better, but for now we use street/city match
+    const leadCity = lead.stadt?.toLowerCase()?.trim();
+    const areaCity = area.city?.toLowerCase()?.trim();
+    if (leadCity && areaCity && leadCity !== areaCity) return false;
 
-    const streetName = lead.strasse_hausnummer?.split(/\s\d/)[0]?.trim()?.toLowerCase();
-    if (!streetName) return false;
+    const leadStreet = lead.strasse_hausnummer?.toLowerCase()?.trim();
+    if (!leadStreet) return false;
+
+    // Extract street name (everything before the first digit)
+    const streetNameMatch = leadStreet.match(/^([^0-9]+)/);
+    const leadStreetName = streetNameMatch ? streetNameMatch[1].trim() : leadStreet;
 
     const areaStreets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
     return areaStreets.some(s => {
-      const aStreetName = (typeof s === 'string' ? s : s.name)?.toLowerCase();
-      return aStreetName && (streetName.includes(aStreetName) || aStreetName.includes(streetName));
+      const aStreetName = (typeof s === 'string' ? s : s.name)?.toLowerCase()?.trim();
+      if (!aStreetName) return false;
+      return leadStreetName.includes(aStreetName) || aStreetName.includes(leadStreetName);
     });
   };
 
   const filteredLeads = useMemo(() => {
+    // If no city and no area selected, show nothing to avoid overwhelming the map/list
     if (!filterCity && filterAreaId === 'all') return [];
 
     return allLeads.filter((lead) => {
-      const cityMatch = !filterCity || lead.stadt?.toLowerCase() === filterCity.toLowerCase();
+      // City filter
+      const cityMatch = !filterCity || lead.stadt?.toLowerCase()?.includes(filterCity.toLowerCase());
       
+      // Area filter
       let areaMatch = true;
       if (filterAreaId !== 'all') {
         const area = savedAreas.find(a => a.id === filterAreaId);
