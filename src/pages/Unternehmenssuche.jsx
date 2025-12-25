@@ -520,48 +520,95 @@ export default function Unternehmenssuche() {
           },
         );
 
-        // Geocode each lead to get coordinates and save to DB
-        const leadsToSave = [];
-        
-        for (const lead of leads) {
-          const leadData = {
-            firma: lead.firma || "",
-            strasse_hausnummer: lead.strasse_hausnummer || "",
-            stadt: lead.stadt || selectedArea.city || cityInput,
-            email: lead.email || "",
-          };
-
-          // Use fuzzy matching against database AND session
-          const isDuplicateInDB = allLeads.some(existing => isDuplicateLead(leadData, existing));
-          const isDuplicateInSession = sessionLeads.some(existing => isDuplicateLead(leadData, existing));
+          // Geocode each lead to get coordinates and save to DB
+          const leadsToSave = [];
           
-          if (isDuplicateInDB || isDuplicateInSession) {
-            continue;
+          for (const lead of leads) {
+            const leadData = {
+              firma: lead.firma || "",
+              strasse_hausnummer: lead.strasse_hausnummer || "",
+              stadt: lead.stadt || selectedArea.city || cityInput,
+              email: lead.email || "",
+              postleitzahl: lead.postleitzahl || "",
+            };
+
+            // 1. Session Duplicate Check (skip entirely if already found in this run)
+            const isDuplicateInSession = sessionLeads.some(existing => isDuplicateLead(leadData, existing));
+            if (isDuplicateInSession) continue;
+
+            // 2. Database Duplicate Check
+            const existingLeadInDB = allLeads.find(existing => isDuplicateLead(leadData, existing));
+            
+            if (existingLeadInDB) {
+              // Lead exists in DB. If it's not assigned to this area, update it.
+              if (String(existingLeadInDB.area_id) !== String(selectedArea.id)) {
+                try {
+                  await base44.entities.Lead.update(existingLeadInDB.id, {
+                    area_id: selectedArea.id,
+                    pool_status: existingLeadInDB.pool_status || "im_pool"
+                  });
+                } catch (updateErr) {
+                  console.error("Failed to update existing lead area_id:", updateErr);
+                }
+              }
+
+              // If it exists but has no coordinates, try to geocode and update
+              if (!existingLeadInDB.latitude || !existingLeadInDB.longitude) {
+                const coords = await geocodeAddress(
+                  lead.street_name || streetName,
+                  lead.street_number || "",
+                  selectedArea.city || cityInput,
+                  lead.postleitzahl || ""
+                );
+                if (coords) {
+                  try {
+                    await base44.entities.Lead.update(existingLeadInDB.id, {
+                      latitude: coords.lat.toString(),
+                      longitude: coords.lon.toString()
+                    });
+                  } catch (coordUpdateErr) {
+                    console.error("Failed to update coords for existing lead:", coordUpdateErr);
+                  }
+                }
+              }
+              
+              sessionLeads.push(existingLeadInDB);
+              continue;
+            }
+
+            // 3. New Lead - Try to reuse coordinates from another lead at same address
+            let coords = allLeads.find(l => 
+              l.strasse_hausnummer === leadData.strasse_hausnummer && 
+              l.stadt === leadData.stadt && 
+              l.latitude && l.longitude
+            );
+            
+            if (!coords) {
+              // Not found in DB, try geocoding
+              coords = await geocodeAddress(
+                lead.street_name || streetName,
+                lead.street_number || "",
+                selectedArea.city || cityInput,
+                lead.postleitzahl || ""
+              );
+            }
+
+            const newLead = {
+              ...leadData,
+              telefon: lead.telefon || "",
+              infobox: `Branche: ${lead.branche || "-"}\nWebseite: ${lead.webseite || "-"}\nGefunden über: ${streetName}, ${selectedArea.city || cityInput}`,
+              status: "Neu",
+              pool_status: "im_pool",
+              benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
+              sparte: "1&1 Versatel",
+              latitude: coords?.lat?.toString() || coords?.latitude || "",
+              longitude: coords?.lon?.toString() || coords?.longitude || "",
+              area_id: selectedArea.id,
+            };
+
+            leadsToSave.push(newLead);
+            sessionLeads.push(newLead);
           }
-
-          const coords = await geocodeAddress(
-            lead.street_name || streetName,
-            lead.street_number || "",
-            selectedArea.city || cityInput,
-          );
-
-          const newLead = {
-            ...leadData,
-            postleitzahl: lead.postleitzahl || "",
-            telefon: lead.telefon || "",
-            infobox: `Branche: ${lead.branche || "-"}\nWebseite: ${lead.webseite || "-"}\nGefunden über: ${streetName}, ${selectedArea.city || cityInput}`,
-            status: "Neu",
-            pool_status: "im_pool",
-            benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
-            sparte: "1&1 Versatel",
-            latitude: coords?.lat?.toString() || "",
-            longitude: coords?.lon?.toString() || "",
-            area_id: selectedArea.id,
-          };
-
-          leadsToSave.push(newLead);
-          sessionLeads.push(newLead);
-        }
 
         if (leadsToSave.length > 0) {
           await base44.entities.Lead.bulkCreate(leadsToSave);

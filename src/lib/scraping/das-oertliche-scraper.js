@@ -279,11 +279,12 @@ export async function fetchStreetLeads(street, city, options = {}) {
  * @param {string} street - Street name
  * @param {string} streetNumber - Street number
  * @param {string} city - City name
+ * @param {string} postalCode - Postal code (optional)
  * @returns {Promise<Object|null>} - {lat, lon} or null
  */
-export async function geocodeAddress(street, streetNumber, city) {
+export async function geocodeAddress(street, streetNumber, city, postalCode = "") {
   try {
-    const addressParts = [street, streetNumber, city, 'Germany'].filter(Boolean);
+    const addressParts = [street, streetNumber, postalCode, city, 'Germany'].filter(Boolean);
     const address = addressParts.join(' ').trim();
     
     const controller = new AbortController();
