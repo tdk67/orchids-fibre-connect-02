@@ -18,8 +18,9 @@ Leads must be assigned to the specific **Area** (Bereich) they were generated fo
 
 ## 5. Deduplication
 Prevent duplicate leads in the database. A lead is considered a duplicate if:
-- **Same Name & Fuzzy Address**: Same company name and same street name, even if the house number is slightly different (e.g., "Str. 4" vs "Str. 4a").
-- **Same Address & Fuzzy Name**: Same address but slightly different name (e.g., "Company GmbH" vs "Company KG"), especially if email or phone matches.
+- **Normalization**: Names and addresses are normalized by removing accents (e.g., "é" -> "e"), removing content in parentheses, and stripping legal forms (GmbH, KG, etc.).
+- **Same Name & Fuzzy Address**: Same normalized company name and same street/base house number (e.g., "Potsdamer Str. 81a" and "Potsdamer Str. 81 A" match).
+- **Same Address & Fuzzy Name**: Same address and street number, where one business name is a subset of the other (e.g., "Positions Berlin GmbH" vs "Positions Berlin").
 - **Identical Email**: If an email exists and is identical, it's the same business.
 
 Deduplication MUST happen automatically during generation and import. The user should not have to manually trigger a cleanup.

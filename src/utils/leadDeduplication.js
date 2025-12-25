@@ -4,14 +4,23 @@
 
 /**
  * Normalizes a company name for comparison.
- * Removes common legal suffixes and extra whitespace.
+ * Removes common legal suffixes, extra whitespace, accents, and handles parentheses.
  */
 export function normalizeCompanyName(name) {
   if (!name) return "";
-  return name
+  
+  // 1. Normalize accents (e.g., É -> E)
+  let normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  return normalized
     .toLowerCase()
-    .replace(/\s+(gmbh|kg|ug|& co\.?|haftungsbeschränkt|e\.v\.|e\.k\.|inc\.|ltd\.)(\s+|$)/g, " ")
-    .replace(/[^\w\s]/g, "")
+    // 2. Handle parentheses (often contain legal forms or additional info)
+    .replace(/\(.*?\)/g, " ")
+    // 3. Remove common legal suffixes and variants
+    .replace(/\s+(gmbh|kg|ug|& co\.?|haftungsbeschrankt|haftungsbeschrank|e\.v\.|e\.k\.|inc\.|ltd\.)(\s+|$)/g, " ")
+    // 4. Remove all punctuation and special characters
+    .replace(/[^\w\s]/g, " ")
+    // 5. Clean up whitespace
     .trim()
     .replace(/\s+/g, " ");
 }
@@ -23,11 +32,11 @@ export function normalizeCompanyName(name) {
 export function normalizeAddress(address) {
   if (!address) return { street: "", number: "" };
   
-  const normalized = address.toLowerCase().trim();
+  const normalized = address.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   
   // Extract street name (everything before the first digit)
   const streetMatch = normalized.match(/^([^0-9]+)/);
-  const street = streetMatch ? streetMatch[1].trim() : normalized;
+  const street = streetMatch ? streetMatch[1].replace(/[^\w\s]/g, "").trim() : normalized;
   
   // Extract base house number (digits only)
   const numberMatch = normalized.match(/(\d+)/);
@@ -57,14 +66,16 @@ export function isDuplicateLead(leadA, leadB) {
   // City check (must match if both provided)
   if (cityA && cityB && cityA !== cityB) return false;
 
-  // 2. Same Name & Fuzzy Address (Same street, same base number)
-  if (nameA === nameB && addrA.street === addrB.street && addrA.number === addrB.number) {
+  const addressMatch = addrA.street === addrB.street && addrA.number === addrB.number;
+
+  // 2. Same Name & Fuzzy Address
+  if (nameA === nameB && addressMatch) {
     return true;
   }
 
   // 3. Same Address & Fuzzy Name (One name contains the other after normalization)
-  const addressMatch = addrA.street === addrB.street && addrA.number === addrB.number;
-  if (addressMatch && (nameA.includes(nameB) || nameB.includes(nameA))) {
+  // Or high similarity (for cases like "Positions Berlin" vs "Positions Berlin GmbH" where normalization handles it)
+  if (addressMatch && (nameA.includes(nameB) || nameB.includes(nameA)) && nameA.length > 3 && nameB.length > 3) {
     return true;
   }
 
