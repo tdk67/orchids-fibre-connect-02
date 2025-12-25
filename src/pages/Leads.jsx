@@ -1175,37 +1175,37 @@ export default function Leads() {
         {/* Tabs & Filters */}
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
-            <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-9 bg-slate-100 p-1.5 gap-1">
-                <TabsTrigger value="aktiv" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                  Aktiv ({leads.filter(l => !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
-                </TabsTrigger>
-                <TabsTrigger value="angebote" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-                  Angebote ({leads.filter(l => l.verkaufschance_status).length})
-                </TabsTrigger>
-                <TabsTrigger value="bearbeitet" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                  Bearbeitet ({leads.filter(l => l.archiv_kategorie === 'Bearbeitet').length})
-                </TabsTrigger>
-                <TabsTrigger value="adresspunkte" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-                  Adresspunkte ({leads.filter(l => l.archiv_kategorie === 'Adresspunkte').length})
-                </TabsTrigger>
-                <TabsTrigger value="verloren" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-                  Verloren ({leads.filter(l => l.verloren).length})
-                </TabsTrigger>
-                <TabsTrigger value="nicht_erreicht" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                  Nicht erreicht ({leads.filter(l => l.archiv_kategorie === 'Nicht erreicht').length})
-                </TabsTrigger>
-                <TabsTrigger value="anderer_provider" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
-                  Anderer Provider ({leads.filter(l => l.archiv_kategorie === 'Anderer Provider').length})
-                </TabsTrigger>
-                <TabsTrigger value="kein_interesse" className="data-[state=active]:bg-slate-600 data-[state=active]:text-white">
-                  Kein Interesse ({leads.filter(l => l.archiv_kategorie === 'Kein Interesse').length})
-                </TabsTrigger>
-                <TabsTrigger value="falsche_daten" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white">
-                  Falsche Daten ({leads.filter(l => l.archiv_kategorie === 'Falsche Daten').length})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+              <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
+                <TabsList className="grid w-full grid-cols-9 bg-slate-100 p-1.5 gap-1">
+                  <TabsTrigger value="aktiv" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                    Aktiv ({leads.filter(l => l.pool_status !== 'im_pool' && !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
+                  </TabsTrigger>
+                  <TabsTrigger value="angebote" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                    Angebote ({leads.filter(l => l.pool_status !== 'im_pool' && l.verkaufschance_status).length})
+                  </TabsTrigger>
+                  <TabsTrigger value="bearbeitet" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+                    Bearbeitet ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Bearbeitet').length})
+                  </TabsTrigger>
+                  <TabsTrigger value="adresspunkte" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                    Adresspunkte ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Adresspunkte').length})
+                  </TabsTrigger>
+                  <TabsTrigger value="verloren" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                    Verloren ({leads.filter(l => l.pool_status !== 'im_pool' && l.verloren).length})
+                  </TabsTrigger>
+                  <TabsTrigger value="nicht_erreicht" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+                    Nicht erreicht ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Nicht erreicht').length})
+                  </TabsTrigger>
+                  <TabsTrigger value="anderer_provider" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+                    Anderer Provider ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Anderer Provider').length})
+                  </TabsTrigger>
+                  <TabsTrigger value="kein_interesse" className="data-[state=active]:bg-slate-600 data-[state=active]:text-white">
+                    Kein Interesse ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Kein Interesse').length})
+                  </TabsTrigger>
+                  <TabsTrigger value="falsche_daten" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white">
+                    Falsche Daten ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Falsche Daten').length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
               <div className="space-y-3 mt-4">
                 <div className="flex gap-4 flex-wrap">
                   <div className="relative flex-1 min-w-[200px]">
