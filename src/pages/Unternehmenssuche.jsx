@@ -61,6 +61,7 @@ import {
   fetchStreetLeads,
   geocodeAddress,
 } from "@/lib/scraping/das-oertliche-scraper";
+import { isDuplicateLead } from "@/utils/leadDeduplication";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -238,6 +239,12 @@ export default function Unternehmenssuche() {
       return leads;
     },
   });
+
+  useEffect(() => {
+    if (activeSection === "leads" || activeSection === "generator") {
+      refetchAllLeads();
+    }
+  }, [activeSection, refetchAllLeads]);
 
   const getAreaLeadMatch = (lead, area) => {
     if (!lead || !area) return false;
@@ -492,9 +499,7 @@ export default function Unternehmenssuche() {
     setGenerationProgress({});
 
     // Keep track of leads found in this session to prevent duplicates
-    const sessionLeads = new Set(
-      allLeads.map(l => `${l.firma?.toLowerCase().trim()}|${l.strasse_hausnummer?.toLowerCase().trim()}`)
-    );
+    const sessionLeads = [];
 
     for (let i = 0; i < streets.length; i++) {
       const street = streets[i];
@@ -519,9 +524,18 @@ export default function Unternehmenssuche() {
         const leadsToSave = [];
         
         for (const lead of leads) {
-          const leadKey = `${lead.firma?.toLowerCase().trim()}|${lead.strasse_hausnummer?.toLowerCase().trim()}`;
+          const leadData = {
+            firma: lead.firma || "",
+            strasse_hausnummer: lead.strasse_hausnummer || "",
+            stadt: lead.stadt || selectedArea.city || cityInput,
+            email: lead.email || "",
+          };
+
+          // Use fuzzy matching against database AND session
+          const isDuplicateInDB = allLeads.some(existing => isDuplicateLead(leadData, existing));
+          const isDuplicateInSession = sessionLeads.some(existing => isDuplicateLead(leadData, existing));
           
-          if (sessionLeads.has(leadKey)) {
+          if (isDuplicateInDB || isDuplicateInSession) {
             continue;
           }
 
@@ -532,12 +546,9 @@ export default function Unternehmenssuche() {
           );
 
           const newLead = {
-            firma: lead.firma || "",
-            strasse_hausnummer: lead.strasse_hausnummer || "",
+            ...leadData,
             postleitzahl: lead.postleitzahl || "",
-            stadt: lead.stadt || selectedArea.city || cityInput,
             telefon: lead.telefon || "",
-            email: lead.email || "",
             infobox: `Branche: ${lead.branche || "-"}\nWebseite: ${lead.webseite || "-"}\nGefunden über: ${streetName}, ${selectedArea.city || cityInput}`,
             status: "Neu",
             pool_status: "im_pool",
@@ -549,7 +560,7 @@ export default function Unternehmenssuche() {
           };
 
           leadsToSave.push(newLead);
-          sessionLeads.add(leadKey);
+          sessionLeads.push(newLead);
         }
 
         if (leadsToSave.length > 0) {
@@ -686,59 +697,6 @@ export default function Unternehmenssuche() {
       toast({
         title: "Fehler",
         description: "Bereinigung fehlgeschlagen.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const cleanupDuplicates = async () => {
-    toast({
-      title: "Bereinigung läuft",
-      description: "Duplikate werden gesucht...",
-    });
-
-    const seen = new Set();
-    const toDelete = [];
-
-    // Order by created_date desc to keep newest
-    const sortedLeads = [...allLeads].sort((a, b) => 
-      new Date(b.created_date || 0) - new Date(a.created_date || 0)
-    );
-
-    for (const lead of sortedLeads) {
-      const key = `${lead.firma?.toLowerCase().trim()}|${lead.strasse_hausnummer?.toLowerCase().trim()}|${lead.stadt?.toLowerCase().trim()}`;
-      if (seen.has(key)) {
-        toDelete.push(lead.id);
-      } else {
-        seen.add(key);
-      }
-    }
-
-    if (toDelete.length === 0) {
-      toast({
-        title: "Bereinigt",
-        description: "Keine Duplikate gefunden.",
-      });
-      return;
-    }
-
-    if (!confirm(`${toDelete.length} Duplikate gefunden. Jetzt löschen?`)) return;
-
-    try {
-      // Delete in batches of 10 to avoid overloading
-      for (let i = 0; i < toDelete.length; i += 10) {
-        const batch = toDelete.slice(i, i + 10);
-        await Promise.all(batch.map(id => base44.entities.Lead.delete(id)));
-      }
-      await refetchAllLeads();
-      toast({
-        title: "Erfolgreich",
-        description: `${toDelete.length} Duplikate gelöscht.`,
-      });
-    } catch (err) {
-      toast({
-        title: "Fehler",
-        description: "Bereinigung fehlgeschlagen: " + err.message,
         variant: "destructive",
       });
     }
@@ -1068,30 +1026,13 @@ export default function Unternehmenssuche() {
           <Card className="border-0 shadow-lg">
             <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Leads Liste ({filteredLeads.length})
-                </CardTitle>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => refetchAllLeads()}
-                      disabled={isLoadingLeads}
-                    >
-                      <Clock className="h-4 w-4 mr-1" />
-                      Aktualisieren
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={cleanupDuplicates}
-                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Duplikate bereinigen
-                    </Button>
-                    <div className="flex flex-col gap-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Leads Liste ({filteredLeads.length})
+                  </CardTitle>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-1">
+
 
                     <Label className="text-[10px] text-white/70 ml-1">
                       Stadt
