@@ -70,24 +70,32 @@ export function useOSMImport() {
 
       // 2. Process and Upsert in batches
       const batchSize = 100;
-      for (let i = 0; i < elements.length; i += batchSize) {
-        const batch = elements.slice(i, i + batchSize).map(el => ({
-          street: el.tags["addr:street"],
-          house_number: el.tags["addr:housenumber"],
-          postcode: el.tags["addr:postcode"] || "",
-          city: el.tags["addr:city"] || city,
-          latitude: el.lat || el.center.lat,
-          longitude: el.lon || el.center.lon,
-        }));
+        for (let i = 0; i < elements.length; i += batchSize) {
+          const batch = elements.slice(i, i + batchSize)
+            .filter(el => el.tags && el.tags["addr:street"] && el.tags["addr:housenumber"])
+            .map(el => ({
+              street: el.tags["addr:street"],
+              house_number: el.tags["addr:housenumber"],
+              postcode: el.tags["addr:postcode"] || "",
+              city: el.tags["addr:city"] || city,
+              latitude: el.lat || (el.center && el.center.lat),
+              longitude: el.lon || (el.center && el.center.lon),
+            }))
+            .filter(item => item.latitude && item.longitude);
 
-        const { error } = await base44.client
-          .from("geocoding_cache")
-          .upsert(batch, { 
-            onConflict: 'street,house_number,postcode,city',
-            ignoreDuplicates: false 
-          });
+          if (batch.length === 0) continue;
 
-        if (error) console.error("Batch upsert error:", error);
+          const { error } = await base44.client
+            .from("geocoding_cache")
+            .upsert(batch, { 
+              onConflict: 'street,house_number,postcode,city',
+              ignoreDuplicates: false 
+            });
+
+          if (error) {
+            console.error("Batch upsert error details:", JSON.stringify(error, null, 2));
+            throw new Error(`Fehler beim Speichern der Daten: ${error.message || 'Unbekannter Datenbankfehler'}`);
+          }
         
         setProgress(prev => ({ 
           ...prev, 
