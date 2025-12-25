@@ -143,18 +143,18 @@ export default function Unternehmenssuche() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [savedAreas, setSavedAreas] = useState([]);
   const [selectedAreaId, setSelectedAreaId] = useState(null);
-  const [filterCity, setFilterCity] = useState('all');
-  const [filterArea, setFilterArea] = useState('all');
+  const [filterCity, setFilterCity] = useState('Berlin');
+  const [filterAreaId, setFilterAreaId] = useState('all');
 
   const selectedArea = useMemo(() => {
-    return savedAreas.find((a) => a.id === selectedAreaId);
-  }, [savedAreas, selectedAreaId]);
+    return savedAreas.find((a) => a.id === selectedAreaId || a.id === filterAreaId);
+  }, [savedAreas, selectedAreaId, filterAreaId]);
 
   const [showAreaDialog, setShowAreaDialog] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaBounds, setNewAreaBounds] = useState(null);
   const [cityInput, setCityInput] = useState('Berlin');
-  const [genAreaFilter, setGenAreaFilter] = useState('all');
+  const [genAreaId, setGenAreaId] = useState('all');
   
   const [generatingArea, setGeneratingArea] = useState(null);
   const [generationProgress, setGenerationProgress] = useState({});
@@ -167,14 +167,15 @@ export default function Unternehmenssuche() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const city = params.get('city');
-    const area = params.get('area') || params.get('plz');
+    const areaId = params.get('areaId');
     if (city) {
       setCityInput(city);
       setFilterCity(city);
     }
-    if (area) {
-      setGenAreaFilter(area);
-      setFilterArea(area);
+    if (areaId) {
+      setFilterAreaId(areaId);
+      setGenAreaId(areaId);
+      setSelectedAreaId(areaId);
     }
   }, [location.search]);
 
@@ -197,12 +198,25 @@ export default function Unternehmenssuche() {
   });
 
   const filteredLeads = useMemo(() => {
+    if (!filterCity && filterAreaId === 'all') return [];
+
     return allLeads.filter((lead) => {
-      const cityMatch = filterCity === 'all' || lead.stadt === filterCity;
-      const areaMatch = filterArea === 'all' || lead.postleitzahl === filterArea;
+      const cityMatch = !filterCity || lead.stadt?.toLowerCase() === filterCity.toLowerCase();
+      
+      let areaMatch = true;
+      if (filterAreaId !== 'all') {
+        const area = savedAreas.find(a => a.id === filterAreaId);
+        if (area) {
+          // Check if lead belongs to this area
+          areaMatch = lead.area_id === area.id || 
+                     (lead.stadt?.toLowerCase() === area.city?.toLowerCase() && 
+                      (typeof area.streets === 'string' ? area.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
+        }
+      }
+      
       return cityMatch && areaMatch;
     });
-  }, [allLeads, filterCity, filterArea]);
+  }, [allLeads, filterCity, filterAreaId, savedAreas]);
 
   const leadsWithCoordinates = useMemo(() => {
     return filteredLeads.filter((lead) => {
@@ -216,29 +230,23 @@ export default function Unternehmenssuche() {
     return [...new Set(allLeads.map((l) => l.stadt).filter(Boolean))].sort();
   }, [allLeads]);
 
-  const uniqueAreas = useMemo(() => {
-    return [...new Set(allLeads.map((l) => l.postleitzahl).filter(Boolean))].sort();
-  }, [allLeads]);
-
   const foundWithCoordinates = useMemo(() => {
     return foundCompanies.filter((c) => !isNaN(parseFloat(c.latitude)) && !isNaN(parseFloat(c.longitude)));
   }, [foundCompanies]);
 
   const selectedAreaLeads = useMemo(() => {
+    const areaToUse = savedAreas.find(a => a.id === (genAreaId !== 'all' ? genAreaId : selectedAreaId));
+    if (!areaToUse) return [];
+
     return allLeads.filter(lead => {
-      const cityMatch = cityInput === 'all' || lead.stadt === cityInput;
-      const areaMatch = genAreaFilter === 'all' || lead.postleitzahl === genAreaFilter;
-      
-      // If we have a selectedArea (from map), prioritize its logic
-      if (selectedArea) {
-        return lead.area_id === selectedArea.id || 
-               (lead.stadt === selectedArea.city && 
-                (typeof selectedArea.streets === 'string' ? selectedArea.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
-      }
+      const cityMatch = lead.stadt?.toLowerCase() === (areaToUse.city || cityInput).toLowerCase();
+      const areaMatch = lead.area_id === areaToUse.id || 
+                       (lead.stadt?.toLowerCase() === areaToUse.city?.toLowerCase() && 
+                        (typeof areaToUse.streets === 'string' ? areaToUse.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
       
       return cityMatch && areaMatch;
     });
-  }, [allLeads, selectedArea, cityInput, genAreaFilter]);
+  }, [allLeads, savedAreas, genAreaId, selectedAreaId, cityInput]);
 
   async function loadAreas() {
     try {
@@ -541,7 +549,7 @@ export default function Unternehmenssuche() {
           </TabsTrigger>
           <TabsTrigger value="leads" className="flex items-center gap-2">
             <List className="h-4 w-4" />
-            Leads ({leadsWithCoordinates.length})
+            Leads ({filteredLeads.length})
           </TabsTrigger>
           <TabsTrigger value="generator" className="flex items-center gap-2">
             <Search className="h-4 w-4" />
@@ -716,8 +724,9 @@ export default function Unternehmenssuche() {
                           const streets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
                           const isSelected = area.id === selectedAreaId;
                           const areaLeads = allLeads.filter(lead => 
-                            lead.stadt?.toLowerCase() === area.city?.toLowerCase() ||
-                            lead.postleitzahl?.startsWith(area.city?.split(' ')[0])
+                            lead.area_id === area.id || 
+                            (lead.stadt?.toLowerCase() === area.city?.toLowerCase() && 
+                             (typeof area.streets === 'string' ? area.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false))
                           );
                           return (
                             <div
@@ -747,10 +756,9 @@ export default function Unternehmenssuche() {
                                     className="flex items-center gap-2 text-xs text-blue-600 font-medium cursor-pointer hover:underline"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const params = new URLSearchParams();
-                                      params.set('city', area.city || '');
-                                      // If PLZ is available, use it, otherwise use city
-                                      navigate(`${createPageUrl('Leads')}?${params.toString()}`);
+                                      setFilterCity(area.city || '');
+                                      setFilterAreaId(area.id);
+                                      setActiveSection('leads');
                                     }}
                                   >
                                     <Building2 className="h-3 w-3" />
@@ -764,9 +772,9 @@ export default function Unternehmenssuche() {
                                     className="w-full mt-2 border-blue-300 text-blue-700 hover:bg-blue-50"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const params = new URLSearchParams();
-                                      params.set('city', area.city || '');
-                                      navigate(`${createPageUrl('Leads')}?${params.toString()}`);
+                                      setFilterCity(area.city || '');
+                                      setFilterAreaId(area.id);
+                                      setActiveSection('leads');
                                     }}
                                   >
                                     <List className="h-3 w-3 mr-1" />
@@ -779,7 +787,9 @@ export default function Unternehmenssuche() {
                                   className="w-full mt-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigateToGenerator();
+                                    setGenAreaId(area.id);
+                                    setCityInput(area.city || '');
+                                    setActiveSection('generator');
                                   }}
                                 >
                                   <Zap className="h-3 w-3 mr-1" />
@@ -806,36 +816,35 @@ export default function Unternehmenssuche() {
                     Leads Liste ({filteredLeads.length})
                   </CardTitle>
                     <div className="flex flex-wrap gap-2">
-                      <div className="flex gap-2">
-                        <Select value={filterCity} onValueChange={setFilterCity}>
-                          <SelectTrigger className="w-40 bg-white text-slate-900">
-                            <SelectValue placeholder="Stadt" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Alle Städte</SelectItem>
-                            {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] text-white/70 ml-1">Stadt</Label>
                         <Input 
-                          value={filterCity === 'all' ? '' : filterCity} 
-                          onChange={(e) => setFilterCity(e.target.value || 'all')} 
-                          className="w-32 bg-white text-slate-900"
-                          placeholder="Manuell..."
+                          value={filterCity} 
+                          onChange={(e) => setFilterCity(e.target.value)} 
+                          className="w-48 bg-white text-slate-900"
+                          placeholder="Stadt eingeben..."
                         />
                       </div>
-                      <Select value={filterArea} onValueChange={setFilterArea}>
-                      <SelectTrigger className="w-40 bg-white text-slate-900">
-                        <SelectValue placeholder="PLZ" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Alle PLZ</SelectItem>
-                        {uniqueAreas.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="secondary" size="sm" onClick={navigateToMap}>
-                      <MapIcon className="h-4 w-4 mr-1" />
-                      Zur Karte
-                    </Button>
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] text-white/70 ml-1">Bereich</Label>
+                        <Select value={filterAreaId} onValueChange={setFilterAreaId}>
+                          <SelectTrigger className="w-48 bg-white text-slate-900">
+                            <SelectValue placeholder="Bereich wählen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Alle Bereiche</SelectItem>
+                            {savedAreas.filter(a => !filterCity || a.city?.toLowerCase() === filterCity.toLowerCase()).map(a => (
+                              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-end">
+                        <Button variant="secondary" size="sm" onClick={navigateToMap}>
+                          <MapIcon className="h-4 w-4 mr-1" />
+                          Zur Karte
+                        </Button>
+                      </div>
                   </div>
                 </div>
               </CardHeader>
@@ -844,7 +853,7 @@ export default function Unternehmenssuche() {
                     <div className="text-center py-16 text-slate-500">
                       <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
                       <p className="text-lg font-medium">Keine Leads gefunden</p>
-                      <p className="text-sm mt-2">Gefundene Leads werden hier aufgelistet</p>
+                      <p className="text-sm mt-2">Filter anpassen oder Leads im Generator suchen</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -924,63 +933,40 @@ export default function Unternehmenssuche() {
                   </div>
                 </CardHeader>
                   <CardContent className="p-6">
-                      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                         <div className="space-y-2">
-                          <Label>Bereich auswählen</Label>
-                          <Select value={selectedAreaId || "none"} onValueChange={(val) => val !== "none" && handleAreaSelect(val)}>
+                          <Label>Stadt (Textsuche)</Label>
+                          <Input 
+                            value={cityInput} 
+                            onChange={(e) => setCityInput(e.target.value)} 
+                            className="w-full"
+                            placeholder="z.B. Berlin"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Bereich auswählen (Dropdown)</Label>
+                          <Select value={genAreaId} onValueChange={setGenAreaId}>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Wählen Sie einen Bereich..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">Kein Bereich ausgewählt</SelectItem>
-                              {savedAreas.map((area) => (
+                              <SelectItem value="all">Kein Bereich ausgewählt</SelectItem>
+                              {savedAreas.filter(a => !cityInput || a.city?.toLowerCase() === cityInput.toLowerCase()).map((area) => (
                                 <SelectItem key={area.id} value={area.id}>
-                                  {area.name} ({area.city})
+                                  {area.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Stadt (Filter / Neue Suche)</Label>
-                          <div className="flex gap-2">
-                            <Select value={cityInput} onValueChange={setCityInput}>
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Stadt wählen" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                <SelectItem value="Berlin">Berlin (Standard)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input 
-                              value={cityInput} 
-                              onChange={(e) => setCityInput(e.target.value)} 
-                              className="w-32"
-                              placeholder="Manuell..."
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>PLZ Filter</Label>
-                          <Select value={genAreaFilter} onValueChange={setGenAreaFilter}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="PLZ wählen" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Alle PLZ</SelectItem>
-                              {uniqueAreas.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
                       </div>
 
-                    {!selectedArea ? (
+                    {genAreaId === 'all' && !selectedAreaId ? (
                     <div className="text-center py-16">
                       <MapPin className="h-16 w-16 mx-auto mb-4 text-slate-300" />
                       <p className="text-lg font-medium text-slate-700">Kein Bereich ausgewählt</p>
                       <p className="text-sm text-slate-500 mt-2">
-                        Wählen Sie einen Bereich auf der Karte aus
+                        Wählen Sie einen Bereich aus dem Dropdown oder auf der Karte
                       </p>
                       <Button
                         variant="outline"
@@ -996,22 +982,26 @@ export default function Unternehmenssuche() {
                       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
                         <div className="flex items-start justify-between mb-4">
                           <div>
-                            <h3 className="font-bold text-blue-900 text-lg">{selectedArea.name}</h3>
-                            <p className="text-sm text-blue-700 mt-1">{selectedArea.city}</p>
+                            <h3 className="font-bold text-blue-900 text-lg">
+                              {savedAreas.find(a => a.id === genAreaId)?.name || selectedArea?.name}
+                            </h3>
+                            <p className="text-sm text-blue-700 mt-1">{cityInput}</p>
                           </div>
                           <Badge className="bg-blue-600 text-white">
-                            {typeof selectedArea.streets === 'string'
-                              ? JSON.parse(selectedArea.streets).length
-                              : selectedArea.streets?.length || 0} Straßen
+                            {(() => {
+                              const area = savedAreas.find(a => a.id === genAreaId) || selectedArea;
+                              const streets = typeof area?.streets === 'string' ? JSON.parse(area.streets) : area?.streets || [];
+                              return streets.length;
+                            })()} Straßen
                           </Badge>
                         </div>
                           <Button
                             onClick={generateLeadsForArea}
-                            disabled={generatingArea === selectedArea.id}
+                            disabled={generatingArea === (genAreaId !== 'all' ? genAreaId : selectedAreaId)}
                             className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md"
                             size="lg"
                           >
-                          {generatingArea === selectedArea.id ? (
+                          {generatingArea ? (
                             <>
                               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                               {generationProgress.street && (
