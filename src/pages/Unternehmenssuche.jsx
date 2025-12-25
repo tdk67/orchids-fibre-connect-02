@@ -55,9 +55,9 @@ const statusColors = {
 const createCustomIcon = (color) =>
   L.divIcon({
     className: 'custom-div-icon',
-    html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
+    html: `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4); pointer-events: auto;"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 
 function DrawingHandler({ isDrawing, onDrawComplete }) {
@@ -143,10 +143,18 @@ export default function Unternehmenssuche() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [savedAreas, setSavedAreas] = useState([]);
   const [selectedAreaId, setSelectedAreaId] = useState(null);
+
+  const selectedArea = useMemo(() => {
+    return savedAreas.find((a) => a.id === selectedAreaId);
+  }, [savedAreas, selectedAreaId]);
+
   const [showAreaDialog, setShowAreaDialog] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaBounds, setNewAreaBounds] = useState(null);
   const [cityInput, setCityInput] = useState('Berlin');
+  const [filterCity, setFilterCity] = useState('all');
+  const [filterArea, setFilterArea] = useState('all');
+  const [filterPLZ, setFilterPLZ] = useState('all');
   
   const [generatingArea, setGeneratingArea] = useState(null);
   const [generationProgress, setGenerationProgress] = useState({});
@@ -182,12 +190,28 @@ export default function Unternehmenssuche() {
     },
   });
 
-  const leadsWithCoordinates = useMemo(() => {
+  const filteredLeads = useMemo(() => {
     return allLeads.filter((lead) => {
+      const cityMatch = filterCity === 'all' || lead.stadt === filterCity;
+      const areaMatch = filterArea === 'all' || lead.postleitzahl === filterArea;
+      return cityMatch && areaMatch;
+    });
+  }, [allLeads, filterCity, filterArea]);
+
+  const leadsWithCoordinates = useMemo(() => {
+    return filteredLeads.filter((lead) => {
       const lat = parseFloat(lead.latitude);
       const lng = parseFloat(lead.longitude);
       return !isNaN(lat) && !isNaN(lng);
     });
+  }, [filteredLeads]);
+
+  const uniqueCities = useMemo(() => {
+    return [...new Set(allLeads.map((l) => l.stadt).filter(Boolean))].sort();
+  }, [allLeads]);
+
+  const uniqueAreas = useMemo(() => {
+    return [...new Set(allLeads.map((l) => l.postleitzahl).filter(Boolean))].sort();
   }, [allLeads]);
 
   const foundWithCoordinates = useMemo(() => {
@@ -197,6 +221,14 @@ export default function Unternehmenssuche() {
   const selectedArea = useMemo(() => {
     return savedAreas.find((a) => a.id === selectedAreaId);
   }, [savedAreas, selectedAreaId]);
+
+  const selectedAreaLeads = useMemo(() => {
+    if (!selectedArea) return [];
+    return allLeads.filter(lead => 
+      lead.area_id === selectedArea.id || 
+      (lead.stadt === selectedArea.city && (typeof selectedArea.streets === 'string' ? selectedArea.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false))
+    );
+  }, [allLeads, selectedArea]);
 
   async function loadAreas() {
     try {
@@ -755,30 +787,50 @@ export default function Unternehmenssuche() {
             </div>
           </TabsContent>
 
-        <TabsContent value="leads" className="mt-6">
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Leads auf Karte ({leadsWithCoordinates.length})
-                </CardTitle>
-                <Button variant="secondary" size="sm" onClick={navigateToMap}>
-                  <MapIcon className="h-4 w-4 mr-1" />
-                  Zur Karte
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              {leadsWithCoordinates.length === 0 ? (
-                <div className="text-center py-16 text-slate-500">
-                  <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-lg font-medium">Keine Leads mit Koordinaten</p>
-                  <p className="text-sm mt-2">Leads mit Adresse werden automatisch auf der Karte angezeigt</p>
+          <TabsContent value="leads" className="mt-6">
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Leads Liste ({filteredLeads.length})
+                  </CardTitle>
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={filterCity} onValueChange={setFilterCity}>
+                      <SelectTrigger className="w-40 bg-white text-slate-900">
+                        <SelectValue placeholder="Stadt" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle Städte</SelectItem>
+                        {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterArea} onValueChange={setFilterArea}>
+                      <SelectTrigger className="w-40 bg-white text-slate-900">
+                        <SelectValue placeholder="PLZ" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle PLZ</SelectItem>
+                        {uniqueAreas.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="secondary" size="sm" onClick={navigateToMap}>
+                      <MapIcon className="h-4 w-4 mr-1" />
+                      Zur Karte
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {leadsWithCoordinates.map((lead) => (
+              </CardHeader>
+                <CardContent className="p-6">
+                  {filteredLeads.length === 0 ? (
+                    <div className="text-center py-16 text-slate-500">
+                      <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+                      <p className="text-lg font-medium">Keine Leads gefunden</p>
+                      <p className="text-sm mt-2">Gefundene Leads werden hier aufgelistet</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {filteredLeads.map((lead) => (
                     <div
                       key={lead.id}
                       className="p-4 rounded-lg border-2 border-slate-200 hover:border-green-400 bg-white shadow-sm hover:shadow-md transition-all"
@@ -853,8 +905,35 @@ export default function Unternehmenssuche() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
-                  {!selectedArea ? (
+                  <CardContent className="p-6">
+                    <div className="mb-6 flex flex-wrap gap-4 items-end">
+                      <div className="space-y-2">
+                        <Label>Bereich auswählen</Label>
+                        <Select value={selectedAreaId || "none"} onValueChange={(val) => val !== "none" && handleAreaSelect(val)}>
+                          <SelectTrigger className="w-64">
+                            <SelectValue placeholder="Wählen Sie einen Bereich..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Kein Bereich ausgewählt</SelectItem>
+                            {savedAreas.map((area) => (
+                              <SelectItem key={area.id} value={area.id}>
+                                {area.name} ({area.city})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Stadt (für neue Suche)</Label>
+                        <Input 
+                          value={cityInput} 
+                          onChange={(e) => setCityInput(e.target.value)} 
+                          className="w-48"
+                        />
+                      </div>
+                    </div>
+
+                    {!selectedArea ? (
                     <div className="text-center py-16">
                       <MapPin className="h-16 w-16 mx-auto mb-4 text-slate-300" />
                       <p className="text-lg font-medium text-slate-700">Kein Bereich ausgewählt</p>
@@ -922,10 +1001,10 @@ export default function Unternehmenssuche() {
                               </Button>
                             </div>
 
-                            {selectedArea && allLeads.filter(l => l.area_id === selectedArea.id).length > 0 && (
+                            {selectedArea && selectedAreaLeads.length > 0 && (
                               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                 <p className="text-sm text-blue-800 font-medium">
-                                  {allLeads.filter(l => l.area_id === selectedArea.id).length} Leads bereits in der Datenbank für diesen Bereich.
+                                  {selectedAreaLeads.length} Leads bereits in der Datenbank für diesen Bereich.
                                 </p>
                               </div>
                             )}
