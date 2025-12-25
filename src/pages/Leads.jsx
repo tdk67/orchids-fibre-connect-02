@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock, FileText, Download, Eye } from 'lucide-react';
+import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock, FileText, Download, Eye, Zap } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { isDuplicateLead } from '@/utils/leadDeduplication';
 import AngebotPDFGenerator from '../components/AngebotPDFGenerator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { format } from 'date-fns';
@@ -696,14 +697,7 @@ export default function Leads() {
   };
 
   const findDuplicateLead = (newLead, existingLeads) => {
-    return existingLeads.find(existing => {
-      const sameCompany = existing.firma?.toLowerCase() === newLead.firma?.toLowerCase();
-      const sameAddress = existing.postleitzahl === newLead.postleitzahl && 
-                          existing.strasse_hausnummer?.toLowerCase() === newLead.strasse_hausnummer?.toLowerCase();
-      const samePhone = existing.telefon && newLead.telefon && existing.telefon === newLead.telefon;
-
-      return sameCompany && (sameAddress || samePhone);
-    });
+    return existingLeads.find(existing => isDuplicateLead(newLead, existing));
   };
 
   const mergeDuplicateData = (existing, newData) => {

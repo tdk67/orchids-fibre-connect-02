@@ -17,7 +17,12 @@ Generated leads must have a data structure compatible with imported leads. This 
 Leads must be assigned to the specific **Area** (Bereich) they were generated for. This is determined either by the area selection in the generator or by matching the street name to an existing area's defined streets.
 
 ## 5. Deduplication
-Prevent duplicate leads in the database. Before inserting a new lead, check if a lead with the same company name and address already exists.
+Prevent duplicate leads in the database. A lead is considered a duplicate if:
+- **Same Name & Fuzzy Address**: Same company name and same street name, even if the house number is slightly different (e.g., "Str. 4" vs "Str. 4a").
+- **Same Address & Fuzzy Name**: Same address but slightly different name (e.g., "Company GmbH" vs "Company KG"), especially if email or phone matches.
+- **Identical Email**: If an email exists and is identical, it's the same business.
+
+Deduplication MUST happen automatically during generation and import. The user should not have to manually trigger a cleanup.
 
 ## 6. Map Integration
 ALL leads in the database that have valid coordinates must be displayed on the map, regardless of their source (Import or Generator).
