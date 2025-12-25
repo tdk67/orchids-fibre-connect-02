@@ -224,7 +224,11 @@ export default function Unternehmenssuche() {
     queryFn: () => base44.entities.Employee.list(),
   });
 
-  const { data: allLeads = [], isLoading: isLoadingLeads } = useQuery({
+  const {
+    data: allLeads = [],
+    isLoading: isLoadingLeads,
+    refetch: refetchAllLeads,
+  } = useQuery({
     queryKey: ["allLeads"],
     queryFn: async () => {
       const leads = await base44.entities.Lead.list("-created_at", 2000);
@@ -235,10 +239,10 @@ export default function Unternehmenssuche() {
   const getAreaLeadMatch = (lead, area) => {
     if (!lead || !area) return false;
 
-    // Direct match by ID
+    // Direct match by ID is the most reliable
     if (lead.area_id === area.id) return true;
 
-    // Geometric match would be better, but for now we use street/city match
+    // Fallback: Geometric/Street match for leads that might not have area_id (e.g. from Excel)
     const leadCity = lead.stadt?.toLowerCase()?.trim();
     const areaCity = area.city?.toLowerCase()?.trim();
     if (leadCity && areaCity && leadCity !== areaCity) return false;
@@ -256,6 +260,7 @@ export default function Unternehmenssuche() {
       typeof area.streets === "string"
         ? JSON.parse(area.streets)
         : area.streets || [];
+
     return areaStreets.some((s) => {
       const aStreetName = (typeof s === "string" ? s : s.name)
         ?.toLowerCase()
@@ -273,10 +278,13 @@ export default function Unternehmenssuche() {
     if (!filterCity && filterAreaId === "all") return [];
 
     return allLeads.filter((lead) => {
-      // City filter
+      // City filter - use includes for better matching
       const cityMatch =
         !filterCity ||
-        lead.stadt?.toLowerCase()?.includes(filterCity.toLowerCase());
+        lead.stadt
+          ?.toLowerCase()
+          ?.trim()
+          ?.includes(filterCity.toLowerCase().trim());
 
       // Area filter
       let areaMatch = true;
@@ -430,7 +438,7 @@ export default function Unternehmenssuche() {
     setGeneratingArea(selectedArea.id);
     setGenerationProgress({});
 
-    let allLeads = [];
+    let newlyFound = [];
 
     for (let i = 0; i < streets.length; i++) {
       const street = streets[i];
@@ -454,7 +462,7 @@ export default function Unternehmenssuche() {
         // Geocode each lead to get coordinates
         const withCoordinates = await Promise.all(
           leads.map(async (lead) => {
-            // Double check if lead is already in database
+            // Check against database leads (outer allLeads)
             const isDuplicate = allLeads.some(
               (existing) =>
                 existing.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
@@ -465,8 +473,8 @@ export default function Unternehmenssuche() {
 
             if (isDuplicate) return null;
 
-            // Also check if already in foundCompanies (local state)
-            const isAlreadyFound = foundCompanies.some(
+            // Also check if already in newlyFound (this session)
+            const isAlreadyFound = newlyFound.some(
               (found) =>
                 found.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
                 (found.strasse_hausnummer?.toLowerCase() ===
@@ -475,6 +483,17 @@ export default function Unternehmenssuche() {
             );
 
             if (isAlreadyFound) return null;
+
+            // Also check if already in foundCompanies (existing state)
+            const isAlreadyInState = foundCompanies.some(
+              (found) =>
+                found.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
+                (found.strasse_hausnummer?.toLowerCase() ===
+                  lead.strasse_hausnummer?.toLowerCase() ||
+                  found.telefon === lead.telefon),
+            );
+
+            if (isAlreadyInState) return null;
 
             const coords = await geocodeAddress(
               lead.street_name || streetName,
@@ -494,7 +513,7 @@ export default function Unternehmenssuche() {
         );
 
         const filteredNewLeads = withCoordinates.filter(Boolean);
-        allLeads = [...allLeads, ...filteredNewLeads];
+        newlyFound = [...newlyFound, ...filteredNewLeads];
 
         await new Promise((resolve) => setTimeout(resolve, 1500));
       } catch (err) {
@@ -502,13 +521,13 @@ export default function Unternehmenssuche() {
       }
     }
 
-    setFoundCompanies([...foundCompanies, ...allLeads]);
+    setFoundCompanies([...foundCompanies, ...newlyFound]);
     setGeneratingArea(null);
     setGenerationProgress({});
     setActiveSection("generator");
     toast({
       title: "Erfolgreich",
-      description: `${allLeads.length} Unternehmen gefunden!`,
+      description: `${newlyFound.length} Unternehmen gefunden!`,
     });
   }
 
@@ -583,6 +602,7 @@ export default function Unternehmenssuche() {
       await base44.entities.Lead.bulkCreate(leadsToCreate);
       queryClient.invalidateQueries(["leads"]);
       queryClient.invalidateQueries(["allLeads"]);
+      if (refetchAllLeads) await refetchAllLeads();
       setFoundCompanies([]);
       toast({
         title: "Erfolgreich",
