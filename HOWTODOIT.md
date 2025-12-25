@@ -27,13 +27,17 @@ Deduplication MUST happen automatically during generation and import. The user s
 
 ## 6. Map Integration & Geocoding
 - **Local Geocoding Cache**: To avoid Nominatim rate limits (1 query/sec), the system uses a local `geocoding_cache` table. 
-- **Mass Data Import**: You can pre-populate this cache for entire cities using the OpenStreetMap (OSM) data.
-  - **Overpass API**: Use `node scripts/import-osm.js "Berlin"` to download all addresses for a city and store them locally.
-  - **OSM Data Extraction**: The system extracts `addr:street`, `addr:housenumber`, `addr:postcode`, `addr:city`, and the corresponding `latitude/longitude` from OSM nodes and ways.
+- **Mass Data Import (UI)**: In the **Unternehmenssuche** (Map view), you can use the **"OSM Daten"** button.
+  - **Status Check**: The UI shows if a city's data has already been imported.
+  - **Import/Update**: You can trigger a mass import from OpenStreetMap directly in the browser. It uses the Overpass API to fetch building addresses and coordinates.
+  - **No Duplicates**: The import uses an "Upsert" mechanism to update existing entries and add new ones without creating duplicates.
+  - **Actualization**: You can see the date of the last import and re-run it at any time to get the latest OSM data.
 - **Coordinate Assignment**: Coordinates are assigned by checking the local cache first. If missing, it falls back to Nominatim and then saves the result to the cache for future use.
 - **Consistency**: The system ensures "Same Address = Same Coordinates" by using exact matches in the cache.
 - **Display**: ALL leads in the database with valid latitude/longitude are displayed on the map.
 
 ## 7. Lead Recovery (Duplicate Handling)
 - **Problem**: Previously, if the generator found a business already in the database (e.g., from an Excel import), it would skip it, making it seem "lost" to the user.
-- **Solution**: The system now checks if an existing lead matches the generated one. If found, it automatically assigns that existing lead to the current **Area** (Bereich) by updating its `area_id`. This ensures previously imported leads appear in the context of the current search area.
+- **Solution**: If an existing lead matches a generated one, the system automatically assigns that lead to the current **Area** (Bereich). This ensures previously imported leads appear in the search context.
+- **Auto-Correction**: If a lead is missing coordinates but a match is found in the geocoding cache, it is updated automatically.
+
