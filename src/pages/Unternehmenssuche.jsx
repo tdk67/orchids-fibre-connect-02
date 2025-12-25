@@ -274,10 +274,12 @@ export default function Unternehmenssuche() {
   };
 
   const filteredLeads = useMemo(() => {
-    // If no city and no area selected, show nothing to avoid overwhelming the map/list
-    if (!filterCity && filterAreaId === "all") return [];
-
     return allLeads.filter((lead) => {
+      // Basic visibility filter: ignore pool leads and archived leads to match active leads list
+      if (lead.pool_status === "im_pool") return false;
+      if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren)
+        return false;
+
       // City filter - use includes for better matching
       const cityMatch =
         !filterCity ||
@@ -592,6 +594,8 @@ export default function Unternehmenssuche() {
       assigned_to: employee?.full_name || "",
       assigned_to_email: employee?.email || "",
       status: "Neu",
+      pool_status: "zugewiesen",
+      benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
       sparte: "1&1 Versatel",
       latitude: company.latitude?.toString() || "",
       longitude: company.longitude?.toString() || "",
