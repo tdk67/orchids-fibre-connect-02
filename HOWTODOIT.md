@@ -17,34 +17,7 @@ Generated leads must have a data structure compatible with imported leads. This 
 Leads must be assigned to the specific **Area** (Bereich) they were generated for. This is determined either by the area selection in the generator or by matching the street name to an existing area's defined streets.
 
 ## 5. Deduplication
-Prevent duplicate leads in the database. A lead is considered a duplicate if:
-- **Normalization**: Names and addresses are normalized by removing accents (e.g., "é" -> "e"), removing content in parentheses, and stripping legal forms (GmbH, KG, etc.).
-- **Same Name & Fuzzy Address**: Same normalized company name and same street/base house number (e.g., "Potsdamer Str. 81a" and "Potsdamer Str. 81 A" match).
-- **Same Address & Fuzzy Name**: Same address and street number, where one business name is a subset of the other (e.g., "Positions Berlin GmbH" vs "Positions Berlin").
-- **Identical Email**: If an email exists and is identical, it's the same business.
+Prevent duplicate leads in the database. Before inserting a new lead, check if a lead with the same company name and address already exists.
 
-Deduplication MUST happen automatically during generation and import. The user should not have to manually trigger a cleanup.
-
-## 6. Map Integration & Geocoding (OSM Data)
-- **Data Source**: Mass geocoding data is downloaded from **OpenStreetMap (OSM)** via the **Overpass API**. The system specifically queries for all buildings with `addr:street` and `addr:housenumber` tags within a city's administrative boundaries.
-- **Local Geocoding Cache**: To avoid Nominatim rate limits (1 query/sec) and reduce external API dependency, the system uses a local `geocoding_cache` table. This cache acts as a "Phonebook of Coordinates" for the entire city.
-- **Mass Data Import (UI)**: In the **Unternehmenssuche** (Map view), you can use the **"OSM Daten"** button.
-  - **Status Check**: The UI checks the `osm_imports` table to show if a city's data has already been imported and when.
-  - **Import/Update**: Triggering an import fetches thousands of address points in seconds. This data is stored locally in `geocoding_cache`.
-  - **No Duplicates**: The import uses an "Upsert" mechanism (Unique constraint on `street, house_number, postcode, city`) to update existing entries and add new ones without creating duplicates.
-  - **Actualization**: You can see the date of the last import. Since OSM is frequently updated by the community, re-running the import keeps your local cache actualized.
-- **Lead Validation**:
-  - The OSM data provides a "Ground Truth" for physical addresses. 
-  - If a lead generated from other sources (like "Das Örtliche") exists at an address found in the OSM building data, it increases the confidence that the lead corresponds to a real physical location.
-- **Coordinate Assignment (Geocoding)**: 
-  - When a lead is generated or imported, the system looks up its address in the `geocoding_cache`.
-  - If a match is found, the `latitude` and `longitude` are assigned instantly.
-  - This local lookup is 100x faster than external geocoding and allows for real-time map plotting of thousands of leads.
-- **Consistency**: The system ensures "Same Address = Same Coordinates" by using exact matches in the cache.
-- **Display**: ALL leads in the database with valid latitude/longitude are displayed on the map.
-
-## 7. Lead Recovery (Duplicate Handling)
-- **Problem**: Previously, if the generator found a business already in the database (e.g., from an Excel import), it would skip it, making it seem "lost" to the user.
-- **Solution**: If an existing lead matches a generated one, the system automatically assigns that lead to the current **Area** (Bereich). This ensures previously imported leads appear in the search context.
-- **Auto-Correction**: If a lead is missing coordinates but a match is found in the geocoding cache, it is updated automatically.
-
+## 6. Map Integration
+ALL leads in the database that have valid coordinates must be displayed on the map, regardless of their source (Import or Generator).
