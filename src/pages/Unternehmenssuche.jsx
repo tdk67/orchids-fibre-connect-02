@@ -170,11 +170,32 @@ const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-export default function Unternehmenssuche() {
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState("map");
-  const [user, setUser] = useState(null);
+  export default function Unternehmenssuche() {
+    const { toast } = useToast();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const [activeSection, setActiveSection] = useState("map");
+    const [user, setUser] = useState(null);
+
+    const { 
+      isImporting, 
+      progress: importProgress, 
+      importCityData, 
+      getImportStatus 
+    } = useOSMImport();
+
+    const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
+
+    useEffect(() => {
+      const fetchStatus = async () => {
+        if (cityInput) {
+          const status = await getImportStatus(cityInput);
+          setCurrentCityImportStatus(status);
+        }
+      };
+      fetchStatus();
+    }, [cityInput, getImportStatus]);
+
 
   const [mapCenter, setMapCenter] = useState([52.52, 13.405]);
   const [mapZoom, setMapZoom] = useState(12);
