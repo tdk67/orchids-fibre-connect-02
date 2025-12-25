@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   MapContainer,
   Marker,
@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -56,12 +57,18 @@ import {
   X,
   Clock,
   FileText,
+  Download,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import {
   fetchStreetLeads,
   geocodeAddress,
 } from "@/lib/scraping/das-oertliche-scraper";
 import { isDuplicateLead } from "@/utils/leadDeduplication";
+import { useOSMImport } from "@/hooks/useOSMImport";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -196,6 +203,19 @@ export default function Unternehmenssuche() {
   const [generatingArea, setGeneratingArea] = useState(null);
   const [generationProgress, setGenerationProgress] = useState({});
   const [assignEmployee, setAssignEmployee] = useState("");
+
+  const { isImporting, progress: importProgress, importCityData, getImportStatus } = useOSMImport();
+  const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
+
+  const checkImportStatus = useCallback(async () => {
+    if (!cityInput) return;
+    const status = await getImportStatus(cityInput);
+    setCurrentCityImportStatus(status);
+  }, [cityInput, getImportStatus]);
+
+  useEffect(() => {
+    checkImportStatus();
+  }, [cityInput, checkImportStatus, isImporting]);
 
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -788,40 +808,118 @@ export default function Unternehmenssuche() {
                       <MapPin className="h-5 w-5" />
                       Karte
                     </CardTitle>
-                    <div className="flex flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={cityInput}
-                          onChange={(e) => setCityInput(e.target.value)}
-                          placeholder="Stadt suchen..."
-                          className="w-48 bg-white text-slate-900"
-                          onKeyDown={(e) => e.key === "Enter" && geocodeCity()}
-                        />
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={geocodeCity}
-                          disabled={isGeocoding}
-                        >
-                          {isGeocoding ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Search className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <Button
-                        variant={isDrawing ? "default" : "secondary"}
-                        size="sm"
-                        onClick={() => setIsDrawing(!isDrawing)}
-                        className={
-                          isDrawing ? "bg-purple-600 hover:bg-purple-700" : ""
-                        }
-                      >
-                        <Crosshair className="h-4 w-4 mr-1" />
-                        {isDrawing ? "Zeichnen aktiv..." : "Bereich zeichnen"}
-                      </Button>
-                    </div>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={cityInput}
+                                onChange={(e) => setCityInput(e.target.value)}
+                                placeholder="Stadt suchen..."
+                                className="w-48 bg-white text-slate-900"
+                                onKeyDown={(e) => e.key === "Enter" && geocodeCity()}
+                              />
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={geocodeCity}
+                                disabled={isGeocoding}
+                              >
+                                {isGeocoding ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Search className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            
+                            <Button
+                              variant={isDrawing ? "default" : "secondary"}
+                              size="sm"
+                              onClick={() => setIsDrawing(!isDrawing)}
+                              className={isDrawing ? "bg-purple-600 hover:bg-purple-700" : ""}
+                            >
+                              <Crosshair className="h-4 w-4 mr-1" />
+                              {isDrawing ? "Zeichnen aktiv..." : "Bereich zeichnen"}
+                            </Button>
+
+                            {cityInput && (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="secondary" size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
+                                    <Download className="h-4 w-4 mr-1" />
+                                    OSM Daten
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>OSM Daten für {cityInput}</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    {currentCityImportStatus ? (
+                                      <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                                        <div className="flex items-center gap-2 text-green-800 font-semibold mb-1">
+                                          <Badge className="bg-green-600">Bereits geladen</Badge>
+                                          <span>Letzter Import:</span>
+                                        </div>
+                                        <p className="text-sm text-green-700">
+                                          {format(new Date(currentCityImportStatus.last_import_at), "PPP 'um' p", { locale: de })}
+                                        </p>
+                                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                                          <AlertCircle className="h-3 w-3" />
+                                          OSM Daten werden häufig aktualisiert. Sie können die Daten jederzeit auffrischen.
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg">
+                                        <p className="text-sm text-slate-600">
+                                          Noch keine OSM-Daten für <strong>{cityInput}</strong> in der Datenbank vorhanden.
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-2">
+                                          Durch das Laden von OSM-Daten werden Adress-Koordinaten lokal gespeichert, was die Lead-Generierung erheblich beschleunigt.
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {isImporting && (
+                                      <div className="space-y-2">
+                                        <div className="flex justify-between text-xs font-medium">
+                                          <span>{importProgress.message}</span>
+                                          {importProgress.total > 0 && (
+                                            <span>{Math.round((importProgress.current / importProgress.total) * 100)}%</span>
+                                          )}
+                                        </div>
+                                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                          <div 
+                                            className="h-full bg-blue-600 transition-all duration-300" 
+                                            style={{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <DialogFooter>
+                                    <Button 
+                                      className="w-full bg-orange-500 hover:bg-orange-600" 
+                                      onClick={() => importCityData(cityInput)}
+                                      disabled={isImporting}
+                                    >
+                                      {isImporting ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Import läuft...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <RefreshCw className="h-4 w-4 mr-2" />
+                                          {currentCityImportStatus ? "Daten aktualisieren" : "OSM Daten importieren"}
+                                        </>
+                                      )}
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                          </div>
+
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">

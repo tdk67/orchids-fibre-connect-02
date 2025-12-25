@@ -31,12 +31,11 @@ export function useOSMImport() {
     try {
       // 1. Fetch from Overpass
       const query = `
-        [out:json][timeout:180][maxsize:1073741824];
-        area["name"="${city}"]["admin_level"~"4|6|8|9"]->.searchArea;
+        [out:json][timeout:90];
+        area["name"="${city}"]["admin_level"~"4|6|8"]->.searchArea;
         (
           node["addr:street"]["addr:housenumber"](area.searchArea);
           way["addr:street"]["addr:housenumber"](area.searchArea);
-          relation["addr:street"]["addr:housenumber"](area.searchArea);
         );
         out center;
       `;
@@ -46,13 +45,7 @@ export function useOSMImport() {
         body: query,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Overpass API error response:", errorText);
-        if (response.status === 429) throw new Error("Overpass API: Zu viele Anfragen. Bitte kurz warten.");
-        if (response.status === 504) throw new Error("Overpass API: Zeitüberschreitung (die Stadt ist evtl. zu groß).");
-        throw new Error(`Overpass API Fehler (${response.status})`);
-      }
+      if (!response.ok) throw new Error("Overpass API error");
       const data = await response.json();
       const elements = data.elements || [];
 
@@ -70,32 +63,24 @@ export function useOSMImport() {
 
       // 2. Process and Upsert in batches
       const batchSize = 100;
-        for (let i = 0; i < elements.length; i += batchSize) {
-          const batch = elements.slice(i, i + batchSize)
-            .filter(el => el.tags && el.tags["addr:street"] && el.tags["addr:housenumber"])
-            .map(el => ({
-              street: el.tags["addr:street"],
-              house_number: el.tags["addr:housenumber"],
-              postcode: el.tags["addr:postcode"] || "",
-              city: el.tags["addr:city"] || city,
-              latitude: el.lat || (el.center && el.center.lat),
-              longitude: el.lon || (el.center && el.center.lon),
-            }))
-            .filter(item => item.latitude && item.longitude);
+      for (let i = 0; i < elements.length; i += batchSize) {
+        const batch = elements.slice(i, i + batchSize).map(el => ({
+          street: el.tags["addr:street"],
+          house_number: el.tags["addr:housenumber"],
+          postcode: el.tags["addr:postcode"] || "",
+          city: el.tags["addr:city"] || city,
+          latitude: el.lat || el.center.lat,
+          longitude: el.lon || el.center.lon,
+        }));
 
-          if (batch.length === 0) continue;
+        const { error } = await base44.client
+          .from("geocoding_cache")
+          .upsert(batch, { 
+            onConflict: 'street,house_number,postcode,city',
+            ignoreDuplicates: false 
+          });
 
-          const { error } = await base44.client
-            .from("geocoding_cache")
-            .upsert(batch, { 
-              onConflict: 'street,house_number,postcode,city',
-              ignoreDuplicates: false 
-            });
-
-          if (error) {
-            console.error("Batch upsert error details:", JSON.stringify(error, null, 2));
-            throw new Error(`Fehler beim Speichern der Daten: ${error.message || 'Unbekannter Datenbankfehler'}`);
-          }
+        if (error) console.error("Batch upsert error:", error);
         
         setProgress(prev => ({ 
           ...prev, 
