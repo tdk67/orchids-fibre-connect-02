@@ -238,6 +238,15 @@ export default function Unternehmenssuche() {
       return allLeads.filter(lead => getAreaLeadMatch(lead, areaToUse));
     }, [allLeads, savedAreas, genAreaId, selectedAreaId]);
 
+    const leadsWithCoordinates = useMemo(() => {
+      return filteredLeads.filter((lead) => lead.latitude && lead.longitude);
+    }, [filteredLeads]);
+
+    const foundWithCoordinates = useMemo(() => {
+      return foundCompanies.filter((company) => company.latitude && company.longitude);
+    }, [foundCompanies]);
+
+
   async function loadAreas() {
     try {
       const { data: areas, error } = await base44.client
