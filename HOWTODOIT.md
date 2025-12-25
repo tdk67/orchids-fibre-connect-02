@@ -25,5 +25,13 @@ Prevent duplicate leads in the database. A lead is considered a duplicate if:
 
 Deduplication MUST happen automatically during generation and import. The user should not have to manually trigger a cleanup.
 
-## 6. Map Integration
-ALL leads in the database that have valid coordinates must be displayed on the map, regardless of their source (Import or Generator).
+## 6. Map Integration & Geocoding
+- **Coordinate Assignment**: Coordinates are assigned by querying Nominatim with `Street Name + House Number + PLZ + City + Germany`.
+- **Accuracy**: Including the Postal Code (PLZ) is mandatory for accuracy, especially in large cities like Berlin where street names may repeat across districts.
+- **Consistency**: The system ensures "Same Address = Same Coordinates" by reusing coordinates from existing leads in the database for the same street and house number before attempting a new geocoding request.
+- **Display**: ALL leads in the database with valid latitude/longitude are displayed on the map.
+- **Auto-Correction**: If a generated lead matches an existing lead in the database that is missing coordinates, the system will attempt to geocode it and update the database record.
+
+## 7. Lead Recovery (Duplicate Handling)
+- **Problem**: Previously, if the generator found a business already in the database (e.g., from an Excel import), it would skip it, making it seem "lost" to the user.
+- **Solution**: The system now checks if an existing lead matches the generated one. If found, it automatically assigns that existing lead to the current **Area** (Bereich) by updating its `area_id`. This ensures previously imported leads appear in the context of the current search area.
