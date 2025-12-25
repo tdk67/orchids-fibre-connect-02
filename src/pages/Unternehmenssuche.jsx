@@ -222,8 +222,6 @@ export default function Unternehmenssuche() {
   const [rescanMode, setRescanMode] = useState(false);
   const [assignEmployee, setAssignEmployee] = useState("");
 
-  };
-
   const poolLeads = useMemo(() => {
     return allLeads.filter(lead => lead.pool_status === "im_pool");
   }, [allLeads]);
