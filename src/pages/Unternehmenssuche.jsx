@@ -194,7 +194,6 @@ export default function Unternehmenssuche() {
 
   const [generatingArea, setGeneratingArea] = useState(null);
   const [generationProgress, setGenerationProgress] = useState({});
-  const [foundCompanies, setFoundCompanies] = useState([]);
   const [assignEmployee, setAssignEmployee] = useState("");
 
   const queryClient = useQueryClient();
@@ -235,7 +234,7 @@ export default function Unternehmenssuche() {
   } = useQuery({
     queryKey: ["allLeads"],
     queryFn: async () => {
-      const leads = await base44.entities.Lead.list("-created_date", 2000);
+      const leads = await base44.entities.Lead.list("-created_date", 5000);
       return leads;
     },
   });
@@ -277,10 +276,19 @@ export default function Unternehmenssuche() {
     });
   };
 
+  const poolLeads = useMemo(() => {
+    return allLeads.filter(lead => lead.pool_status === "im_pool");
+  }, [allLeads]);
+
+  const foundCompanies = useMemo(() => {
+    if (!selectedArea) return [];
+    return poolLeads.filter(lead => String(lead.area_id) === String(selectedArea.id));
+  }, [poolLeads, selectedArea]);
+
   const filteredLeads = useMemo(() => {
     return allLeads.filter((lead) => {
       // Basic visibility filter: ignore pool leads and archived leads to match active leads list
-      if (lead.pool_status === "im_pool") return false;
+      // UNLESS we are explicitly looking for pool leads in this view
       if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren)
         return false;
 
@@ -346,12 +354,14 @@ export default function Unternehmenssuche() {
     );
     if (!areaToUse) return [];
 
-    return allLeads.filter((lead) => getAreaLeadMatch(lead, areaToUse));
+    return allLeads.filter((lead) => 
+      lead.pool_status !== "im_pool" && getAreaLeadMatch(lead, areaToUse)
+    );
   }, [allLeads, savedAreas, genAreaId, selectedAreaId]);
 
   const leadsWithCoordinates = useMemo(() => {
-    return filteredLeads.filter((lead) => lead.latitude && lead.longitude);
-  }, [filteredLeads]);
+    return allLeads.filter((lead) => lead.latitude && lead.longitude);
+  }, [allLeads]);
 
   const foundWithCoordinates = useMemo(() => {
     return foundCompanies.filter(
@@ -481,8 +491,6 @@ export default function Unternehmenssuche() {
     setGeneratingArea(selectedArea.id);
     setGenerationProgress({});
 
-    let newlyFound = [];
-
     for (let i = 0; i < streets.length; i++) {
       const street = streets[i];
       const streetName = street.name || street;
@@ -502,61 +510,50 @@ export default function Unternehmenssuche() {
           },
         );
 
-        // Geocode each lead to get coordinates
-        const withCoordinates = await Promise.all(
-          leads.map(async (lead) => {
-            // Check against database leads (outer allLeads)
-            const isDuplicate = allLeads.some(
-              (existing) =>
-                existing.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
-                (existing.strasse_hausnummer?.toLowerCase() ===
-                  lead.strasse_hausnummer?.toLowerCase() ||
-                  existing.telefon === lead.telefon),
-            );
+        // Geocode each lead to get coordinates and save to DB
+        const leadsToSave = [];
+        
+        for (const lead of leads) {
+          // Check against database leads (outer allLeads)
+          const isDuplicate = allLeads.some(
+            (existing) =>
+              existing.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
+              (existing.strasse_hausnummer?.toLowerCase() ===
+                lead.strasse_hausnummer?.toLowerCase() ||
+                existing.telefon === lead.telefon),
+          );
 
-            if (isDuplicate) return null;
+          if (isDuplicate) continue;
 
-            // Also check if already in newlyFound (this session)
-            const isAlreadyFound = newlyFound.some(
-              (found) =>
-                found.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
-                (found.strasse_hausnummer?.toLowerCase() ===
-                  lead.strasse_hausnummer?.toLowerCase() ||
-                  found.telefon === lead.telefon),
-            );
+          const coords = await geocodeAddress(
+            lead.street_name || streetName,
+            lead.street_number || "",
+            selectedArea.city || cityInput,
+          );
 
-            if (isAlreadyFound) return null;
+          leadsToSave.push({
+            firma: lead.firma || "",
+            strasse_hausnummer: lead.strasse_hausnummer || "",
+            postleitzahl: lead.postleitzahl || "",
+            stadt: lead.stadt || selectedArea.city || cityInput,
+            telefon: lead.telefon || "",
+            email: lead.email || "",
+            infobox: `Branche: ${lead.branche || "-"}\nWebseite: ${lead.webseite || "-"}\nGefunden über: ${streetName}, ${selectedArea.city || cityInput}`,
+            status: "Neu",
+            pool_status: "im_pool",
+            benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
+            sparte: "1&1 Versatel",
+            latitude: coords?.lat?.toString() || "",
+            longitude: coords?.lon?.toString() || "",
+            area_id: selectedArea.id,
+          });
+        }
 
-            // Also check if already in foundCompanies (existing state)
-            const isAlreadyInState = foundCompanies.some(
-              (found) =>
-                found.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
-                (found.strasse_hausnummer?.toLowerCase() ===
-                  lead.strasse_hausnummer?.toLowerCase() ||
-                  found.telefon === lead.telefon),
-            );
-
-            if (isAlreadyInState) return null;
-
-            const coords = await geocodeAddress(
-              lead.street_name || streetName,
-              lead.street_number || "",
-              selectedArea.city || cityInput,
-            );
-
-            return {
-              ...lead,
-              id: `${Date.now()}-${Math.random()}`,
-              area_id: selectedArea.id,
-              source_address: `${streetName}, ${selectedArea.city || cityInput}`,
-              latitude: coords?.lat?.toString() || "",
-              longitude: coords?.lon?.toString() || "",
-            };
-          }),
-        );
-
-        const filteredNewLeads = withCoordinates.filter(Boolean);
-        newlyFound = [...newlyFound, ...filteredNewLeads];
+        if (leadsToSave.length > 0) {
+          await base44.entities.Lead.bulkCreate(leadsToSave);
+          // Refresh leads to show progress on map/list
+          await refetchAllLeads();
+        }
 
         await new Promise((resolve) => setTimeout(resolve, 1500));
       } catch (err) {
@@ -564,13 +561,12 @@ export default function Unternehmenssuche() {
       }
     }
 
-    setFoundCompanies([...foundCompanies, ...newlyFound]);
     setGeneratingArea(null);
     setGenerationProgress({});
     setActiveSection("generator");
     toast({
       title: "Erfolgreich",
-      description: `${newlyFound.length} Unternehmen gefunden!`,
+      description: `Generierung abgeschlossen!`,
     });
   }
 
@@ -624,39 +620,32 @@ export default function Unternehmenssuche() {
     }
 
     const employee = employees.find((e) => e.full_name === assignEmployee);
-    const leadsToCreate = foundCompanies.map((company) => ({
-      firma: company.firma || "",
-      strasse_hausnummer: company.strasse_hausnummer || "",
-      postleitzahl: company.postleitzahl || "",
-      stadt: company.stadt || cityInput,
-      telefon: company.telefon || "",
-      email: company.email || "",
-      infobox: `Branche: ${company.branche || "-"}\nWebseite: ${company.webseite || "-"}\nGefunden über: ${company.source_address || "Unternehmensuche"}`,
-      assigned_to: employee?.full_name || "",
-      assigned_to_email: employee?.email || "",
-      status: "Neu",
-      pool_status: "zugewiesen",
-      benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
-      sparte: "1&1 Versatel",
-      latitude: company.latitude?.toString() || "",
-      longitude: company.longitude?.toString() || "",
-      area_id: company.area_id || selectedArea?.id,
-    }));
-
+    
     try {
-      await base44.entities.Lead.bulkCreate(leadsToCreate);
+      // Update existing pool leads to assigned leads
+      const updatePromises = foundCompanies.map((company) => 
+        base44.entities.Lead.update(company.id, {
+          assigned_to: employee?.full_name || "",
+          assigned_to_email: employee?.email || "",
+          pool_status: "zugewiesen",
+          status: "Neu"
+        })
+      );
+
+      await Promise.all(updatePromises);
+      
       queryClient.invalidateQueries(["leads"]);
       queryClient.invalidateQueries(["allLeads"]);
       if (refetchAllLeads) await refetchAllLeads();
-      setFoundCompanies([]);
+      
       toast({
         title: "Erfolgreich",
-        description: `${leadsToCreate.length} Leads erstellt und ${employee?.full_name} zugewiesen!`,
+        description: `${foundCompanies.length} Leads zugewiesen an ${employee?.full_name}!`,
       });
     } catch (error) {
       toast({
         title: "Fehler",
-        description: "Fehler beim Erstellen: " + error.message,
+        description: "Fehler beim Zuweisen: " + error.message,
         variant: "destructive",
       });
     }

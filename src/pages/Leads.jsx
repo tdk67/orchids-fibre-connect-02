@@ -723,62 +723,94 @@ export default function Leads() {
     setIsImporting(true);
 
     try {
-      const lines = pastedData.trim().split('\n');
-      const assignedEmployee = employees.find(e => e.full_name === importAssignedTo);
+      const lines = pastedData.trim().split("\n");
+      const assignedEmployee = employees.find(
+        (e) => e.full_name === importAssignedTo,
+      );
       const existingLeads = await base44.entities.Lead.list();
 
       let imported = 0;
       let merged = 0;
 
-      const parsedLeads = lines.map(line => {
-        const columns = line.split('\t');
-        return {
-          firma: columns[0] || '',
-          ansprechpartner: columns[1] || '',
-          stadt: columns[2] || '',
-          postleitzahl: columns[3] || '',
-          strasse_hausnummer: columns[4] || '',
-          telefon: columns[5] || '',
-          telefon2: columns[6] || '',
-          email: columns[7] || '',
-          infobox: columns[8] || '',
-          leadnummer: columns[9] || '',
-          cluster_id: columns[10] || '',
-          assigned_to: assignedEmployee?.full_name || '',
-          assigned_to_email: assignedEmployee?.email || '',
-          sparte: '1&1 Versatel',
-          status: 'Neu',
-          benutzertyp: user?.benutzertyp || 'Interner Mitarbeiter'
-        };
-      }).filter(lead => lead.firma);
+      const parsedLeads = lines
+        .map((line) => {
+          const columns = line.split("\t");
+          return {
+            firma: columns[0] || "",
+            ansprechpartner: columns[1] || "",
+            stadt: columns[2] || "",
+            postleitzahl: columns[3] || "",
+            strasse_hausnummer: columns[4] || "",
+            telefon: columns[5] || "",
+            telefon2: columns[6] || "",
+            email: columns[7] || "",
+            infobox: columns[8] || "",
+            leadnummer: columns[9] || "",
+            cluster_id: columns[10] || "",
+            assigned_to: assignedEmployee?.full_name || "",
+            assigned_to_email: assignedEmployee?.email || "",
+            sparte: "1&1 Versatel",
+            status: "Neu",
+            benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
+          };
+        })
+        .filter((lead) => lead.firma);
 
       if (parsedLeads.length === 0) {
-        alert('Keine gültigen Daten gefunden');
+        alert("Keine gültigen Daten gefunden");
         setIsImporting(false);
         return;
       }
 
+      const geocodeAddress = async (street, number, city) => {
+        try {
+          const q = `${street} ${number}, ${city}`.trim();
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
+          );
+          const data = await res.json();
+          if (data && data[0]) {
+            return { lat: data[0].lat, lon: data[0].lon };
+          }
+        } catch (e) {}
+        return null;
+      };
+
       for (const newLead of parsedLeads) {
         const duplicate = findDuplicateLead(newLead, existingLeads);
 
+        // Try to geocode if address exists
+        let coords = null;
+        if (newLead.strasse_hausnummer && newLead.stadt) {
+          coords = await geocodeAddress("", newLead.strasse_hausnummer, newLead.stadt);
+        }
+
+        const finalLeadData = {
+          ...newLead,
+          latitude: coords?.lat?.toString() || "",
+          longitude: coords?.lon?.toString() || "",
+        };
+
         if (duplicate) {
-          const mergedData = mergeDuplicateData(duplicate, newLead);
+          const mergedData = mergeDuplicateData(duplicate, finalLeadData);
           await base44.entities.Lead.update(duplicate.id, mergedData);
           merged++;
         } else {
-          await base44.entities.Lead.create(newLead);
+          await base44.entities.Lead.create(finalLeadData);
           imported++;
         }
       }
 
-      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(["leads"]);
       setIsImportDialogOpen(false);
-      setPastedData('');
-      setImportAssignedTo('');
-      alert(`Import erfolgreich!\n${imported} neue Leads erstellt\n${merged} Duplikate zusammengeführt`);
+      setPastedData("");
+      setImportAssignedTo("");
+      alert(
+        `Import erfolgreich!\n${imported} neue Leads erstellt\n${merged} Duplikate zusammengeführt`,
+      );
     } catch (error) {
-      alert('Fehler beim Import: ' + error.message);
-      console.error('Import error:', error);
+      alert("Fehler beim Import: " + error.message);
+      console.error("Import error:", error);
     } finally {
       setIsImporting(false);
     }
@@ -807,29 +839,59 @@ export default function Leads() {
     const isInternalAdmin = (user?.role === 'admin' || isTeamleiter) && userBenutzertyp === 'Interner Mitarbeiter';
     
     let filteredLeads = leads.filter((lead) => {
-      // WICHTIG: Pool-Leads (im_pool) niemals anzeigen - nur im Hintergrund
-      if (lead.pool_status === 'im_pool') return false;
-
       // Tab-basierte Filterung ZUERST
-      if (activeTab === 'aktiv') {
-        if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;
-      } else if (activeTab === 'angebote') {
-        if (!lead.verkaufschance_status) return false;
-      } else if (activeTab === 'bearbeitet') {
-        if (lead.archiv_kategorie !== 'Bearbeitet') return false;
-      } else if (activeTab === 'adresspunkte') {
-        if (lead.archiv_kategorie !== 'Adresspunkte') return false;
-      } else if (activeTab === 'verloren') {
-        if (!lead.verloren) return false;
-      } else if (activeTab === 'nicht_erreicht') {
-        if (lead.archiv_kategorie !== 'Nicht erreicht') return false;
-      } else if (activeTab === 'anderer_provider') {
-        if (lead.archiv_kategorie !== 'Anderer Provider') return false;
-      } else if (activeTab === 'kein_interesse') {
-        if (lead.archiv_kategorie !== 'Kein Interesse') return false;
-      } else if (activeTab === 'falsche_daten') {
-        if (lead.archiv_kategorie !== 'Falsche Daten') return false;
-      }
+      if (activeTab === "aktiv") {
+          if (
+            lead.pool_status === "im_pool" ||
+            lead.archiv_kategorie ||
+            lead.verkaufschance_status ||
+            lead.verloren
+          )
+            return false;
+        } else if (activeTab === "pool") {
+          if (lead.pool_status !== "im_pool") return false;
+        } else if (activeTab === "angebote") {
+          if (lead.pool_status === "im_pool" || !lead.verkaufschance_status)
+            return false;
+        } else if (activeTab === "bearbeitet") {
+          if (
+            lead.pool_status === "im_pool" ||
+            lead.archiv_kategorie !== "Bearbeitet"
+          )
+            return false;
+        } else if (activeTab === "adresspunkte") {
+          if (
+            lead.pool_status === "im_pool" ||
+            lead.archiv_kategorie !== "Adresspunkte"
+          )
+            return false;
+        } else if (activeTab === "verloren") {
+          if (lead.pool_status === "im_pool" || !lead.verloren) return false;
+        } else if (activeTab === "nicht_erreicht") {
+          if (
+            lead.pool_status === "im_pool" ||
+            lead.archiv_kategorie !== "Nicht erreicht"
+          )
+            return false;
+        } else if (activeTab === "anderer_provider") {
+          if (
+            lead.pool_status === "im_pool" ||
+            lead.archiv_kategorie !== "Anderer Provider"
+          )
+            return false;
+        } else if (activeTab === "kein_interesse") {
+          if (
+            lead.pool_status === "im_pool" ||
+            lead.archiv_kategorie !== "Kein Interesse"
+          )
+            return false;
+        } else if (activeTab === "falsche_daten") {
+          if (
+            lead.pool_status === "im_pool" ||
+            lead.archiv_kategorie !== "Falsche Daten"
+          )
+            return false;
+        }
 
       // Benutzertyp-Filter - Allow leads explicitly assigned to the user regardless of benutzertyp
       const isAssignedToMe = lead.assigned_to_email === user?.email;
@@ -1154,13 +1216,16 @@ export default function Leads() {
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
               <Tabs value={activeTab} onValueChange={(tab) => navigate(createPageUrl('Leads') + `?tab=${tab}`)} className="space-y-4">
-                <TabsList className="grid w-full grid-cols-9 bg-slate-100 p-1.5 gap-1">
-                  <TabsTrigger value="aktiv" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                    Aktiv ({leads.filter(l => l.pool_status !== 'im_pool' && !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
-                  </TabsTrigger>
-                  <TabsTrigger value="angebote" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-                    Angebote ({leads.filter(l => l.pool_status !== 'im_pool' && l.verkaufschance_status).length})
-                  </TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-10 bg-slate-100 p-1.5 gap-1">
+                    <TabsTrigger value="aktiv" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                      Aktiv ({leads.filter(l => l.pool_status !== 'im_pool' && !l.archiv_kategorie && !l.verkaufschance_status && !l.verloren).length})
+                    </TabsTrigger>
+                    <TabsTrigger value="pool" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white">
+                      Pool ({leads.filter(l => l.pool_status === 'im_pool').length})
+                    </TabsTrigger>
+                    <TabsTrigger value="angebote" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                      Angebote ({leads.filter(l => l.pool_status !== 'im_pool' && l.verkaufschance_status).length})
+                    </TabsTrigger>
                   <TabsTrigger value="bearbeitet" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
                     Bearbeitet ({leads.filter(l => l.pool_status !== 'im_pool' && l.archiv_kategorie === 'Bearbeitet').length})
                   </TabsTrigger>
