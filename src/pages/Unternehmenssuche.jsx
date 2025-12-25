@@ -197,54 +197,54 @@ export default function Unternehmenssuche() {
     },
   });
 
-    const getAreaLeadMatch = (lead, area) => {
-      if (!lead || !area) return false;
-      if (lead.area_id === area.id) return true;
+  const getAreaLeadMatch = (lead, area) => {
+    if (!lead || !area) return false;
+    if (lead.area_id === area.id) return true;
+    
+    const leadCity = lead.stadt?.toLowerCase();
+    const areaCity = area.city?.toLowerCase();
+    if (leadCity !== areaCity) return false;
+
+    const streetName = lead.strasse_hausnummer?.split(/\s\d/)[0]?.trim()?.toLowerCase();
+    if (!streetName) return false;
+
+    const areaStreets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
+    return areaStreets.some(s => {
+      const aStreetName = (typeof s === 'string' ? s : s.name)?.toLowerCase();
+      return aStreetName && (streetName.includes(aStreetName) || aStreetName.includes(streetName));
+    });
+  };
+
+  const filteredLeads = useMemo(() => {
+    if (!filterCity && filterAreaId === 'all') return [];
+
+    return allLeads.filter((lead) => {
+      const cityMatch = !filterCity || lead.stadt?.toLowerCase() === filterCity.toLowerCase();
       
-      const leadCity = lead.stadt?.toLowerCase();
-      const areaCity = area.city?.toLowerCase();
-      if (leadCity !== areaCity) return false;
+      let areaMatch = true;
+      if (filterAreaId !== 'all') {
+        const area = savedAreas.find(a => a.id === filterAreaId);
+        areaMatch = getAreaLeadMatch(lead, area);
+      }
+      
+      return cityMatch && areaMatch;
+    });
+  }, [allLeads, filterCity, filterAreaId, savedAreas]);
 
-      const streetName = lead.strasse_hausnummer?.split(/\s\d/)[0]?.trim()?.toLowerCase();
-      if (!streetName) return false;
+  const selectedAreaLeads = useMemo(() => {
+    const areaToUse = savedAreas.find(a => a.id === (genAreaId !== 'all' ? genAreaId : selectedAreaId));
+    if (!areaToUse) return [];
 
-      const areaStreets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
-      return areaStreets.some(s => {
-        const aStreetName = (typeof s === 'string' ? s : s.name)?.toLowerCase();
-        return aStreetName && (streetName.includes(aStreetName) || aStreetName.includes(streetName));
-      });
-    };
+    return allLeads.filter(lead => getAreaLeadMatch(lead, areaToUse));
+  }, [allLeads, savedAreas, genAreaId, selectedAreaId]);
 
-    const filteredLeads = useMemo(() => {
-      if (!filterCity && filterAreaId === 'all') return [];
+  const leadsWithCoordinates = useMemo(() => {
+    return filteredLeads.filter((lead) => lead.latitude && lead.longitude);
+  }, [filteredLeads]);
 
-      return allLeads.filter((lead) => {
-        const cityMatch = !filterCity || lead.stadt?.toLowerCase() === filterCity.toLowerCase();
-        
-        let areaMatch = true;
-        if (filterAreaId !== 'all') {
-          const area = savedAreas.find(a => a.id === filterAreaId);
-          areaMatch = getAreaLeadMatch(lead, area);
-        }
-        
-        return cityMatch && areaMatch;
-      });
-    }, [allLeads, filterCity, filterAreaId, savedAreas]);
-
-    const selectedAreaLeads = useMemo(() => {
-      const areaToUse = savedAreas.find(a => a.id === (genAreaId !== 'all' ? genAreaId : selectedAreaId));
-      if (!areaToUse) return [];
-
-      return allLeads.filter(lead => getAreaLeadMatch(lead, areaToUse));
-    }, [allLeads, savedAreas, genAreaId, selectedAreaId]);
-
-    const leadsWithCoordinates = useMemo(() => {
-      return filteredLeads.filter((lead) => lead.latitude && lead.longitude);
-    }, [filteredLeads]);
-
-    const foundWithCoordinates = useMemo(() => {
-      return foundCompanies.filter((company) => company.latitude && company.longitude);
-    }, [foundCompanies]);
+  const foundWithCoordinates = useMemo(() => {
+    return foundCompanies.filter((company) => company.latitude && company.longitude);
+  }, [foundCompanies]);
 
 
   async function loadAreas() {
