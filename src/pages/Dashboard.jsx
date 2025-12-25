@@ -109,24 +109,33 @@ export default function Dashboard() {
   
   console.log('Dashboard Filter:', { userBenutzertyp, isInternalAdmin, selectedBenutzertyp, userRole: user?.role });
   
-  const leads = isInternalAdmin
-    ? allLeads.filter(l => l.benutzertyp === selectedBenutzertyp && l.pool_status !== 'im_pool')
-    : allLeads.filter(lead => {
-        // Pool-Leads niemals anzeigen
-        if (lead.pool_status === 'im_pool') return false;
-        // Benutzertyp prüfen
-        if (lead.benutzertyp !== userBenutzertyp) return false;
-        // Teamleiter in Mitarbeiter-Ansicht: nur eigene
-        if (isTeamleiter && !teamleiterAnsicht) {
+    const leads = isInternalAdmin
+      ? allLeads.filter(l => 
+          l.benutzertyp === selectedBenutzertyp && 
+          l.pool_status !== 'im_pool' &&
+          !l.archiv_kategorie &&
+          !l.verkaufschance_status &&
+          !l.verloren
+        )
+      : allLeads.filter(lead => {
+          // Pool-Leads niemals anzeigen
+          if (lead.pool_status === 'im_pool') return false;
+          // Nur aktive Leads zählen (keine archivierten, keine Angebote, nicht verloren)
+          if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren) return false;
+          
+          // Benutzertyp prüfen
+          if (lead.benutzertyp !== userBenutzertyp) return false;
+          // Teamleiter in Mitarbeiter-Ansicht: nur eigene
+          if (isTeamleiter && !teamleiterAnsicht) {
+            return lead.assigned_to_email === user?.email;
+          }
+          // Teamleiter in Team-Ansicht: alle
+          if (isTeamleiter && teamleiterAnsicht) {
+            return true;
+          }
+          // Normaler Mitarbeiter: nur eigene
           return lead.assigned_to_email === user?.email;
-        }
-        // Teamleiter in Team-Ansicht: alle
-        if (isTeamleiter && teamleiterAnsicht) {
-          return true;
-        }
-        // Normaler Mitarbeiter: nur eigene
-        return lead.assigned_to_email === user?.email;
-      });
+        });
 
   const sales = isInternalAdmin
     ? allSales.filter(s => s.benutzertyp === selectedBenutzertyp)

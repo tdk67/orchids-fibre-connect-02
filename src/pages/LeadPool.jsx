@@ -64,8 +64,16 @@ export default function LeadPool() {
   });
 
   const poolLeads = filteredLeads.filter(l => l.pool_status === 'im_pool');
-  const assignedLeads = filteredLeads.filter(l => l.pool_status === 'zugewiesen');
-  const completedLeads = filteredLeads.filter(l => l.pool_status === 'bearbeitet');
+  const assignedLeads = filteredLeads.filter(l => 
+    l.pool_status === 'zugewiesen' &&
+    !l.archiv_kategorie &&
+    !l.verkaufschance_status &&
+    !l.verloren
+  );
+  const completedLeads = filteredLeads.filter(l => 
+    l.pool_status === 'bearbeitet' || 
+    (l.pool_status === 'zugewiesen' && l.archiv_kategorie === 'Bearbeitet')
+  );
 
   // Mitarbeiter-Statistiken
   const employeeStats = employees.map(emp => {
