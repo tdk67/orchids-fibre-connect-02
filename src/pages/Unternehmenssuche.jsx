@@ -200,55 +200,12 @@ export default function Unternehmenssuche() {
 
   const [showAreaDialog, setShowAreaDialog] = useState(false);
 
-  const [generatingArea, setGeneratingArea] = useState(null);
-  const [generationProgress, setGenerationProgress] = useState({});
-  const [assignEmployee, setAssignEmployee] = useState("");
-
-  const { isImporting, progress: importProgress, importCityData, getImportStatus } = useOSMImport();
-  const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
-
-  const checkImportStatus = useCallback(async () => {
-    if (!cityInput) return;
-    const status = await getImportStatus(cityInput);
-    setCurrentCityImportStatus(status);
-  }, [cityInput, getImportStatus]);
-
-  useEffect(() => {
-    checkImportStatus();
-  }, [cityInput, checkImportStatus, isImporting]);
-
-  const queryClient = useQueryClient();
-  const location = useLocation();
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const city = params.get("city");
-    const areaId = params.get("areaId");
-    if (city) {
-      setCityInput(city);
-      setFilterCity(city);
-    }
-    if (areaId) {
-      setFilterAreaId(areaId);
-      setGenAreaId(areaId);
-      setSelectedAreaId(areaId);
-    }
-  }, [location.search]);
-
-  useEffect(() => {
-    base44.auth
-      .me()
-      .then(setUser)
-      .catch(() => {});
-    loadAreas();
-  }, []);
-
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
     queryFn: () => base44.entities.Employee.list(),
   });
 
-    const {
+  const {
     data: allLeads = [],
     isLoading: isLoadingLeads,
     refetch: refetchAllLeads,
@@ -260,47 +217,11 @@ export default function Unternehmenssuche() {
     },
   });
 
-  useEffect(() => {
-    if (activeSection === "leads" || activeSection === "generator") {
-      refetchAllLeads();
-    }
-  }, [activeSection, refetchAllLeads]);
+  const [generatingArea, setGeneratingArea] = useState(null);
+  const [generationProgress, setGenerationProgress] = useState({});
+  const [rescanMode, setRescanMode] = useState(false);
+  const [assignEmployee, setAssignEmployee] = useState("");
 
-  const getAreaLeadMatch = (lead, area) => {
-    if (!lead || !area) return false;
-
-    // Direct match by ID is the most reliable - ensure string comparison
-    if (lead.area_id && area.id && String(lead.area_id) === String(area.id)) return true;
-
-    // Fallback: Geometric/Street match for leads that might not have area_id (e.g. from Excel)
-    const leadCity = lead.stadt?.toLowerCase()?.trim();
-    const areaCity = area.city?.toLowerCase()?.trim();
-    if (leadCity && areaCity && leadCity !== areaCity) return false;
-
-    const leadStreet = lead.strasse_hausnummer?.toLowerCase()?.trim();
-    if (!leadStreet) return false;
-
-    // Extract street name (everything before the first digit)
-    const streetNameMatch = leadStreet.match(/^([^0-9]+)/);
-    const leadStreetName = streetNameMatch
-      ? streetNameMatch[1].trim()
-      : leadStreet;
-
-    const areaStreets =
-      typeof area.streets === "string"
-        ? JSON.parse(area.streets)
-        : area.streets || [];
-
-    return areaStreets.some((s) => {
-      const aStreetName = (typeof s === "string" ? s : s.name)
-        ?.toLowerCase()
-        ?.trim();
-      if (!aStreetName) return false;
-      return (
-        leadStreetName.includes(aStreetName) ||
-        aStreetName.includes(leadStreetName)
-      );
-    });
   };
 
   const poolLeads = useMemo(() => {
@@ -518,6 +439,23 @@ export default function Unternehmenssuche() {
     setGeneratingArea(selectedArea.id);
     setGenerationProgress({});
 
+    // 1. Re-assign existing leads that fall within bounds spatially
+    // This handles Excel imports or leads previously outside but now inside a newly drawn area
+    const leadsToReassign = allLeads.filter(lead => 
+      !lead.area_id && lead.latitude && lead.longitude && isPointInBounds(lead.latitude, lead.longitude, selectedArea.bounds)
+    );
+
+    if (leadsToReassign.length > 0) {
+      for (const lead of leadsToReassign) {
+        try {
+          await base44.entities.Lead.update(lead.id, { area_id: selectedArea.id });
+        } catch (e) {
+          console.error("Failed to reassign lead:", lead.id, e);
+        }
+      }
+      await refetchAllLeads();
+    }
+
     // Keep track of leads found in this session to prevent duplicates
     const sessionLeads = [];
 
@@ -531,10 +469,22 @@ export default function Unternehmenssuche() {
         street: streetName,
       });
 
+      // Skip already loaded streets unless rescanMode is active
+      const streetCity = selectedArea.city || cityInput;
+      const alreadyHasLeads = allLeads.some(l => 
+        l.stadt?.toLowerCase() === streetCity.toLowerCase() && 
+        l.strasse_hausnummer?.toLowerCase().includes(streetName.toLowerCase())
+      );
+
+      if (alreadyHasLeads && !rescanMode) {
+        console.log(`Skipping already loaded street: ${streetName}`);
+        continue;
+      }
+
       try {
         const leads = await fetchStreetLeads(
           streetName,
-          selectedArea.city || cityInput,
+          streetCity,
           {
             maxPages: 5,
           },
@@ -1473,32 +1423,55 @@ export default function Unternehmenssuche() {
                   ) : (
                     <div className="space-y-6">
                       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h3 className="font-bold text-blue-900 text-lg">
-                              {savedAreas.find((a) => a.id === genAreaId)
-                                ?.name || selectedArea?.name}
-                            </h3>
-                            <p className="text-sm text-blue-700 mt-1">
-                              {cityInput}
-                            </p>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id="rescan-mode"
+                                checked={rescanMode}
+                                onChange={(e) => setRescanMode(e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <Label
+                                htmlFor="rescan-mode"
+                                className="text-sm font-medium text-blue-900 cursor-pointer"
+                              >
+                                Bereits geladene Straßen erneut scannen
+                              </Label>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 h-8"
+                              onClick={async () => {
+                                if (!confirm("Sollen alle Leads ohne Bereichszuordnung räumlich auf diesen Bereich geprüft werden?")) return;
+                                const areaToUse = savedAreas.find(a => a.id === genAreaId) || selectedArea;
+                                if (!areaToUse) return;
+                                
+                                const leadsToReassign = allLeads.filter(lead => 
+                                  !lead.area_id && lead.latitude && lead.longitude && isPointInBounds(lead.latitude, lead.longitude, areaToUse.bounds)
+                                );
+                                
+                                if (leadsToReassign.length === 0) {
+                                  toast({ title: "Info", description: "Keine passenden Leads ohne Bereich gefunden." });
+                                  return;
+                                }
+                                
+                                for (const lead of leadsToReassign) {
+                                  await base44.entities.Lead.update(lead.id, { area_id: areaToUse.id });
+                                }
+                                await refetchAllLeads();
+                                toast({ title: "Erfolg", description: `${leadsToReassign.length} Leads dem Bereich zugeordnet.` });
+                              }}
+                            >
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Räumlich abgleichen
+                            </Button>
                           </div>
-                          <Badge className="bg-blue-600 text-white">
-                            {(() => {
-                              const area =
-                                savedAreas.find((a) => a.id === genAreaId) ||
-                                selectedArea;
-                              const streets =
-                                typeof area?.streets === "string"
-                                  ? JSON.parse(area.streets)
-                                  : area?.streets || [];
-                              return streets.length;
-                            })()}{" "}
-                            Straßen
-                          </Badge>
-                        </div>
-                        <Button
-                          onClick={generateLeadsForArea}
+
+                          <Button
+                            onClick={generateLeadsForArea}
+
                           disabled={
                             generatingArea ===
                             (genAreaId !== "all" ? genAreaId : selectedAreaId)
