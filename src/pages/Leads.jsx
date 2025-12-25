@@ -857,16 +857,33 @@ export default function Leads() {
         // City filter
         const cityMatch = !filterCity || lead.stadt?.toLowerCase().includes(filterCity.toLowerCase());
         
-        // Area (area_id) filter
-        let areaMatch = true;
-        if (filterAreaId !== 'all') {
-          const area = savedAreas.find(a => a.id === filterAreaId);
-          if (area) {
-            areaMatch = lead.area_id === area.id || 
-                       (lead.stadt?.toLowerCase() === area.city?.toLowerCase() && 
-                        (typeof area.streets === 'string' ? area.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
+      // Area (area_id) filter
+      let areaMatch = true;
+      if (filterAreaId !== 'all') {
+        const area = savedAreas.find(a => a.id === filterAreaId);
+        if (area) {
+          if (lead.area_id === area.id) {
+            areaMatch = true;
+          } else {
+            const leadCity = lead.stadt?.toLowerCase();
+            const areaCity = area.city?.toLowerCase();
+            if (leadCity !== areaCity) {
+              areaMatch = false;
+            } else {
+              const streetName = lead.strasse_hausnummer?.split(/\s\d/)[0]?.trim()?.toLowerCase();
+              if (!streetName) {
+                areaMatch = false;
+              } else {
+                const areaStreets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
+                areaMatch = areaStreets.some(s => {
+                  const aStreetName = (typeof s === 'string' ? s : s.name)?.toLowerCase();
+                  return aStreetName && (streetName.includes(aStreetName) || aStreetName.includes(streetName));
+                });
+              }
+            }
           }
         }
+      }
         
         // Street filter
         const streetMatch = !filterStreet || lead.strasse_hausnummer?.toLowerCase().includes(filterStreet.toLowerCase());

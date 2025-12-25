@@ -197,56 +197,46 @@ export default function Unternehmenssuche() {
     },
   });
 
-  const filteredLeads = useMemo(() => {
-    if (!filterCity && filterAreaId === 'all') return [];
-
-    return allLeads.filter((lead) => {
-      const cityMatch = !filterCity || lead.stadt?.toLowerCase() === filterCity.toLowerCase();
+    const getAreaLeadMatch = (lead, area) => {
+      if (!lead || !area) return false;
+      if (lead.area_id === area.id) return true;
       
-      let areaMatch = true;
-      if (filterAreaId !== 'all') {
-        const area = savedAreas.find(a => a.id === filterAreaId);
-        if (area) {
-          // Check if lead belongs to this area
-          areaMatch = lead.area_id === area.id || 
-                     (lead.stadt?.toLowerCase() === area.city?.toLowerCase() && 
-                      (typeof area.streets === 'string' ? area.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
+      const leadCity = lead.stadt?.toLowerCase();
+      const areaCity = area.city?.toLowerCase();
+      if (leadCity !== areaCity) return false;
+
+      const streetName = lead.strasse_hausnummer?.split(/\s\d/)[0]?.trim()?.toLowerCase();
+      if (!streetName) return false;
+
+      const areaStreets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
+      return areaStreets.some(s => {
+        const aStreetName = (typeof s === 'string' ? s : s.name)?.toLowerCase();
+        return aStreetName && (streetName.includes(aStreetName) || aStreetName.includes(streetName));
+      });
+    };
+
+    const filteredLeads = useMemo(() => {
+      if (!filterCity && filterAreaId === 'all') return [];
+
+      return allLeads.filter((lead) => {
+        const cityMatch = !filterCity || lead.stadt?.toLowerCase() === filterCity.toLowerCase();
+        
+        let areaMatch = true;
+        if (filterAreaId !== 'all') {
+          const area = savedAreas.find(a => a.id === filterAreaId);
+          areaMatch = getAreaLeadMatch(lead, area);
         }
-      }
-      
-      return cityMatch && areaMatch;
-    });
-  }, [allLeads, filterCity, filterAreaId, savedAreas]);
+        
+        return cityMatch && areaMatch;
+      });
+    }, [allLeads, filterCity, filterAreaId, savedAreas]);
 
-  const leadsWithCoordinates = useMemo(() => {
-    return filteredLeads.filter((lead) => {
-      const lat = parseFloat(lead.latitude);
-      const lng = parseFloat(lead.longitude);
-      return !isNaN(lat) && !isNaN(lng);
-    });
-  }, [filteredLeads]);
+    const selectedAreaLeads = useMemo(() => {
+      const areaToUse = savedAreas.find(a => a.id === (genAreaId !== 'all' ? genAreaId : selectedAreaId));
+      if (!areaToUse) return [];
 
-  const uniqueCities = useMemo(() => {
-    return [...new Set(allLeads.map((l) => l.stadt).filter(Boolean))].sort();
-  }, [allLeads]);
-
-  const foundWithCoordinates = useMemo(() => {
-    return foundCompanies.filter((c) => !isNaN(parseFloat(c.latitude)) && !isNaN(parseFloat(c.longitude)));
-  }, [foundCompanies]);
-
-  const selectedAreaLeads = useMemo(() => {
-    const areaToUse = savedAreas.find(a => a.id === (genAreaId !== 'all' ? genAreaId : selectedAreaId));
-    if (!areaToUse) return [];
-
-    return allLeads.filter(lead => {
-      const cityMatch = lead.stadt?.toLowerCase() === (areaToUse.city || cityInput).toLowerCase();
-      const areaMatch = lead.area_id === areaToUse.id || 
-                       (lead.stadt?.toLowerCase() === areaToUse.city?.toLowerCase() && 
-                        (typeof areaToUse.streets === 'string' ? areaToUse.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
-      
-      return cityMatch && areaMatch;
-    });
-  }, [allLeads, savedAreas, genAreaId, selectedAreaId, cityInput]);
+      return allLeads.filter(lead => getAreaLeadMatch(lead, areaToUse));
+    }, [allLeads, savedAreas, genAreaId, selectedAreaId]);
 
   async function loadAreas() {
     try {
@@ -504,6 +494,7 @@ export default function Unternehmenssuche() {
       sparte: '1&1 Versatel',
       latitude: company.latitude?.toString() || '',
       longitude: company.longitude?.toString() || '',
+      area_id: company.area_id || selectedArea?.id,
     }));
     
     try {
@@ -678,25 +669,25 @@ export default function Unternehmenssuche() {
                             );
                           })}
 
-                        {foundWithCoordinates.map((company) => {
-                          const lat = parseFloat(company.latitude);
-                          const lng = parseFloat(company.longitude);
-                          return (
-                            <Marker key={company.id} position={[lat, lng]} icon={createCustomIcon('#10b981')}>
-                              <Popup>
-                                <div className="p-2">
-                                  <h3 className="font-bold text-slate-900">{company.firma || 'Unbekannt'}</h3>
-                                  <p className="text-sm text-slate-600 mt-1">
-                                    {company.strasse_hausnummer}
-                                  </p>
-                                  <Badge className="mt-2 bg-green-100 text-green-800">
-                                    Neuer Fund
-                                  </Badge>
-                                </div>
-                              </Popup>
-                            </Marker>
-                          );
-                        })}
+                          {foundWithCoordinates.map((company) => {
+                            const lat = parseFloat(company.latitude);
+                            const lng = parseFloat(company.longitude);
+                            return (
+                              <Marker key={company.id} position={[lat, lng]} icon={createCustomIcon('#3b82f6')}>
+                                <Popup>
+                                  <div className="p-2">
+                                    <h3 className="font-bold text-slate-900">{company.firma || 'Unbekannt'}</h3>
+                                    <p className="text-sm text-slate-600 mt-1">
+                                      {company.strasse_hausnummer}
+                                    </p>
+                                    <Badge className="mt-2 bg-blue-100 text-blue-800">
+                                      Gefunden (nicht gespeichert)
+                                    </Badge>
+                                  </div>
+                                </Popup>
+                              </Marker>
+                            );
+                          })}
                       </MapContainer>
                     </div>
                   </CardContent>
@@ -720,18 +711,14 @@ export default function Unternehmenssuche() {
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-                        {savedAreas.map((area) => {
-                          const streets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
-                          const isSelected = area.id === selectedAreaId;
-                          const areaLeads = allLeads.filter(lead => 
-                            lead.area_id === area.id || 
-                            (lead.stadt?.toLowerCase() === area.city?.toLowerCase() && 
-                             (typeof area.streets === 'string' ? area.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false))
-                          );
-                          return (
-                            <div
-                              key={area.id}
-                              className={`group p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          {savedAreas.map((area) => {
+                            const streets = typeof area.streets === 'string' ? JSON.parse(area.streets) : area.streets || [];
+                            const isSelected = area.id === selectedAreaId;
+                            const areaLeads = allLeads.filter(lead => getAreaLeadMatch(lead, area));
+                            return (
+                              <div
+                                key={area.id}
+                                className={`group p-3 rounded-lg border-2 cursor-pointer transition-all ${
                                 isSelected
                                   ? 'border-blue-500 bg-blue-50 shadow-md'
                                   : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm'
