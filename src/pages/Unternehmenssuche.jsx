@@ -36,6 +36,9 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
   Search,
   MapPin,
   Building2,
@@ -179,6 +182,7 @@ export default function Unternehmenssuche() {
   const [filterCity, setFilterCity] = useState("");
   const [filterAreaId, setFilterAreaId] = useState("all");
   const [genAreaId, setGenAreaId] = useState("all");
+  const [sortConfig, setSortConfig] = useState({ key: "firma", direction: "asc" });
 
   const selectedArea = useMemo(() => {
     const areaId =
@@ -239,8 +243,8 @@ export default function Unternehmenssuche() {
   const getAreaLeadMatch = (lead, area) => {
     if (!lead || !area) return false;
 
-    // Direct match by ID is the most reliable
-    if (lead.area_id === area.id) return true;
+    // Direct match by ID is the most reliable - ensure string comparison
+    if (lead.area_id && area.id && String(lead.area_id) === String(area.id)) return true;
 
     // Fallback: Geometric/Street match for leads that might not have area_id (e.g. from Excel)
     const leadCity = lead.stadt?.toLowerCase()?.trim();
@@ -298,6 +302,43 @@ export default function Unternehmenssuche() {
       return cityMatch && areaMatch;
     });
   }, [allLeads, filterCity, filterAreaId, savedAreas]);
+
+  const sortedLeads = useMemo(() => {
+    const sorted = [...filteredLeads];
+    if (sortConfig.key) {
+      sorted.sort((a, b) => {
+        let aVal = a[sortConfig.key] || "";
+        let bVal = b[sortConfig.key] || "";
+
+        if (sortConfig.key === "strasse_hausnummer") {
+          // Robust address sorting (Street Name -> Padded Number -> Firma)
+          const getStreetName = (addr) => addr?.match(/^[^0-9]*/)?.[0]?.trim() || "";
+          const getStreetNumber = (addr) => {
+            const match = addr?.match(/\d+/);
+            return match ? match[0].padStart(4, "0") : "0000";
+          };
+          aVal = `${getStreetName(aVal)}|${getStreetNumber(aVal)}|${a.firma || ""}`;
+          bVal = `${getStreetName(bVal)}|${getStreetNumber(bVal)}|${b.firma || ""}`;
+        }
+
+        aVal = aVal.toString().toLowerCase();
+        bVal = bVal.toString().toLowerCase();
+
+        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return sorted;
+  }, [filteredLeads, sortConfig]);
+
+  const requestSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
 
   const selectedAreaLeads = useMemo(() => {
     const areaToUse = savedAreas.find(
@@ -1008,8 +1049,8 @@ export default function Unternehmenssuche() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
-              {filteredLeads.length === 0 ? (
+            <CardContent className="p-0">
+              {sortedLeads.length === 0 ? (
                 <div className="text-center py-16 text-slate-500">
                   <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
                   <p className="text-lg font-medium">Keine Leads gefunden</p>
@@ -1018,67 +1059,146 @@ export default function Unternehmenssuche() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {filteredLeads.map((lead) => (
-                    <div
-                      key={lead.id}
-                      className="p-4 rounded-lg border-2 border-slate-200 hover:border-green-400 bg-white shadow-sm hover:shadow-md transition-all"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-slate-900 text-lg">
-                            {lead.firma || "Unbekannt"}
-                          </h4>
-                          <Badge
-                            className="mt-1"
-                            style={{
-                              backgroundColor:
-                                statusColors[lead.status] ||
-                                statusColors["Neu"],
-                            }}
-                          >
-                            {lead.status}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-sm text-slate-600 space-y-2">
-                        {lead.strasse_hausnummer && (
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                            <p className="flex-1">
-                              {lead.strasse_hausnummer}
-                              <br />
-                              {lead.postleitzahl} {lead.stadt}
-                            </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th
+                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => requestSort("firma")}
+                        >
+                          <div className="flex items-center gap-2">
+                            Firma
+                            {sortConfig.key === "firma" ? (
+                              sortConfig.direction === "asc" ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                            )}
                           </div>
-                        )}
-                        <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
-                          {lead.telefon && (
-                            <a
-                              href={`tel:${lead.telefon}`}
-                              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                        </th>
+                        <th
+                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => requestSort("strasse_hausnummer")}
+                        >
+                          <div className="flex items-center gap-2">
+                            Adresse
+                            {sortConfig.key === "strasse_hausnummer" ? (
+                              sortConfig.direction === "asc" ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => requestSort("stadt")}
+                        >
+                          <div className="flex items-center gap-2">
+                            Stadt
+                            {sortConfig.key === "stadt" ? (
+                              sortConfig.direction === "asc" ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => requestSort("status")}
+                        >
+                          <div className="flex items-center gap-2">
+                            Status
+                            {sortConfig.key === "status" ? (
+                              sortConfig.direction === "asc" ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                            )}
+                          </div>
+                        </th>
+                        <th className="px-6 py-4">Kontakt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {sortedLeads.map((lead) => (
+                        <tr
+                          key={lead.id}
+                          className="hover:bg-blue-50/50 transition-colors group"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                              {lead.firma || "Unbekannt"}
+                            </div>
+                            {lead.ansprechpartner && (
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {lead.ansprechpartner}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {lead.strasse_hausnummer}
+                            {lead.postleitzahl && (
+                              <div className="text-xs opacity-70">
+                                {lead.postleitzahl}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {lead.stadt}
+                          </td>
+                          <td className="px-6 py-4">
+                            <Badge
+                              style={{
+                                backgroundColor:
+                                  statusColors[lead.status] ||
+                                  statusColors["Neu"],
+                                color: "white",
+                              }}
                             >
-                              <Phone className="h-4 w-4" /> {lead.telefon}
-                            </a>
-                          )}
-                          {lead.email && (
-                            <a
-                              href={`mailto:${lead.email}`}
-                              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                            >
-                              <Mail className="h-4 w-4" /> {lead.email}
-                            </a>
-                          )}
-                        </div>
-                        {lead.assigned_to && (
-                          <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">
-                            <span className="font-medium">Zugewiesen:</span>{" "}
-                            {lead.assigned_to}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                              {lead.status}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-1">
+                              {lead.telefon && (
+                                <a
+                                  href={`tel:${lead.telefon}`}
+                                  className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  <span className="text-xs">{lead.telefon}</span>
+                                </a>
+                              )}
+                              {lead.email && (
+                                <a
+                                  href={`mailto:${lead.email}`}
+                                  className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                  <Mail className="h-3 w-3" />
+                                  <span className="text-xs">{lead.email}</span>
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>
