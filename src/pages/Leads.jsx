@@ -27,28 +27,38 @@ export default function Leads() {
   const navigate = useNavigate();
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [user, setUser] = useState(null);
-  const [filterCity, setFilterCity] = useState('all');
-  const [filterArea, setFilterArea] = useState('all');
-  const [filterStreet, setFilterStreet] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [importFile, setImportFile] = useState(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState('');
-  const [pastedData, setPastedData] = useState('');
-  const [importAssignedTo, setImportAssignedTo] = useState('');
-  const [selectedLeads, setSelectedLeads] = useState([]);
-  const [showBulkAssign, setShowBulkAssign] = useState(false);
-  const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
-  const [selectedAdresspunkte, setSelectedAdresspunkte] = useState([]);
+    const [filterCity, setFilterCity] = useState('');
+    const [filterAreaId, setFilterAreaId] = useState('all');
+    const [filterStreet, setFilterStreet] = useState('');
+    const [sortBy, setSortBy] = useState('name');
+    
+    const { data: savedAreas = [] } = useQuery({
+      queryKey: ['areas'],
+      queryFn: async () => {
+        const { data, error } = await base44.client.from('areas').select('*');
+        if (error) throw error;
+        return data || [];
+      },
+    });
+
+    const [importFile, setImportFile] = useState(null);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importStatus, setImportStatus] = useState('');
+    const [pastedData, setPastedData] = useState('');
+    const [importAssignedTo, setImportAssignedTo] = useState('');
+    const [selectedLeads, setSelectedLeads] = useState([]);
+    const [showBulkAssign, setShowBulkAssign] = useState(false);
+    const [bulkAssignEmployee, setBulkAssignEmployee] = useState('');
+    const [selectedAdresspunkte, setSelectedAdresspunkte] = useState([]);
     const location = useLocation();
     const activeTab = new URLSearchParams(location.search).get('tab') || 'aktiv';
     const cityParam = new URLSearchParams(location.search).get('city');
-    const plzParam = new URLSearchParams(location.search).get('plz');
+    const areaIdParam = new URLSearchParams(location.search).get('areaId');
 
     useEffect(() => {
       if (cityParam) setFilterCity(cityParam);
-      if (plzParam) setFilterArea(plzParam);
-    }, [cityParam, plzParam]);
+      if (areaIdParam) setFilterAreaId(areaIdParam);
+    }, [cityParam, areaIdParam]);
 
     const [showTerminDialog, setShowTerminDialog] = useState(false);
   const [selectedLeadForTermin, setSelectedLeadForTermin] = useState(null);
@@ -844,17 +854,25 @@ export default function Leads() {
         employeeMatch = lead.assigned_to === selectedEmployee;
       }
       
-      // City filter
-      const cityMatch = filterCity === 'all' || lead.stadt === filterCity;
-      
-      // Area (postleitzahl) filter
-      const areaMatch = filterArea === 'all' || lead.postleitzahl === filterArea;
-      
-      // Street filter
-      const streetMatch = !filterStreet || lead.strasse_hausnummer?.toLowerCase().includes(filterStreet.toLowerCase());
-      
-      return searchMatch && employeeMatch && cityMatch && areaMatch && streetMatch;
-    });
+        // City filter
+        const cityMatch = !filterCity || lead.stadt?.toLowerCase().includes(filterCity.toLowerCase());
+        
+        // Area (area_id) filter
+        let areaMatch = true;
+        if (filterAreaId !== 'all') {
+          const area = savedAreas.find(a => a.id === filterAreaId);
+          if (area) {
+            areaMatch = lead.area_id === area.id || 
+                       (lead.stadt?.toLowerCase() === area.city?.toLowerCase() && 
+                        (typeof area.streets === 'string' ? area.streets.includes(lead.strasse_hausnummer?.split(' ')[0]) : false));
+          }
+        }
+        
+        // Street filter
+        const streetMatch = !filterStreet || lead.strasse_hausnummer?.toLowerCase().includes(filterStreet.toLowerCase());
+        
+        return searchMatch && employeeMatch && cityMatch && areaMatch && streetMatch;
+      });
     
     // Apply sorting
     filteredLeads = [...filteredLeads].sort((a, b) => {
@@ -1174,57 +1192,50 @@ export default function Leads() {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-4 flex-wrap">
-                  <div className="min-w-[160px]">
-                    <Select value={filterCity} onValueChange={setFilterCity}>
-                      <SelectTrigger className="border-slate-300">
-                        <SelectValue placeholder="Stadt auswählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Alle Städte</SelectItem>
-                        {uniqueCities.map((city) => (
-                          <SelectItem key={city} value={city}>
-                            {city}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex gap-4 flex-wrap">
+                    <div className="min-w-[160px] flex-1">
+                      <Input
+                        placeholder="Stadt filtern..."
+                        value={filterCity}
+                        onChange={(e) => setFilterCity(e.target.value)}
+                        className="border-slate-300"
+                      />
+                    </div>
+                    <div className="min-w-[200px] flex-1">
+                      <Select value={filterAreaId} onValueChange={setFilterAreaId}>
+                        <SelectTrigger className="border-slate-300">
+                          <SelectValue placeholder="Bereich auswählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Alle Bereiche</SelectItem>
+                          {savedAreas.filter(a => !filterCity || a.city?.toLowerCase().includes(filterCity.toLowerCase())).map((area) => (
+                            <SelectItem key={area.id} value={area.id}>
+                              {area.name} ({area.city})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="relative min-w-[200px] flex-1">
+                      <Input
+                        placeholder="Straßenname (optional)..."
+                        value={filterStreet}
+                        onChange={(e) => setFilterStreet(e.target.value)}
+                        className="border-slate-300"
+                      />
+                    </div>
+                    <div className="min-w-[180px]">
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="border-slate-300">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="name">Sortieren nach Name</SelectItem>
+                          <SelectItem value="address">Sortieren nach Adresse</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="min-w-[160px]">
-                    <Select value={filterArea} onValueChange={setFilterArea}>
-                      <SelectTrigger className="border-slate-300">
-                        <SelectValue placeholder="PLZ auswählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Alle PLZ</SelectItem>
-                        {uniqueAreas.map((area) => (
-                          <SelectItem key={area} value={area}>
-                            {area}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="relative min-w-[200px]">
-                    <Input
-                      placeholder="Straßenname (optional)..."
-                      value={filterStreet}
-                      onChange={(e) => setFilterStreet(e.target.value)}
-                      className="border-slate-300"
-                    />
-                  </div>
-                  <div className="min-w-[180px]">
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="border-slate-300">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="name">Sortieren nach Name</SelectItem>
-                        <SelectItem value="address">Sortieren nach Adresse</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
               </div>
           </CardContent>
         </Card>
