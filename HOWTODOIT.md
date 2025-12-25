@@ -26,11 +26,13 @@ Prevent duplicate leads in the database. A lead is considered a duplicate if:
 Deduplication MUST happen automatically during generation and import. The user should not have to manually trigger a cleanup.
 
 ## 6. Map Integration & Geocoding
-- **Coordinate Assignment**: Coordinates are assigned by querying Nominatim with `Street Name + House Number + PLZ + City + Germany`.
-- **Accuracy**: Including the Postal Code (PLZ) is mandatory for accuracy, especially in large cities like Berlin where street names may repeat across districts.
-- **Consistency**: The system ensures "Same Address = Same Coordinates" by reusing coordinates from existing leads in the database for the same street and house number before attempting a new geocoding request.
+- **Local Geocoding Cache**: To avoid Nominatim rate limits (1 query/sec), the system uses a local `geocoding_cache` table. 
+- **Mass Data Import**: You can pre-populate this cache for entire cities using the OpenStreetMap (OSM) data.
+  - **Overpass API**: Use `node scripts/import-osm.js "Berlin"` to download all addresses for a city and store them locally.
+  - **OSM Data Extraction**: The system extracts `addr:street`, `addr:housenumber`, `addr:postcode`, `addr:city`, and the corresponding `latitude/longitude` from OSM nodes and ways.
+- **Coordinate Assignment**: Coordinates are assigned by checking the local cache first. If missing, it falls back to Nominatim and then saves the result to the cache for future use.
+- **Consistency**: The system ensures "Same Address = Same Coordinates" by using exact matches in the cache.
 - **Display**: ALL leads in the database with valid latitude/longitude are displayed on the map.
-- **Auto-Correction**: If a generated lead matches an existing lead in the database that is missing coordinates, the system will attempt to geocode it and update the database record.
 
 ## 7. Lead Recovery (Duplicate Handling)
 - **Problem**: Previously, if the generator found a business already in the database (e.g., from an Excel import), it would skip it, making it seem "lost" to the user.
