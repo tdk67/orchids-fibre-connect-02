@@ -31,11 +31,12 @@ export function useOSMImport() {
     try {
       // 1. Fetch from Overpass
       const query = `
-        [out:json][timeout:90];
-        area["name"="${city}"]["admin_level"~"4|6|8"]->.searchArea;
+        [out:json][timeout:180][maxsize:1073741824];
+        area["name"="${city}"]["admin_level"~"4|6|8|9"]->.searchArea;
         (
           node["addr:street"]["addr:housenumber"](area.searchArea);
           way["addr:street"]["addr:housenumber"](area.searchArea);
+          relation["addr:street"]["addr:housenumber"](area.searchArea);
         );
         out center;
       `;
@@ -45,7 +46,13 @@ export function useOSMImport() {
         body: query,
       });
 
-      if (!response.ok) throw new Error("Overpass API error");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Overpass API error response:", errorText);
+        if (response.status === 429) throw new Error("Overpass API: Zu viele Anfragen. Bitte kurz warten.");
+        if (response.status === 504) throw new Error("Overpass API: Zeitüberschreitung (die Stadt ist evtl. zu groß).");
+        throw new Error(`Overpass API Fehler (${response.status})`);
+      }
       const data = await response.json();
       const elements = data.elements || [];
 
