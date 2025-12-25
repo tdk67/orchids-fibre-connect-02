@@ -491,6 +491,11 @@ export default function Unternehmenssuche() {
     setGeneratingArea(selectedArea.id);
     setGenerationProgress({});
 
+    // Keep track of leads found in this session to prevent duplicates
+    const sessionLeads = new Set(
+      allLeads.map(l => `${l.firma?.toLowerCase().trim()}|${l.strasse_hausnummer?.toLowerCase().trim()}`)
+    );
+
     for (let i = 0; i < streets.length; i++) {
       const street = streets[i];
       const streetName = street.name || street;
@@ -514,16 +519,11 @@ export default function Unternehmenssuche() {
         const leadsToSave = [];
         
         for (const lead of leads) {
-          // Check against database leads (outer allLeads)
-          const isDuplicate = allLeads.some(
-            (existing) =>
-              existing.firma?.toLowerCase() === lead.firma?.toLowerCase() &&
-              (existing.strasse_hausnummer?.toLowerCase() ===
-                lead.strasse_hausnummer?.toLowerCase() ||
-                existing.telefon === lead.telefon),
-          );
-
-          if (isDuplicate) continue;
+          const leadKey = `${lead.firma?.toLowerCase().trim()}|${lead.strasse_hausnummer?.toLowerCase().trim()}`;
+          
+          if (sessionLeads.has(leadKey)) {
+            continue;
+          }
 
           const coords = await geocodeAddress(
             lead.street_name || streetName,
@@ -531,7 +531,7 @@ export default function Unternehmenssuche() {
             selectedArea.city || cityInput,
           );
 
-          leadsToSave.push({
+          const newLead = {
             firma: lead.firma || "",
             strasse_hausnummer: lead.strasse_hausnummer || "",
             postleitzahl: lead.postleitzahl || "",
@@ -546,7 +546,10 @@ export default function Unternehmenssuche() {
             latitude: coords?.lat?.toString() || "",
             longitude: coords?.lon?.toString() || "",
             area_id: selectedArea.id,
-          });
+          };
+
+          leadsToSave.push(newLead);
+          sessionLeads.add(leadKey);
         }
 
         if (leadsToSave.length > 0) {
@@ -651,11 +654,95 @@ export default function Unternehmenssuche() {
     }
   }
 
-  const removeCompany = (companyId) => {
-    setFoundCompanies((prev) => prev.filter((c) => c.id !== companyId));
+  const removeCompany = async (companyId) => {
+    try {
+      await base44.entities.Lead.delete(companyId);
+      await refetchAllLeads();
+      toast({
+        title: "Entfernt",
+        description: "Unternehmen aus dem Pool gelöscht.",
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: "Löschen fehlgeschlagen.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const clearAllCompanies = () => setFoundCompanies([]);
+  const clearAllCompanies = async () => {
+    if (!confirm(`Möchten Sie alle ${foundCompanies.length} Pool-Leads in diesem Bereich löschen?`)) return;
+    try {
+      for (const company of foundCompanies) {
+        await base44.entities.Lead.delete(company.id);
+      }
+      await refetchAllLeads();
+      toast({
+        title: "Bereinigt",
+        description: "Alle Pool-Leads in diesem Bereich wurden gelöscht.",
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: "Bereinigung fehlgeschlagen.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cleanupDuplicates = async () => {
+    toast({
+      title: "Bereinigung läuft",
+      description: "Duplikate werden gesucht...",
+    });
+
+    const seen = new Set();
+    const toDelete = [];
+
+    // Order by created_date desc to keep newest
+    const sortedLeads = [...allLeads].sort((a, b) => 
+      new Date(b.created_date || 0) - new Date(a.created_date || 0)
+    );
+
+    for (const lead of sortedLeads) {
+      const key = `${lead.firma?.toLowerCase().trim()}|${lead.strasse_hausnummer?.toLowerCase().trim()}|${lead.stadt?.toLowerCase().trim()}`;
+      if (seen.has(key)) {
+        toDelete.push(lead.id);
+      } else {
+        seen.add(key);
+      }
+    }
+
+    if (toDelete.length === 0) {
+      toast({
+        title: "Bereinigt",
+        description: "Keine Duplikate gefunden.",
+      });
+      return;
+    }
+
+    if (!confirm(`${toDelete.length} Duplikate gefunden. Jetzt löschen?`)) return;
+
+    try {
+      // Delete in batches of 10 to avoid overloading
+      for (let i = 0; i < toDelete.length; i += 10) {
+        const batch = toDelete.slice(i, i + 10);
+        await Promise.all(batch.map(id => base44.entities.Lead.delete(id)));
+      }
+      await refetchAllLeads();
+      toast({
+        title: "Erfolgreich",
+        description: `${toDelete.length} Duplikate gelöscht.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: "Bereinigung fehlgeschlagen: " + err.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -985,8 +1072,27 @@ export default function Unternehmenssuche() {
                   <Building2 className="h-5 w-5" />
                   Leads Liste ({filteredLeads.length})
                 </CardTitle>
-                <div className="flex flex-wrap gap-2">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => refetchAllLeads()}
+                      disabled={isLoadingLeads}
+                    >
+                      <Clock className="h-4 w-4 mr-1" />
+                      Aktualisieren
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cleanupDuplicates}
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Duplikate bereinigen
+                    </Button>
+                    <div className="flex flex-col gap-1">
+
                     <Label className="text-[10px] text-white/70 ml-1">
                       Stadt
                     </Label>
