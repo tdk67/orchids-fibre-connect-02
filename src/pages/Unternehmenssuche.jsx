@@ -288,8 +288,10 @@ const TILE_ATTRIBUTION =
 
       // Area filter
       let areaMatch = true;
-      if (filterAreaId !== "all") {
-        const area = savedAreas.find((a) => a.id === filterAreaId);
+      const activeAreaId = filterAreaId !== "all" ? filterAreaId : selectedAreaId;
+      
+      if (activeAreaId) {
+        const area = savedAreas.find((a) => a.id === activeAreaId);
         areaMatch = getAreaLeadMatch(lead, area);
       }
 
@@ -346,8 +348,18 @@ const TILE_ATTRIBUTION =
   }, [allLeads, savedAreas, genAreaId, selectedAreaId]);
 
   const leadsWithCoordinates = useMemo(() => {
-    return allLeads.filter((lead) => lead.latitude && lead.longitude);
-  }, [allLeads]);
+    return allLeads.filter((lead) => {
+      if (!lead.latitude || !lead.longitude) return false;
+      
+      // If an area is selected, only show leads in that area
+      if (selectedAreaId) {
+        const area = savedAreas.find((a) => a.id === selectedAreaId);
+        return getAreaLeadMatch(lead, area);
+      }
+      
+      return true;
+    });
+  }, [allLeads, selectedAreaId, savedAreas]);
 
   const foundWithCoordinates = useMemo(() => {
     return foundCompanies.filter(
@@ -433,17 +445,21 @@ const TILE_ATTRIBUTION =
   }
 
   function handleAreaSelect(areaId) {
-    setSelectedAreaId(areaId);
-    const area = savedAreas.find((a) => a.id === areaId);
-    if (area && area.bounds) {
-      const bounds =
-        typeof area.bounds === "string" ? JSON.parse(area.bounds) : area.bounds;
-      const center = [
-        (bounds.north + bounds.south) / 2,
-        (bounds.east + bounds.west) / 2,
-      ];
-      setMapCenter(center);
-      setMapZoom(16);
+    if (selectedAreaId === areaId) {
+      setSelectedAreaId(null);
+    } else {
+      setSelectedAreaId(areaId);
+      const area = savedAreas.find((a) => a.id === areaId);
+      if (area && area.bounds) {
+        const bounds =
+          typeof area.bounds === "string" ? JSON.parse(area.bounds) : area.bounds;
+        const center = [
+          (bounds.north + bounds.south) / 2,
+          (bounds.east + bounds.west) / 2,
+        ];
+        setMapCenter(center);
+        setMapZoom(16);
+      }
     }
   }
 
