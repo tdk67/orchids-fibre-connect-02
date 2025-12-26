@@ -175,7 +175,9 @@ const TILE_ATTRIBUTION =
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [activeSection, setActiveSection] = useState("map");
-    const [user, setUser] = useState(null);
+      const [user, setUser] = useState(null);
+      const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
+
 
     const { 
       isImporting, 
@@ -184,13 +186,34 @@ const TILE_ATTRIBUTION =
       getImportStatus 
     } = useOSMImport();
 
-    const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
     const [mapCenter, setMapCenter] = useState([52.52, 13.405]);
     const [mapZoom, setMapZoom] = useState(12);
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [cityInput, setCityInput] = useState("Berlin");
     const [newAreaName, setNewAreaName] = useState("");
     const [newAreaBounds, setNewAreaBounds] = useState(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [savedAreas, setSavedAreas] = useState([]);
+    const [selectedAreaId, setSelectedAreaId] = useState(null);
+    const [filterCity, setFilterCity] = useState("");
+    const [filterAreaId, setFilterAreaId] = useState("all");
+
+    const getAreaLeadMatch = useCallback((lead, area) => {
+      if (!lead || !area) return false;
+      
+      const leadCity = lead.stadt?.toLowerCase()?.trim() || "";
+      const areaCity = area.city?.toLowerCase()?.trim() || "";
+      
+      if (areaCity && leadCity !== areaCity) return false;
+      
+      const streets = typeof area.streets === "string" ? JSON.parse(area.streets) : area.streets || [];
+      const leadStreet = lead.strasse_hausnummer?.toLowerCase()?.trim() || "";
+      
+      return streets.some(s => {
+        const streetName = s.name?.toLowerCase()?.trim() || "";
+        return streetName && leadStreet.startsWith(streetName);
+      });
+    }, []);
 
     useEffect(() => {
       const fetchStatus = async () => {
@@ -202,11 +225,10 @@ const TILE_ATTRIBUTION =
       fetchStatus();
     }, [cityInput, getImportStatus]);
 
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [savedAreas, setSavedAreas] = useState([]);
-  const [selectedAreaId, setSelectedAreaId] = useState(null);
-  const [filterCity, setFilterCity] = useState("");
-  const [filterAreaId, setFilterAreaId] = useState("all");
+    useEffect(() => {
+      base44.auth.me().then(setUser).catch(() => {});
+      loadAreas();
+    }, []);
   const [genAreaId, setGenAreaId] = useState("all");
   const [sortConfig, setSortConfig] = useState({ key: "firma", direction: "asc" });
 
