@@ -185,6 +185,12 @@ const TILE_ATTRIBUTION =
     } = useOSMImport();
 
     const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
+    const [mapCenter, setMapCenter] = useState([52.52, 13.405]);
+    const [mapZoom, setMapZoom] = useState(12);
+    const [isGeocoding, setIsGeocoding] = useState(false);
+    const [cityInput, setCityInput] = useState("Berlin");
+    const [newAreaName, setNewAreaName] = useState("");
+    const [newAreaBounds, setNewAreaBounds] = useState(null);
 
     useEffect(() => {
       const fetchStatus = async () => {
@@ -195,15 +201,6 @@ const TILE_ATTRIBUTION =
       };
       fetchStatus();
     }, [cityInput, getImportStatus]);
-
-
-  const [mapCenter, setMapCenter] = useState([52.52, 13.405]);
-  const [mapZoom, setMapZoom] = useState(12);
-  const [isGeocoding, setIsGeocoding] = useState(false);
-
-  const [cityInput, setCityInput] = useState("Berlin");
-  const [newAreaName, setNewAreaName] = useState("");
-  const [newAreaBounds, setNewAreaBounds] = useState(null);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [savedAreas, setSavedAreas] = useState([]);
