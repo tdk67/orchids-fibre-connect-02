@@ -198,9 +198,28 @@ const TILE_ATTRIBUTION =
     const [filterCity, setFilterCity] = useState("");
     const [filterAreaId, setFilterAreaId] = useState("all");
 
+    const isPointInBounds = useCallback((lat, lng, bounds) => {
+      if (!lat || !lng || !bounds) return false;
+      const b = typeof bounds === "string" ? JSON.parse(bounds) : bounds;
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      return (
+        latitude <= b.north &&
+        latitude >= b.south &&
+        longitude <= b.east &&
+        longitude >= b.west
+      );
+    }, []);
+
     const getAreaLeadMatch = useCallback((lead, area) => {
       if (!lead || !area) return false;
+
+      // 1. Spatial check (most accurate)
+      if (lead.latitude && lead.longitude && area.bounds) {
+        return isPointInBounds(lead.latitude, lead.longitude, area.bounds);
+      }
       
+      // 2. Fallback to street name matching if no coordinates
       const leadCity = lead.stadt?.toLowerCase()?.trim() || "";
       const areaCity = area.city?.toLowerCase()?.trim() || "";
       
@@ -213,7 +232,7 @@ const TILE_ATTRIBUTION =
         const streetName = s.name?.toLowerCase()?.trim() || "";
         return streetName && leadStreet.startsWith(streetName);
       });
-    }, []);
+    }, [isPointInBounds]);
 
     useEffect(() => {
       const fetchStatus = async () => {
@@ -268,8 +287,11 @@ const TILE_ATTRIBUTION =
 
   const foundCompanies = useMemo(() => {
     if (!selectedArea) return [];
-    return poolLeads.filter(lead => String(lead.area_id) === String(selectedArea.id));
-  }, [poolLeads, selectedArea]);
+    return poolLeads.filter(lead => {
+      // Prioritize spatial matching for "real" area membership
+      return getAreaLeadMatch(lead, selectedArea);
+    });
+  }, [poolLeads, selectedArea, getAreaLeadMatch]);
 
   const filteredLeads = useMemo(() => {
     return allLeads.filter((lead) => {
@@ -986,11 +1008,13 @@ const TILE_ATTRIBUTION =
                       {leadsWithCoordinates.map((lead) => {
                         const lat = parseFloat(lead.latitude);
                         const lng = parseFloat(lead.longitude);
+                        const isPool = lead.pool_status === "im_pool";
+                        
                         return (
                           <Marker
                             key={lead.id}
                             position={[lat, lng]}
-                            icon={createCustomIcon("#3b82f6")}
+                            icon={createCustomIcon(isPool ? "#3b82f6" : "#22c55e")}
                           >
                             <Popup>
                               <div className="p-3">
@@ -1018,42 +1042,15 @@ const TILE_ATTRIBUTION =
                                     <Mail className="h-3 w-3" /> {lead.email}
                                   </p>
                                 )}
-                                {lead.status && (
-                                  <Badge className="mt-2 bg-blue-100 text-blue-800">
-                                    {lead.status}
-                                  </Badge>
-                                )}
-                              </div>
-                            </Popup>
-                          </Marker>
-                        );
-                      })}
-
-                      {foundWithCoordinates.map((company) => {
-                        const lat = parseFloat(company.latitude);
-                        const lng = parseFloat(company.longitude);
-                        return (
-                          <Marker
-                            key={company.id}
-                            position={[lat, lng]}
-                            icon={createCustomIcon("#3b82f6")}
-                          >
-                            <Popup>
-                              <div className="p-2">
-                                <h3 className="font-bold text-slate-900">
-                                  {company.firma || "Unbekannt"}
-                                </h3>
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {company.strasse_hausnummer}
-                                </p>
-                                <Badge className="mt-2 bg-blue-100 text-blue-800">
-                                  Gefunden (nicht gespeichert)
+                                <Badge className={`mt-2 ${isPool ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                                  {isPool ? "Im Pool" : lead.status || "Zugeordnet"}
                                 </Badge>
                               </div>
                             </Popup>
                           </Marker>
                         );
                       })}
+
                     </MapContainer>
                   </div>
                 </CardContent>
