@@ -91,19 +91,15 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <NavigationTracker />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="*" element={<AuthenticatedApp />} />
-          </Routes>
-        </Router>
-        <Toaster />
-        <VisualEditAgent />
-      </QueryClientProvider>
-    </AuthProvider>
+    <Router>
+      <NavigationTracker />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<AuthenticatedApp />} />
+      </Routes>
+      <Toaster />
+      <VisualEditAgent />
+    </Router>
   )
 }
 
