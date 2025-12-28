@@ -1,6 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// Helper to ensure we never send data over insecure HTTP in production
+const getSafeSupabaseUrl = (url) => {
+  if (!url) return '';
+  
+  // If the site is running on HTTPS (like Vercel), but the URL is HTTP, upgrade it
+  // This prevents "Mixed Content" errors and ensures password encryption via TLS
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
+    console.warn('Insecure Supabase URL detected on HTTPS site. Upgrading to HTTPS to prevent Mixed Content error.');
+    return url.replace('http://', 'https://').replace(':8000', ''); // Remove :8000 which is usually for local/HTTP
+  }
+  return url;
+};
+
+const supabaseUrl = getSafeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
