@@ -10,7 +10,9 @@ import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext.jsx';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { Button } from "@/components/ui/button";
 import { createPageUrl } from './utils';
+import Login from './pages/Login';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
