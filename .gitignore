@@ -29,3 +29,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive scripts and data
+create-user.js
+test-login.js
+test_login_node.js
+test_login_esm.js
+login.json

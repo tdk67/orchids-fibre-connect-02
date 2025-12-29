@@ -17,9 +17,7 @@ export function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      console.log('Attempting login with:', email);
       const result = await base44.auth.login({ email, password });
-      console.log('Login successful:', result);
       toast({
         title: 'Erfolgreich angemeldet',
         description: 'Sie werden weitergeleitet...',
