@@ -8,7 +8,7 @@ import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { AuthProvider, useAuth } from '@/lib/AuthContext.jsx';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from './utils';

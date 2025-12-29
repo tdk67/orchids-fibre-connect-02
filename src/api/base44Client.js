@@ -15,7 +15,6 @@ const getSafeSupabaseUrl = (url) => {
 
 const supabaseUrl = getSafeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // Fail fast in dev; in production this will surface clearly
@@ -25,10 +24,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Default client (anon, persisted session)
 const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 
-// Optional service-role client for elevated operations (no session persistence)
-const serviceSupabase = supabaseServiceKey
-  ? createClient(supabaseUrl || '', supabaseServiceKey, { auth: { autoRefreshToken: false, persistSession: false } })
-  : supabase;
+// Use the standard client for everything on the frontend
+const serviceSupabase = supabase;
 
 const parseOrder = (orderBy) => {
   if (!orderBy) return null;
