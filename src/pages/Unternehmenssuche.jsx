@@ -495,6 +495,7 @@ const TILE_ATTRIBUTION =
       await LeadGenerator.generateForArea(selectedArea, allLeads, {
         rescanMode,
         user,
+        allAreas: savedAreas,
         onProgress: (progress) => {
           setGenerationProgress(progress);
         }

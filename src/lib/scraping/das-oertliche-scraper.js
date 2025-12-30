@@ -8,6 +8,7 @@
 import { buildDasOertlicheUrl, wrapWithCorsProxy } from './url-builder';
 import { removeDuplicates } from './duplicate-detection';
 import { base44 } from '../../api/base44Client';
+import { geocodeAddress } from '../../utils/geoUtils';
 
 const LEAD_STATUS = {
   NEW: 'Neu',
@@ -35,9 +36,9 @@ export async function fetchSinglePage(street, city, pageNum = 1) {
     const response = await fetch(proxyUrl);
     
     if (!response.ok) {
-      if (response.status === 410) {
-        // 410 Gone = no more pages available
-        return [];
+      if (response.status === 410 || response.status === 404) {
+        // 410 Gone / 404 Not Found = no more pages available
+        return { leads: [], hasNextPage: false };
       }
       throw new Error(`HTTP ${response.status}`);
     }
@@ -52,10 +53,14 @@ export async function fetchSinglePage(street, city, pageNum = 1) {
     // Parse JSON-LD structured data
     const leads = parseJsonLdFromHtml(html, street, city);
     
-    // Check if next page link exists in HTML
+    // Check if next page link exists in HTML - Enhanced detection
     const hasNextPage = html.includes(`Seite-${pageNum + 1}.htm`) || 
                         html.includes('title="Nächste Seite"') ||
-                        html.includes('class="next"');
+                        html.includes('rel="next"') ||
+                        html.includes('class="next"') ||
+                        html.includes('>Nächste<') ||
+                        html.includes('>vorwärts<') ||
+                        html.includes('title="vorwärts"');
     
     return { leads, hasNextPage };
   } catch (error) {
@@ -197,24 +202,6 @@ function toLead(item, street, city) {
 }
 
 /**
- * Converts JSON-LD item to lead object with business filtering
- */
-export async function checkForNextPage(street, city, pageNum) {
-  const url = buildDasOertlicheUrl(street, city, pageNum);
-  const proxyUrl = wrapWithCorsProxy(url);
-  
-  try {
-    // HEAD request to check if page exists (faster than GET)
-    const response = await fetch(proxyUrl, { method: 'HEAD' });
-    
-    // 410 Gone = no more pages
-    return response.ok && response.status !== 410;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Fetches all leads for a street with pagination
  * @param {string} street - Street name
  * @param {string} city - City name
@@ -269,78 +256,6 @@ export async function fetchStreetLeads(street, city, options = {}) {
   }
   
   return deduplicated;
-}
-
-/**
- * Geocodes an address using local cache or Nominatim fallback
- * @param {string} street - Street name
- * @param {string} streetNumber - Street number
- * @param {string} city - City name
- * @param {string} postalCode - Postal code (optional)
- * @returns {Promise<Object|null>} - {lat, lon} or null
- */
-export async function geocodeAddress(street, streetNumber, city, postalCode = "") {
-  try {
-    // 1. Try local geocoding cache first (MASSIVE performance boost)
-    const { data: cached, error: cacheError } = await base44.client
-      .from('geocoding_cache')
-      .select('latitude, longitude')
-      .eq('street', street)
-      .eq('house_number', streetNumber)
-      .eq('city', city)
-      .maybeSingle();
-
-    if (!cacheError && cached) {
-      return { lat: cached.latitude, lon: cached.longitude };
-    }
-
-    // 2. Fallback to Nominatim if not in cache
-    const addressParts = [street, streetNumber, postalCode, city, 'Germany'].filter(Boolean);
-    const address = addressParts.join(' ').trim();
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
-    
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
-      {
-        headers: { 'User-Agent': 'FiberConnect-LeadGen/1.0' },
-        signal: controller.signal,
-      }
-    );
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      return null;
-    }
-    
-    const data = await response.json();
-    
-    if (data.length === 0) {
-      return null;
-    }
-
-    const result = {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon),
-    };
-
-    // 3. Optional: Store new result in cache for future use
-    await base44.client.from('geocoding_cache').upsert({
-      street,
-      house_number: streetNumber,
-      postcode: postalCode,
-      city,
-      latitude: result.lat,
-      longitude: result.lon
-    }, { onConflict: 'street,house_number,postcode,city' });
-    
-    return result;
-  } catch (error) {
-    // Silently fail - geocoding is optional
-    return null;
-  }
 }
 
 export { LEAD_STATUS, LEAD_SOURCE };
