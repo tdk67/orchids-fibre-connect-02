@@ -340,8 +340,10 @@ const TILE_ATTRIBUTION =
   }, [allLeads, savedAreas, genAreaId, selectedAreaId]);
 
   const leadsWithCoordinates = useMemo(() => {
-    return allLeads.filter((lead) => {
-      if (!lead.latitude || !lead.longitude) return false;
+    const leads = allLeads.filter((lead) => {
+      const lat = parseFloat(lead.latitude);
+      const lng = parseFloat(lead.longitude);
+      if (isNaN(lat) || isNaN(lng)) return false;
       
       // If an area is selected, only show leads in that area
       if (selectedAreaId) {
@@ -351,6 +353,18 @@ const TILE_ATTRIBUTION =
       
       return true;
     });
+
+    // Group leads by coordinates to handle overlapping markers
+    const grouped = {};
+    leads.forEach(lead => {
+      const lat = parseFloat(lead.latitude).toFixed(6);
+      const lng = parseFloat(lead.longitude).toFixed(6);
+      const key = `${lat},${lng}`;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(lead);
+    });
+    
+    return Object.values(grouped);
   }, [allLeads, selectedAreaId, savedAreas]);
 
   const foundWithCoordinates = useMemo(() => {
@@ -913,21 +927,22 @@ const TILE_ATTRIBUTION =
                             : area.bounds;
                         const isSelected = area.id === selectedAreaId;
                         return (
-                          <Rectangle
-                            key={area.id}
-                            bounds={[
-                              [bounds.south, bounds.west],
-                              [bounds.north, bounds.east],
-                            ]}
-                            pathOptions={{
-                              color: isSelected ? "#2563eb" : "#94a3b8",
-                              weight: isSelected ? 3 : 2,
-                              fillOpacity: isSelected ? 0.15 : 0.08,
-                            }}
-                            eventHandlers={{
-                              click: () => handleAreaSelect(area.id),
-                            }}
-                          >
+                            <Rectangle
+                              key={area.id}
+                              bounds={[
+                                [bounds.south, bounds.west],
+                                [bounds.north, bounds.east],
+                              ]}
+                              pathOptions={{
+                                color: isSelected ? "#2563eb" : "#94a3b8",
+                                weight: isSelected ? 3 : 2,
+                                fillOpacity: isSelected ? 0.15 : 0.08,
+                              }}
+                              bubblingMouseEvents={true}
+                              eventHandlers={{
+                                click: () => handleAreaSelect(area.id),
+                              }}
+                            >
                             <Popup>
                               <div className="p-2">
                                 <h3 className="font-bold text-slate-900">
@@ -942,51 +957,61 @@ const TILE_ATTRIBUTION =
                         );
                       })}
 
-                      {leadsWithCoordinates.map((lead) => {
-                        const lat = parseFloat(lead.latitude);
-                        const lng = parseFloat(lead.longitude);
-                        const isPool = lead.pool_status === "im_pool";
-                        
-                        return (
-                          <Marker
-                            key={lead.id}
-                            position={[lat, lng]}
-                            icon={createCustomIcon(isPool ? "#3b82f6" : "#22c55e")}
-                          >
-                            <Popup>
-                              <div className="p-3">
-                                <h3 className="font-bold text-slate-900 mb-2">
-                                  {lead.firma || "Unbekannt"}
-                                </h3>
-                                {lead.ansprechpartner && (
-                                  <p className="text-sm text-slate-700 font-medium">
-                                    {lead.ansprechpartner}
-                                  </p>
-                                )}
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {lead.strasse_hausnummer}
-                                  {lead.postleitzahl &&
-                                    `, ${lead.postleitzahl}`}
-                                  {lead.stadt && ` ${lead.stadt}`}
-                                </p>
-                                {lead.telefon && (
-                                  <p className="text-sm text-blue-600 flex items-center gap-1 mt-2">
-                                    <Phone className="h-3 w-3" /> {lead.telefon}
-                                  </p>
-                                )}
-                                {lead.email && (
-                                  <p className="text-sm text-blue-600 flex items-center gap-1 mt-1">
-                                    <Mail className="h-3 w-3" /> {lead.email}
-                                  </p>
-                                )}
-                                <Badge className={`mt-2 ${isPool ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                                  {isPool ? "Im Pool" : lead.status || "Zugeordnet"}
-                                </Badge>
-                              </div>
-                            </Popup>
-                          </Marker>
-                        );
-                      })}
+                        {leadsWithCoordinates.map((group) => {
+                          const firstLead = group[0];
+                          const lat = parseFloat(firstLead.latitude);
+                          const lng = parseFloat(firstLead.longitude);
+                          // If any lead in the group is im_pool, show it as blue. 
+                          // If all are processed, show green.
+                          const hasPoolLead = group.some(lead => lead.pool_status === "im_pool");
+                          
+                          return (
+                            <Marker
+                              key={firstLead.id}
+                              position={[lat, lng]}
+                              icon={createCustomIcon(hasPoolLead ? "#3b82f6" : "#22c55e")}
+                            >
+                              <Popup className="lead-marker-popup">
+                                <div className="p-1 max-h-[300px] overflow-y-auto min-w-[200px]">
+                                  {group.map((lead, idx) => {
+                                    const isPool = lead.pool_status === "im_pool";
+                                    return (
+                                      <div key={lead.id} className={`${idx > 0 ? 'mt-4 pt-4 border-t border-slate-100' : ''}`}>
+                                        <h3 className="font-bold text-slate-900 mb-1">
+                                          {lead.firma || "Unbekannt"}
+                                        </h3>
+                                        {lead.ansprechpartner && (
+                                          <p className="text-xs text-slate-700 font-medium">
+                                            {lead.ansprechpartner}
+                                          </p>
+                                        )}
+                                        <p className="text-xs text-slate-600 mt-1">
+                                          {lead.strasse_hausnummer}
+                                          {lead.postleitzahl && `, ${lead.postleitzahl}`}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                          {lead.telefon && (
+                                            <p className="text-[10px] text-blue-600 flex items-center gap-1">
+                                              <Phone className="h-2.5 w-2.5" /> {lead.telefon}
+                                            </p>
+                                          )}
+                                          {lead.email && (
+                                            <p className="text-[10px] text-blue-600 flex items-center gap-1">
+                                              <Mail className="h-2.5 w-2.5" /> {lead.email}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <Badge className={`mt-2 text-[10px] h-5 ${isPool ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                                          {isPool ? "Im Pool" : lead.status || "Zugeordnet"}
+                                        </Badge>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </Popup>
+                            </Marker>
+                          );
+                        })}
 
                     </MapContainer>
                   </div>
