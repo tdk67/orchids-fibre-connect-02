@@ -19,6 +19,7 @@ export function buildDasOertlicheUrl(street, city, page = 1) {
   // 3. Replace spaces with single hyphens
   const streetUrl = street
     .replace(/['"]/g, '')           // Remove quotes
+    .replace(/\//g, '-')            // Replace slashes with hyphens
     .replace(/-/g, '--')            // Double hyphens
     .replace(/\s+/g, '-');          // Spaces to hyphens
   

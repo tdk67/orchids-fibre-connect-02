@@ -25,11 +25,7 @@ const LEAD_SOURCE = {
 };
 
 /**
- * Fetches a single page from das örtliche
- * @param {string} street - Street name
- * @param {string} city - City name
- * @param {number} pageNum - Page number
- * @returns {Promise<Array>} - Array of leads
+ * Converts JSON-LD item to lead object with business filtering
  */
 export async function fetchSinglePage(street, city, pageNum = 1) {
   const url = buildDasOertlicheUrl(street, city, pageNum);
@@ -50,16 +46,21 @@ export async function fetchSinglePage(street, city, pageNum = 1) {
     
     // Check for error pages
     if (html.includes('<title>Fehlermeldung</title>') || html.includes('Keine Treffer')) {
-      return [];
+      return { leads: [], hasNextPage: false };
     }
     
     // Parse JSON-LD structured data
     const leads = parseJsonLdFromHtml(html, street, city);
     
-    return leads;
+    // Check if next page link exists in HTML
+    const hasNextPage = html.includes(`Seite-${pageNum + 1}.htm`) || 
+                        html.includes('title="Nächste Seite"') ||
+                        html.includes('class="next"');
+    
+    return { leads, hasNextPage };
   } catch (error) {
     console.error(`Error fetching page ${pageNum} for ${street}, ${city}:`, error);
-    return [];
+    return { leads: [], hasNextPage: false };
   }
 }
 
@@ -196,11 +197,7 @@ function toLead(item, street, city) {
 }
 
 /**
- * Checks if next page exists
- * @param {string} street - Street name
- * @param {string} city - City name
- * @param {number} pageNum - Page number to check
- * @returns {Promise<boolean>} - True if page exists
+ * Converts JSON-LD item to lead object with business filtering
  */
 export async function checkForNextPage(street, city, pageNum) {
   const url = buildDasOertlicheUrl(street, city, pageNum);
@@ -237,7 +234,7 @@ export async function fetchStreetLeads(street, city, options = {}) {
       onProgress({ street, city, page, status: 'fetching' });
     }
     
-    const leads = await fetchSinglePage(street, city, page);
+    const { leads, hasNextPage } = await fetchSinglePage(street, city, page);
     
     if (leads.length === 0) {
       hasMorePages = false;
@@ -248,8 +245,6 @@ export async function fetchStreetLeads(street, city, options = {}) {
         onProgress({ street, city, page, status: 'found', count: leads.length });
       }
       
-      // Check if next page exists
-      const hasNextPage = await checkForNextPage(street, city, page + 1);
       if (hasNextPage) {
         page++;
         // Rate limiting: 800ms delay between pages per IMPL.md
