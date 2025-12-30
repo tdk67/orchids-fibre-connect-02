@@ -222,6 +222,8 @@ export default function Unternehmenssuche() {
   const [sortConfig, setSortConfig] = useState({ key: "firma", direction: "asc" });
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const navigateToMap = () => setActiveSection("map");
+
   const selectedArea = useMemo(() => {
     const areaId =
       genAreaId !== "all" ? genAreaId : selectedAreaId || filterAreaId;
@@ -590,8 +592,6 @@ export default function Unternehmenssuche() {
           await base44.entities.Lead.bulkCreate(leadsToSave);
           await refetchAllLeads();
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (err) {
         console.error(`Error scraping ${streetName}:`, err);
       }
