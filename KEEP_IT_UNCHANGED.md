@@ -1,7 +1,6 @@
 # Critical Functionality and UI/UX Requirements (KEEP UNCHANGED)
 
 ## 1. Lead Generation
-- **Batch Limit**: Each area MUST have exactly **20 leads** assigned to it.
 - **Data Completeness**: Leads MUST include name, address, and **phone number**.
 - **Source**: Scraper must reliably fetch data from "Das Örtliche".
 

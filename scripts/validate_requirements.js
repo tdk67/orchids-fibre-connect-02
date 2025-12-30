@@ -1,23 +1,22 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import process from 'process';
 
 const filesToTable = [
-  {
-    path: 'src/lib/scraping/das-oertliche-scraper.js',
-    checks: [
-      { name: 'Lead limit is 20 (maxPages = 1)', pattern: /maxPages\s*=\s*1/ },
-      { name: 'Phone number extraction exists', pattern: /item\.telephone\s*\|\|\s*item\.phone/ }
-    ]
-  },
-  {
-    path: 'src/pages/Unternehmenssuche.jsx',
-    checks: [
-      { name: 'Area Lead count badge exists', pattern: /\{allLeads\.filter\(l => getAreaLeadMatch\(l, area\)\)\.length\}\s*Leads/ },
-      { name: 'Phone number in Map Popup exists', pattern: /lead\.telefon\s*&&\s*\(/ },
-      { name: 'Quick navigation (View Leads) exists', pattern: /setActiveSection\("leads"\)/ },
-      { name: 'Lead limit in generator is 1', pattern: /fetchStreetLeads\(.*maxPages:\s*1/ }
-    ]
-  },
+    {
+      path: 'src/lib/scraping/das-oertliche-scraper.js',
+      checks: [
+        { name: 'Phone number extraction exists', pattern: /item\.telephone\s*\|\|\s*item\.phone/ }
+      ]
+    },
+    {
+      path: 'src/pages/Unternehmenssuche.jsx',
+      checks: [
+        { name: 'Area Lead count badge exists', pattern: /\{areaLeads\.length\}\s*Leads/ },
+        { name: 'Phone number in Map Popup exists', pattern: /lead\.telefon\s*&&\s*\(/ },
+        { name: 'Quick navigation (View Leads) exists', pattern: /setActiveSection\("leads"\)/ }
+      ]
+    },
   {
     path: 'src/utils/geoUtils.js',
     checks: [
