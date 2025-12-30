@@ -248,14 +248,14 @@ export async function fetchStreetLeads(street, city, options = {}) {
         onProgress({ street, city, page, status: 'found', count: leads.length });
       }
       
-      // Stop if we received fewer results than expected (likely last page)
-      // Das Örtliche usually shows 20 per page. If we got 1-19, it's the last page.
-      if (leads.length < 20) {
-        hasMorePages = false;
-      } else {
+      // Check if next page exists
+      const hasNextPage = await checkForNextPage(street, city, page + 1);
+      if (hasNextPage) {
         page++;
-        // Rate limiting: 1000ms delay between pages per IMPL.md and for stability
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Rate limiting: 800ms delay between pages per IMPL.md
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      } else {
+        hasMorePages = false;
       }
     }
   }
@@ -274,6 +274,78 @@ export async function fetchStreetLeads(street, city, options = {}) {
   }
   
   return deduplicated;
+}
+
+/**
+ * Geocodes an address using local cache or Nominatim fallback
+ * @param {string} street - Street name
+ * @param {string} streetNumber - Street number
+ * @param {string} city - City name
+ * @param {string} postalCode - Postal code (optional)
+ * @returns {Promise<Object|null>} - {lat, lon} or null
+ */
+export async function geocodeAddress(street, streetNumber, city, postalCode = "") {
+  try {
+    // 1. Try local geocoding cache first (MASSIVE performance boost)
+    const { data: cached, error: cacheError } = await base44.client
+      .from('geocoding_cache')
+      .select('latitude, longitude')
+      .eq('street', street)
+      .eq('house_number', streetNumber)
+      .eq('city', city)
+      .maybeSingle();
+
+    if (!cacheError && cached) {
+      return { lat: cached.latitude, lon: cached.longitude };
+    }
+
+    // 2. Fallback to Nominatim if not in cache
+    const addressParts = [street, streetNumber, postalCode, city, 'Germany'].filter(Boolean);
+    const address = addressParts.join(' ').trim();
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+    
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+      {
+        headers: { 'User-Agent': 'FiberConnect-LeadGen/1.0' },
+        signal: controller.signal,
+      }
+    );
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.length === 0) {
+      return null;
+    }
+
+    const result = {
+      lat: parseFloat(data[0].lat),
+      lon: parseFloat(data[0].lon),
+    };
+
+    // 3. Optional: Store new result in cache for future use
+    await base44.client.from('geocoding_cache').upsert({
+      street,
+      house_number: streetNumber,
+      postcode: postalCode,
+      city,
+      latitude: result.lat,
+      longitude: result.lon
+    }, { onConflict: 'street,house_number,postcode,city' });
+    
+    return result;
+  } catch (error) {
+    // Silently fail - geocoding is optional
+    return null;
+  }
 }
 
 export { LEAD_STATUS, LEAD_SOURCE };
