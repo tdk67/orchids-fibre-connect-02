@@ -512,7 +512,7 @@ export default function Unternehmenssuche() {
       }
 
       try {
-        const leads = await fetchStreetLeads(streetName, streetCity, { maxPages: 50 });
+        const leads = await fetchStreetLeads(streetName, streetCity, { maxPages: 1 });
         const leadsToSave = [];
         
         for (const lead of leads) {
@@ -786,7 +786,18 @@ export default function Unternehmenssuche() {
                       })}
                       {leadsWithCoordinates.map((lead) => (
                         <Marker key={lead.id} position={[parseFloat(lead.latitude), parseFloat(lead.longitude)]} icon={createCustomIcon(lead.pool_status === "im_pool" ? "#3b82f6" : "#22c55e")}>
-                          <Popup><div className="p-3"><h3 className="font-bold mb-2">{lead.firma}</h3><p className="text-sm">{lead.strasse_hausnummer}</p><Badge className="mt-2">{lead.pool_status === "im_pool" ? "Pool" : lead.status}</Badge></div></Popup>
+                          <Popup>
+                            <div className="p-3">
+                              <h3 className="font-bold mb-1">{lead.firma}</h3>
+                              <p className="text-sm text-slate-600 mb-1">{lead.strasse_hausnummer}</p>
+                              {lead.telefon && (
+                                <div className="flex items-center gap-2 text-xs text-blue-600 font-medium mb-2">
+                                  <Phone className="h-3 w-3" /> {lead.telefon}
+                                </div>
+                              )}
+                              <Badge className="mt-1">{lead.pool_status === "im_pool" ? "Pool" : lead.status}</Badge>
+                            </div>
+                          </Popup>
                         </Marker>
                       ))}
                     </MapContainer>
@@ -802,11 +813,22 @@ export default function Unternehmenssuche() {
                     {savedAreas.map((area) => (
                       <div key={area.id} className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${area.id === selectedAreaId ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-300"}`} onClick={() => handleAreaSelect(area.id)}>
                         <h4 className="font-semibold text-sm">{area.name}</h4>
-                        <p className="text-xs text-slate-600 mb-2">{area.city}</p>
+                        {area.description && <p className="text-xs text-slate-500 line-clamp-1">{area.description}</p>}
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-slate-600">{area.city}</p>
+                          <Badge variant="secondary" className="text-[10px] px-1 h-4">
+                            {allLeads.filter(l => getAreaLeadMatch(l, area)).length} Leads
+                          </Badge>
+                        </div>
                         {area.id === selectedAreaId && (
-                          <Button size="sm" className="w-full mt-2 bg-blue-600" onClick={(e) => { e.stopPropagation(); setGenAreaId(area.id); setActiveSection("generator"); }}>
-                            <Zap className="h-3 w-3 mr-1" /> Leads generieren
-                          </Button>
+                          <div className="grid grid-cols-2 gap-2 mt-3">
+                            <Button size="sm" className="bg-blue-600 h-8 text-xs" onClick={(e) => { e.stopPropagation(); setGenAreaId(area.id); setActiveSection("generator"); }}>
+                              <Zap className="h-3 w-3 mr-1" /> Scannen
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-8 text-xs border-blue-200 text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); setFilterAreaId(area.id); setActiveSection("leads"); }}>
+                              <List className="h-3 w-3 mr-1" /> View Leads
+                            </Button>
+                          </div>
                         )}
                       </div>
                     ))}

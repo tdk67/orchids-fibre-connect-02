@@ -225,7 +225,7 @@ export async function checkForNextPage(street, city, pageNum) {
  * @returns {Promise<Array>} - Array of all leads
  */
 export async function fetchStreetLeads(street, city, options = {}) {
-  const { onProgress, maxPages = 50 } = options;
+  const { onProgress, maxPages = 1 } = options;
   
   const allLeads = [];
 
