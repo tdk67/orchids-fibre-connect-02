@@ -78,25 +78,26 @@ export const LeadGenerator = {
             let updatePayload = {};
 
             // If it doesn't have coordinates, try to get them
-            if (!existingLead.latitude || !existingLead.longitude) {
-              const coords = await geocodeAddress(
-                lead.street_name || streetName,
-                lead.street_number || "",
-                city,
-                lead.postleitzahl || ""
-              );
-              if (coords) {
-                updatePayload.latitude = coords.lat.toString();
-                updatePayload.longitude = coords.lon.toString();
-                existingLead.latitude = updatePayload.latitude;
-                existingLead.longitude = updatePayload.longitude;
-                shouldUpdate = true;
+              if (!existingLead.latitude || !existingLead.longitude) {
+                const coords = await geocodeAddress(
+                  lead.street_name || streetName,
+                  lead.street_number || "",
+                  city,
+                  lead.postleitzahl || ""
+                );
+                if (coords) {
+                  updatePayload.latitude = parseFloat(coords.lat);
+                  updatePayload.longitude = parseFloat(coords.lon);
+                  existingLead.latitude = updatePayload.latitude;
+                  existingLead.longitude = updatePayload.longitude;
+                  shouldUpdate = true;
+                }
               }
-            }
 
-            // Spatial check: Is it actually in the current area?
-            const isInCurrentArea = existingLead.latitude && existingLead.longitude && 
-                                   isPointInBounds(existingLead.latitude, existingLead.longitude, area.bounds);
+              // Spatial check: Is it actually in the current area?
+              const isInCurrentArea = existingLead.latitude && existingLead.longitude && 
+                                     isPointInBounds(existingLead.latitude, existingLead.longitude, area.bounds);
+
 
             if (isInCurrentArea && String(existingLead.area_id) !== String(area.id)) {
               updatePayload.area_id = area.id;
@@ -132,8 +133,8 @@ export const LeadGenerator = {
           // Spatial Verification: Only assign to this area if it's actually inside the bounds
           // OR if we have no coords, we fallback to the current area being scanned.
           let assignedAreaId = area.id;
-          const lat = coords?.lat?.toString() || coords?.latitude || "";
-          const lon = coords?.lon?.toString() || coords?.longitude || "";
+          const lat = coords?.lat ? parseFloat(coords.lat) : (coords?.latitude ? parseFloat(coords.latitude) : null);
+          const lon = coords?.lon ? parseFloat(coords.lon) : (coords?.longitude ? parseFloat(coords.longitude) : null);
 
           if (lat && lon) {
             const inCurrent = isPointInBounds(lat, lon, area.bounds);
@@ -172,9 +173,20 @@ export const LeadGenerator = {
         // Slight delay between streets to prevent rate limiting
         await new Promise(resolve => setTimeout(resolve, 300));
         
-      } catch (err) {
-        console.error(`Error processing street ${streetName}:`, err);
-      }
+        } catch (err) {
+          const errorMessage = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+          console.error(`Error processing street ${streetName}:`, errorMessage);
+          if (onProgress) {
+            onProgress({
+              current: i + 1,
+              total: streets.length,
+              street: streetName,
+              status: 'error',
+              error: errorMessage
+            });
+          }
+        }
+
     }
 
     return sessionLeads;

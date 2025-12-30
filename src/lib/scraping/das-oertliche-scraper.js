@@ -49,25 +49,33 @@ export async function fetchSinglePage(street, city, pageNum = 1) {
     if (html.includes('<title>Fehlermeldung</title>') || html.includes('Keine Treffer')) {
       return { leads: [], hasNextPage: false };
     }
-    
-    // Parse JSON-LD structured data
-    const leads = parseJsonLdFromHtml(html, street, city);
-    
-    // Check if next page link exists in HTML - Enhanced detection
-    const hasNextPage = html.includes(`Seite-${pageNum + 1}.htm`) || 
-                        html.includes('title="Nächste Seite"') ||
-                        html.includes('rel="next"') ||
-                        html.includes('class="next"') ||
-                        html.includes('>Nächste<') ||
-                        html.includes('>vorwärts<') ||
-                        html.includes('title="vorwärts"');
-    
-    return { leads, hasNextPage };
-  } catch (error) {
-    console.error(`Error fetching page ${pageNum} for ${street}, ${city}:`, error);
-    return { leads: [], hasNextPage: false };
-  }
+
+// Parse JSON-LD structured data
+const leads = parseJsonLdFromHtml(html, street, city);
+
+// Check if next page link exists in HTML - Robust detection
+// Das Örtliche uses various patterns for the next page link
+const hasNextPage = html.includes(`Seite-${pageNum + 1}.htm`) || 
+html.includes('title="Nächste Seite"') ||
+html.includes('rel="next"') ||
+html.includes('class="next"') ||
+html.includes('>Nächste<') ||
+html.includes('>vorwärts<') ||
+html.includes('title="vorwärts"') ||
+// Sometimes it's encoded or different
+html.includes('href="') && html.includes(`-Seite-${pageNum + 1}`);
+
+return { leads, hasNextPage };
+} catch (error) {
+// If we hit a 404 or 410, it's just the end of results
+if (error.message?.includes('404') || error.message?.includes('410')) {
+return { leads: [], hasNextPage: false };
 }
+console.error(`Error fetching page ${pageNum} for ${street}, ${city}:`, error);
+return { leads: [], hasNextPage: false };
+}
+}
+
 
 /**
  * Parses JSON-LD structured data from HTML
