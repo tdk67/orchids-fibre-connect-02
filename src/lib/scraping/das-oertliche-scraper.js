@@ -221,13 +221,14 @@ export async function checkForNextPage(street, city, pageNum) {
  * Fetches all leads for a street with pagination
  * @param {string} street - Street name
  * @param {string} city - City name
- * @param {Object} options - Options (onProgress callback, maxPages)
+  * @param {Object} options - Options (onProgress callback, maxPages)
  * @returns {Promise<Array>} - Array of all leads
  */
 export async function fetchStreetLeads(street, city, options = {}) {
-  const { onProgress, maxPages = 10 } = options;
+  const { onProgress, maxPages = 50 } = options;
   
   const allLeads = [];
+
   let page = 1;
   let hasMorePages = true;
   
