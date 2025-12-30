@@ -248,14 +248,14 @@ export async function fetchStreetLeads(street, city, options = {}) {
         onProgress({ street, city, page, status: 'found', count: leads.length });
       }
       
-      // Check if next page exists
-      const hasNextPage = await checkForNextPage(street, city, page + 1);
-      if (hasNextPage) {
-        page++;
-        // Rate limiting: 800ms delay between pages per IMPL.md
-        await new Promise((resolve) => setTimeout(resolve, 800));
-      } else {
+      // Stop if we received fewer results than expected (likely last page)
+      // Das Örtliche usually shows 20 per page. If we got 1-19, it's the last page.
+      if (leads.length < 20) {
         hasMorePages = false;
+      } else {
+        page++;
+        // Rate limiting: 1000ms delay between pages per IMPL.md and for stability
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
   }

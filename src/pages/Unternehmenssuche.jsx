@@ -789,47 +789,47 @@ const TILE_ATTRIBUTION =
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Unternehmensuche
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Bereiche definieren, Straßen extrahieren, Leads generieren
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-            disabled={isSyncing}
-            onClick={async () => {
-              if (!confirm("Sollen ALLE Leads in der Datenbank neu synchronisiert werden? Dies kann einige Minuten dauern.")) return;
-              setIsSyncing(true);
-              try {
-                const { data: currentLeads } = await base44.client.from('leads').select('*');
-                if (currentLeads) {
-                  const updatedCount = await syncLeadsWithAreas(currentLeads, savedAreas);
-                  await refetchAllLeads();
-                  toast({ 
-                    title: "Globaler Sync abgeschlossen", 
-                    description: `${updatedCount} Leads wurden aktualisiert/neu zugeordnet.` 
-                  });
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">
+              Unternehmensuche
+            </h1>
+            <p className="text-slate-500 mt-1">
+              Bereiche definieren, Straßen extrahieren, Leads generieren
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              disabled={isSyncing}
+              onClick={async () => {
+                if (!confirm("Sollen ALLE Leads in der Datenbank neu synchronisiert werden? Dies kann einige Minuten dauern. Dabei werden fehlende Geo-Koordinaten geladen und alle Leads ihren geografischen Bereichen neu zugeordnet.")) return;
+                setIsSyncing(true);
+                try {
+                  const { data: currentLeads } = await base44.client.from('leads').select('*');
+                  if (currentLeads) {
+                    const updatedCount = await syncLeadsWithAreas(currentLeads, savedAreas);
+                    await refetchAllLeads();
+                    toast({ 
+                      title: "Globaler Sync abgeschlossen", 
+                      description: `${updatedCount} Leads wurden aktualisiert/neu zugeordnet.` 
+                    });
+                  }
+                } catch (err) {
+                  console.error("Global sync error:", err);
+                  toast({ title: "Fehler", description: "Globaler Sync fehlgeschlagen.", variant: "destructive" });
+                } finally {
+                  setIsSyncing(false);
                 }
-              } catch (err) {
-                console.error("Global sync error:", err);
-                toast({ title: "Fehler", description: "Globaler Sync fehlgeschlagen.", variant: "destructive" });
-              } finally {
-                setIsSyncing(false);
-              }
-            }}
-          >
-            {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            Globaler Sync
-          </Button>
+              }}
+            >
+              {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Globaler Sync
+            </Button>
+          </div>
         </div>
-      </div>
 
       <Tabs value={activeSection} onValueChange={setActiveSection}>
         <TabsList className="grid w-full grid-cols-3 bg-slate-100">

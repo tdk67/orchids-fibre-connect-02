@@ -137,17 +137,20 @@ export async function syncLeadsWithAreas(leads, areas, forceGeocode = false) {
       }
     }
 
-    // 2. Assign area
-    if (lat && lon) {
-      const area = findAreaForLead({ latitude: lat, longitude: lon }, areas);
-      if (area && String(lead.area_id) !== String(area.id)) {
-        updateData.area_id = area.id;
-        needsUpdate = true;
-      }
+    // 2. Assign area (uses coordinates if available, otherwise street matching fallback)
+    const area = findAreaForLead({ ...lead, latitude: lat, longitude: lon }, areas);
+    if (area && String(lead.area_id) !== String(area.id)) {
+      updateData.area_id = area.id;
+      needsUpdate = true;
     }
 
     if (needsUpdate) {
       updates.push({ id: lead.id, ...updateData });
+    }
+
+    // Rate limit geocoding: 1s delay per Nominatim policy if we actually did a geocode
+    if (!lat || !lon || forceGeocode) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
