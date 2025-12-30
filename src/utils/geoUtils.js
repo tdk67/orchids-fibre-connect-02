@@ -17,11 +17,12 @@ export const isPointInBounds = (lat, lng, bounds) => {
 };
 
 /**
- * Centralized geocoding using local cache first
+ * Centralized geocoding using local OSM cache (geocoding_cache)
+ * PER USER REQUEST: Does not use Nominatim anymore.
  */
 export async function geocodeAddress(street, streetNumber, city, postalCode = "") {
   try {
-    // 1. Try local geocoding cache first
+    // 1. Try local geocoding cache
     const { data: cached, error: cacheError } = await base44.client
       .from('geocoding_cache')
       .select('latitude, longitude')
@@ -34,37 +35,7 @@ export async function geocodeAddress(street, streetNumber, city, postalCode = ""
       return { lat: cached.latitude, lon: cached.longitude };
     }
 
-    // 2. Fallback to Nominatim
-    const addressParts = [street, streetNumber, postalCode, city, 'Germany'].filter(Boolean);
-    const address = addressParts.join(' ').trim();
-    
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
-      {
-        headers: { 'User-Agent': 'FiberConnect-LeadGen/1.0' },
-      }
-    );
-    
-    if (!response.ok) return null;
-    const data = await response.json();
-    if (data.length === 0) return null;
-
-    const result = {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon),
-    };
-
-    // 3. Update cache
-    await base44.client.from('geocoding_cache').upsert({
-      street,
-      house_number: streetNumber,
-      postcode: postalCode,
-      city,
-      latitude: result.lat,
-      longitude: result.lon
-    }, { onConflict: 'street,house_number,postcode,city' });
-    
-    return result;
+    return null;
   } catch (error) {
     console.error("Geocoding error:", error);
     return null;
@@ -110,6 +81,7 @@ export function findAreaForLead(lead, areas) {
 
 /**
  * Batch syncs leads with geocoding and area assignment
+ * Now optimized: No Nominatim, no delays, batch processing
  */
 export async function syncLeadsWithAreas(leads, areas, forceGeocode = false) {
   const updates = [];
@@ -120,7 +92,7 @@ export async function syncLeadsWithAreas(leads, areas, forceGeocode = false) {
     let needsUpdate = false;
     let updateData = {};
 
-    // 1. Try to geocode if missing or forced
+    // 1. Try to geocode from cache if missing or forced
     if ((!lat || !lon || forceGeocode) && lead.strasse_hausnummer && lead.stadt) {
       // Basic split for street/number
       const match = lead.strasse_hausnummer.match(/^(.*?)\s*(\d.*)?$/);
@@ -147,18 +119,20 @@ export async function syncLeadsWithAreas(leads, areas, forceGeocode = false) {
     if (needsUpdate) {
       updates.push({ id: lead.id, ...updateData });
     }
-
-    // Rate limit geocoding: 1s delay per Nominatim policy if we actually did a geocode
-    if (!lat || !lon || forceGeocode) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
   }
 
-  // Execute updates
-  for (const update of updates) {
-    const { id, ...data } = update;
-    await base44.entities.Lead.update(id, data);
+  // Execute updates in batches to be efficient
+  const batchSize = 50;
+  for (let i = 0; i < updates.length; i += batchSize) {
+    const batch = updates.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(update => {
+        const { id, ...data } = update;
+        return base44.entities.Lead.update(id, data);
+      })
+    );
   }
 
   return updates.length;
 }
+

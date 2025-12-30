@@ -176,52 +176,51 @@ const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-  export default function Unternehmenssuche() {
-    const { toast } = useToast();
-    const navigate = useNavigate();
-    const queryClient = useQueryClient();
-    const [activeSection, setActiveSection] = useState("map");
-      const [user, setUser] = useState(null);
-      const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
+export default function Unternehmenssuche() {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [activeSection, setActiveSection] = useState("map");
+  const [user, setUser] = useState(null);
+  const [currentCityImportStatus, setCurrentCityImportStatus] = useState(null);
 
+  const { 
+    isImporting, 
+    progress: importProgress, 
+    importCityData, 
+    getImportStatus 
+  } = useOSMImport();
 
-    const { 
-      isImporting, 
-      progress: importProgress, 
-      importCityData, 
-      getImportStatus 
-    } = useOSMImport();
+  const [mapCenter, setMapCenter] = useState([52.52, 13.405]);
+  const [mapZoom, setMapZoom] = useState(12);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [cityInput, setCityInput] = useState("Berlin");
+  const [newAreaName, setNewAreaName] = useState("");
+  const [newAreaBounds, setNewAreaBounds] = useState(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [savedAreas, setSavedAreas] = useState([]);
+  const [selectedAreaId, setSelectedAreaId] = useState(null);
+  const [filterCity, setFilterCity] = useState("");
+  const [filterAreaId, setFilterAreaId] = useState("all");
 
-    const [mapCenter, setMapCenter] = useState([52.52, 13.405]);
-    const [mapZoom, setMapZoom] = useState(12);
-    const [isGeocoding, setIsGeocoding] = useState(false);
-    const [cityInput, setCityInput] = useState("Berlin");
-    const [newAreaName, setNewAreaName] = useState("");
-    const [newAreaBounds, setNewAreaBounds] = useState(null);
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [savedAreas, setSavedAreas] = useState([]);
-    const [selectedAreaId, setSelectedAreaId] = useState(null);
-    const [filterCity, setFilterCity] = useState("");
-    const [filterAreaId, setFilterAreaId] = useState("all");
+  useEffect(() => {
+    const fetchStatus = async () => {
+      if (cityInput) {
+        const status = await getImportStatus(cityInput);
+        setCurrentCityImportStatus(status);
+      }
+    };
+    fetchStatus();
+  }, [cityInput, getImportStatus]);
 
-      useEffect(() => {
-        const fetchStatus = async () => {
-          if (cityInput) {
-            const status = await getImportStatus(cityInput);
-            setCurrentCityImportStatus(status);
-          }
-        };
-        fetchStatus();
-      }, [cityInput, getImportStatus]);
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+    loadAreas();
+  }, []);
 
-
-    useEffect(() => {
-      base44.auth.me().then(setUser).catch(() => {});
-      loadAreas();
-    }, []);
-    const [genAreaId, setGenAreaId] = useState("all");
-    const [sortConfig, setSortConfig] = useState({ key: "firma", direction: "asc" });
-    const [isSyncing, setIsSyncing] = useState(false);
+  const [genAreaId, setGenAreaId] = useState("all");
+  const [sortConfig, setSortConfig] = useState({ key: "firma", direction: "asc" });
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const selectedArea = useMemo(() => {
     const areaId =
@@ -260,19 +259,15 @@ const TILE_ATTRIBUTION =
   const foundCompanies = useMemo(() => {
     if (!selectedArea) return [];
     return poolLeads.filter(lead => {
-      // Prioritize spatial matching for "real" area membership
       return getAreaLeadMatch(lead, selectedArea);
     });
-  }, [poolLeads, selectedArea, getAreaLeadMatch]);
+  }, [poolLeads, selectedArea]);
 
   const filteredLeads = useMemo(() => {
     return allLeads.filter((lead) => {
-      // Basic visibility filter: ignore pool leads and archived leads to match active leads list
-      // UNLESS we are explicitly looking for pool leads in this view
       if (lead.archiv_kategorie || lead.verkaufschance_status || lead.verloren)
         return false;
 
-      // City filter - use includes for better matching
       const cityMatch =
         !filterCity ||
         lead.stadt
@@ -280,7 +275,6 @@ const TILE_ATTRIBUTION =
           ?.trim()
           ?.includes(filterCity.toLowerCase().trim());
 
-      // Area filter
       let areaMatch = true;
       const activeAreaId = filterAreaId !== "all" ? filterAreaId : selectedAreaId;
       
@@ -291,7 +285,7 @@ const TILE_ATTRIBUTION =
 
       return cityMatch && areaMatch;
     });
-  }, [allLeads, filterCity, filterAreaId, savedAreas]);
+  }, [allLeads, filterCity, filterAreaId, savedAreas, selectedAreaId]);
 
   const sortedLeads = useMemo(() => {
     const sorted = [...filteredLeads];
@@ -301,7 +295,6 @@ const TILE_ATTRIBUTION =
         let bVal = b[sortConfig.key] || "";
 
         if (sortConfig.key === "strasse_hausnummer") {
-          // Robust address sorting (Street Name -> Padded Number -> Firma)
           const getStreetName = (addr) => addr?.match(/^[^0-9]*/)?.[0]?.trim() || "";
           const getStreetNumber = (addr) => {
             const match = addr?.match(/\d+/);
@@ -344,22 +337,13 @@ const TILE_ATTRIBUTION =
   const leadsWithCoordinates = useMemo(() => {
     return allLeads.filter((lead) => {
       if (!lead.latitude || !lead.longitude) return false;
-      
-      // If an area is selected, only show leads in that area
       if (selectedAreaId) {
         const area = savedAreas.find((a) => a.id === selectedAreaId);
         return getAreaLeadMatch(lead, area);
       }
-      
       return true;
     });
   }, [allLeads, selectedAreaId, savedAreas]);
-
-  const foundWithCoordinates = useMemo(() => {
-    return foundCompanies.filter(
-      (company) => company.latitude && company.longitude,
-    );
-  }, [foundCompanies]);
 
   async function loadAreas() {
     try {
@@ -400,43 +384,34 @@ const TILE_ATTRIBUTION =
       const areaData = {
         name: newAreaName.trim(),
         city: cityInput.trim(),
-        bounds: JSON.stringify(newAreaBounds),
-        streets: JSON.stringify(streetNames),
+        bounds: newAreaBounds,
+        streets: streetNames,
         color: "#3b82f6",
       };
 
-      const { error: insertError } = await base44.client.from("areas").insert({
-        name: areaData.name,
-        city: areaData.city,
-        bounds: newAreaBounds,
-        streets: streetNames,
-        color: areaData.color,
-      });
-
+      const { error: insertError } = await base44.client.from("areas").insert(areaData);
       if (insertError) throw insertError;
   
-        await loadAreas();
-        
-        // Auto-assign leads to the new area
-        setIsSyncing(true);
-        try {
-          const { data: currentLeads } = await base44.client.from('leads').select('*');
-          if (currentLeads) {
-            const updatedCount = await syncLeadsWithAreas(currentLeads, [
-              { id: (await base44.client.from('areas').select('id').eq('name', areaData.name).single()).data?.id, ...areaData, bounds: newAreaBounds }
-            ]);
-            if (updatedCount > 0) {
-              await refetchAllLeads();
-              toast({ title: "Synchronisierung", description: `${updatedCount} Leads wurden dem neuen Bereich zugeordnet.` });
-            }
+      await loadAreas();
+      
+      setIsSyncing(true);
+      try {
+        const { data: currentLeads } = await base44.client.from('leads').select('*');
+        if (currentLeads) {
+          const { data: freshArea } = await base44.client.from('areas').select('*').eq('name', areaData.name).single();
+          const updatedCount = await syncLeadsWithAreas(currentLeads, [freshArea]);
+          if (updatedCount > 0) {
+            await refetchAllLeads();
+            toast({ title: "Synchronisierung", description: `${updatedCount} Leads wurden dem neuen Bereich zugeordnet.` });
           }
-        } catch (syncErr) {
-          console.error("Auto-sync error:", syncErr);
-        } finally {
-          setIsSyncing(false);
         }
+      } catch (syncErr) {
+        console.error("Auto-sync error:", syncErr);
+      } finally {
+        setIsSyncing(false);
+      }
   
-        setShowAreaDialog(false);
+      setShowAreaDialog(false);
       setNewAreaName("");
       setNewAreaBounds(null);
       toast({
@@ -477,16 +452,6 @@ const TILE_ATTRIBUTION =
     }
   }
 
-  function navigateToGenerator() {
-    if (selectedArea) {
-      setActiveSection("generator");
-    }
-  }
-
-  function navigateToMap() {
-    setActiveSection("map");
-  }
-
   async function generateLeadsForArea() {
     if (!selectedArea) return;
 
@@ -507,8 +472,6 @@ const TILE_ATTRIBUTION =
     setGeneratingArea(selectedArea.id);
     setGenerationProgress({});
 
-    // 1. Re-assign existing leads that fall within bounds spatially
-    // This handles Excel imports or leads previously outside but now inside a newly drawn area
     const leadsToReassign = allLeads.filter(lead => 
       !lead.area_id && lead.latitude && lead.longitude && isPointInBounds(lead.latitude, lead.longitude, selectedArea.bounds)
     );
@@ -524,7 +487,6 @@ const TILE_ATTRIBUTION =
       await refetchAllLeads();
     }
 
-    // Keep track of leads found in this session to prevent duplicates
     const sessionLeads = [];
 
     for (let i = 0; i < streets.length; i++) {
@@ -537,7 +499,6 @@ const TILE_ATTRIBUTION =
         street: streetName,
       });
 
-      // Skip already loaded streets unless rescanMode is active
       const streetCity = selectedArea.city || cityInput;
       const alreadyHasLeads = allLeads.some(l => 
         l.stadt?.toLowerCase() === streetCity.toLowerCase() && 
@@ -545,116 +506,92 @@ const TILE_ATTRIBUTION =
       );
 
       if (alreadyHasLeads && !rescanMode) {
-        console.log(`Skipping already loaded street: ${streetName}`);
         continue;
       }
 
       try {
-          const leads = await fetchStreetLeads(
-            streetName,
-            streetCity,
-            {
-              maxPages: 50,
-            },
-          );
+        const leads = await fetchStreetLeads(streetName, streetCity, { maxPages: 50 });
+        const leadsToSave = [];
+        
+        for (const lead of leads) {
+          const leadData = {
+            firma: lead.firma || "",
+            strasse_hausnummer: lead.strasse_hausnummer || "",
+            stadt: lead.stadt || selectedArea.city || cityInput,
+            email: lead.email || "",
+            postleitzahl: lead.postleitzahl || "",
+          };
 
-          // Geocode each lead to get coordinates and save to DB
-          const leadsToSave = [];
+          const isDuplicateInSession = sessionLeads.some(existing => isDuplicateLead(leadData, existing));
+          if (isDuplicateInSession) continue;
+
+          const existingLeadInDB = allLeads.find(existing => isDuplicateLead(leadData, existing));
           
-          for (const lead of leads) {
-            const leadData = {
-              firma: lead.firma || "",
-              strasse_hausnummer: lead.strasse_hausnummer || "",
-              stadt: lead.stadt || selectedArea.city || cityInput,
-              email: lead.email || "",
-              postleitzahl: lead.postleitzahl || "",
-            };
-
-            // 1. Session Duplicate Check (skip entirely if already found in this run)
-            const isDuplicateInSession = sessionLeads.some(existing => isDuplicateLead(leadData, existing));
-            if (isDuplicateInSession) continue;
-
-            // 2. Database Duplicate Check
-            const existingLeadInDB = allLeads.find(existing => isDuplicateLead(leadData, existing));
-            
-            if (existingLeadInDB) {
-              // Lead exists in DB. If it's not assigned to this area, update it.
-              if (String(existingLeadInDB.area_id) !== String(selectedArea.id)) {
-                try {
-                  await base44.entities.Lead.update(existingLeadInDB.id, {
-                    area_id: selectedArea.id,
-                    pool_status: existingLeadInDB.pool_status || "im_pool"
-                  });
-                } catch (updateErr) {
-                  console.error("Failed to update existing lead area_id:", updateErr);
-                }
-              }
-
-              // If it exists but has no coordinates, try to geocode and update
-              if (!existingLeadInDB.latitude || !existingLeadInDB.longitude) {
-                const coords = await geocodeAddress(
-                  lead.street_name || streetName,
-                  lead.street_number || "",
-                  selectedArea.city || cityInput,
-                  lead.postleitzahl || ""
-                );
-                if (coords) {
-                  try {
-                    await base44.entities.Lead.update(existingLeadInDB.id, {
-                      latitude: coords.lat.toString(),
-                      longitude: coords.lon.toString()
-                    });
-                  } catch (coordUpdateErr) {
-                    console.error("Failed to update coords for existing lead:", coordUpdateErr);
-                  }
-                }
-              }
-              
-              sessionLeads.push(existingLeadInDB);
-              continue;
+          if (existingLeadInDB) {
+            if (String(existingLeadInDB.area_id) !== String(selectedArea.id)) {
+              await base44.entities.Lead.update(existingLeadInDB.id, {
+                area_id: selectedArea.id,
+                pool_status: existingLeadInDB.pool_status || "im_pool"
+              });
             }
 
-            // 3. New Lead - Try to reuse coordinates from another lead at same address
-            let coords = allLeads.find(l => 
-              l.strasse_hausnummer === leadData.strasse_hausnummer && 
-              l.stadt === leadData.stadt && 
-              l.latitude && l.longitude
-            );
-            
-            if (!coords) {
-              // Not found in DB, try geocoding
-              coords = await geocodeAddress(
+            if (!existingLeadInDB.latitude || !existingLeadInDB.longitude) {
+              const coords = await geocodeAddress(
                 lead.street_name || streetName,
                 lead.street_number || "",
                 selectedArea.city || cityInput,
                 lead.postleitzahl || ""
               );
+              if (coords) {
+                await base44.entities.Lead.update(existingLeadInDB.id, {
+                  latitude: coords.lat.toString(),
+                  longitude: coords.lon.toString()
+                });
+              }
             }
-
-            const newLead = {
-              ...leadData,
-              telefon: lead.telefon || "",
-              infobox: `Branche: ${lead.branche || "-"}\nWebseite: ${lead.webseite || "-"}\nGefunden über: ${streetName}, ${selectedArea.city || cityInput}`,
-              status: "Neu",
-              pool_status: "im_pool",
-              benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
-              sparte: "1&1 Versatel",
-              latitude: coords?.lat?.toString() || coords?.latitude || "",
-              longitude: coords?.lon?.toString() || coords?.longitude || "",
-              area_id: selectedArea.id,
-            };
-
-            leadsToSave.push(newLead);
-            sessionLeads.push(newLead);
+            
+            sessionLeads.push(existingLeadInDB);
+            continue;
           }
+
+          let coords = allLeads.find(l => 
+            l.strasse_hausnummer === leadData.strasse_hausnummer && 
+            l.stadt === leadData.stadt && 
+            l.latitude && l.longitude
+          );
+          
+          if (!coords) {
+            coords = await geocodeAddress(
+              lead.street_name || streetName,
+              lead.street_number || "",
+              selectedArea.city || cityInput,
+              lead.postleitzahl || ""
+            );
+          }
+
+          const newLead = {
+            ...leadData,
+            telefon: lead.telefon || "",
+            infobox: `Branche: ${lead.branche || "-"}\nWebseite: ${lead.webseite || "-"}\nGefunden über: ${streetName}, ${selectedArea.city || cityInput}`,
+            status: "Neu",
+            pool_status: "im_pool",
+            benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
+            sparte: "1&1 Versatel",
+            latitude: coords?.lat?.toString() || coords?.latitude || "",
+            longitude: coords?.lon?.toString() || coords?.longitude || "",
+            area_id: selectedArea.id,
+          };
+
+          leadsToSave.push(newLead);
+          sessionLeads.push(newLead);
+        }
 
         if (leadsToSave.length > 0) {
           await base44.entities.Lead.bulkCreate(leadsToSave);
-          // Refresh leads to show progress on map/list
           await refetchAllLeads();
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (err) {
         console.error(`Error scraping ${streetName}:`, err);
       }
@@ -662,7 +599,6 @@ const TILE_ATTRIBUTION =
 
     setGeneratingArea(null);
     setGenerationProgress({});
-    setActiveSection("generator");
     toast({
       title: "Erfolgreich",
       description: `Generierung abgeschlossen!`,
@@ -679,49 +615,20 @@ const TILE_ATTRIBUTION =
       const data = await res.json();
       if (data?.length) {
         const { lat, lon } = data[0];
-        const newCenter = [parseFloat(lat), parseFloat(lon)];
-        setMapCenter(newCenter);
+        setMapCenter([parseFloat(lat), parseFloat(lon)]);
         setMapZoom(13);
-      } else {
-        toast({
-          title: "Nicht gefunden",
-          description: "Keine Ergebnisse für diese Stadt gefunden",
-          variant: "destructive",
-        });
       }
     } catch (err) {
-      toast({
-        title: "Fehler",
-        description: "Stadt-Suche fehlgeschlagen",
-        variant: "destructive",
-      });
+      console.error(err);
     } finally {
       setIsGeocoding(false);
     }
   }
 
   async function addCompaniesToLeads() {
-    if (foundCompanies.length === 0) {
-      toast({
-        title: "Warnung",
-        description: "Keine Unternehmen zum Hinzufügen vorhanden",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!assignEmployee) {
-      toast({
-        title: "Warnung",
-        description: "Bitte wählen Sie einen Mitarbeiter aus",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (foundCompanies.length === 0 || !assignEmployee) return;
     const employee = employees.find((e) => e.full_name === assignEmployee);
-    
     try {
-      // Update existing pool leads to assigned leads
       const updatePromises = foundCompanies.map((company) => 
         base44.entities.Lead.update(company.id, {
           assigned_to: employee?.full_name || "",
@@ -730,23 +637,11 @@ const TILE_ATTRIBUTION =
           status: "Neu"
         })
       );
-
       await Promise.all(updatePromises);
-      
-      queryClient.invalidateQueries(["leads"]);
-      queryClient.invalidateQueries(["allLeads"]);
-      if (refetchAllLeads) await refetchAllLeads();
-      
-      toast({
-        title: "Erfolgreich",
-        description: `${foundCompanies.length} Leads zugewiesen an ${employee?.full_name}!`,
-      });
+      await refetchAllLeads();
+      toast({ title: "Erfolgreich", description: `${foundCompanies.length} Leads zugewiesen!` });
     } catch (error) {
-      toast({
-        title: "Fehler",
-        description: "Fehler beim Zuweisen: " + error.message,
-        variant: "destructive",
-      });
+      console.error(error);
     }
   }
 
@@ -754,16 +649,8 @@ const TILE_ATTRIBUTION =
     try {
       await base44.entities.Lead.delete(companyId);
       await refetchAllLeads();
-      toast({
-        title: "Entfernt",
-        description: "Unternehmen aus dem Pool gelöscht.",
-      });
     } catch (err) {
-      toast({
-        title: "Fehler",
-        description: "Löschen fehlgeschlagen.",
-        variant: "destructive",
-      });
+      console.error(err);
     }
   };
 
@@ -774,76 +661,57 @@ const TILE_ATTRIBUTION =
         await base44.entities.Lead.delete(company.id);
       }
       await refetchAllLeads();
-      toast({
-        title: "Bereinigt",
-        description: "Alle Pool-Leads in diesem Bereich wurden gelöscht.",
-      });
     } catch (err) {
-      toast({
-        title: "Fehler",
-        description: "Bereinigung fehlgeschlagen.",
-        variant: "destructive",
-      });
+      console.error(err);
     }
   };
 
   return (
     <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Unternehmensuche
-            </h1>
-            <p className="text-slate-500 mt-1">
-              Bereiche definieren, Straßen extrahieren, Leads generieren
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-              disabled={isSyncing}
-              onClick={async () => {
-                if (!confirm("Sollen ALLE Leads in der Datenbank neu synchronisiert werden? Dies kann einige Minuten dauern. Dabei werden fehlende Geo-Koordinaten geladen und alle Leads ihren geografischen Bereichen neu zugeordnet.")) return;
-                setIsSyncing(true);
-                try {
-                  const { data: currentLeads } = await base44.client.from('leads').select('*');
-                  if (currentLeads) {
-                    const updatedCount = await syncLeadsWithAreas(currentLeads, savedAreas);
-                    await refetchAllLeads();
-                    toast({ 
-                      title: "Globaler Sync abgeschlossen", 
-                      description: `${updatedCount} Leads wurden aktualisiert/neu zugeordnet.` 
-                    });
-                  }
-                } catch (err) {
-                  console.error("Global sync error:", err);
-                  toast({ title: "Fehler", description: "Globaler Sync fehlgeschlagen.", variant: "destructive" });
-                } finally {
-                  setIsSyncing(false);
-                }
-              }}
-            >
-              {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-              Globaler Sync
-            </Button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Unternehmensuche</h1>
+          <p className="text-slate-500 mt-1">Bereiche definieren, Straßen extrahieren, Leads generieren</p>
         </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+            disabled={isSyncing}
+            onClick={async () => {
+              if (!confirm("Sollen ALLE Leads in der Datenbank neu synchronisiert werden?")) return;
+              setIsSyncing(true);
+              try {
+                const { data: currentLeads } = await base44.client.from('leads').select('*');
+                if (currentLeads) {
+                  const updatedCount = await syncLeadsWithAreas(currentLeads, savedAreas);
+                  await refetchAllLeads();
+                  toast({ title: "Globaler Sync abgeschlossen", description: `${updatedCount} Leads wurden aktualisiert.` });
+                }
+              } catch (err) {
+                console.error(err);
+              } finally {
+                setIsSyncing(false);
+              }
+            }}
+          >
+            {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Globaler Sync
+          </Button>
+        </div>
+      </div>
 
       <Tabs value={activeSection} onValueChange={setActiveSection}>
         <TabsList className="grid w-full grid-cols-3 bg-slate-100">
           <TabsTrigger value="map" className="flex items-center gap-2">
-            <MapIcon className="h-4 w-4" />
-            Karte & Bereiche
+            <MapIcon className="h-4 w-4" /> Karte & Bereiche
           </TabsTrigger>
           <TabsTrigger value="leads" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
-            Leads ({filteredLeads.length})
+            <List className="h-4 w-4" /> Leads ({filteredLeads.length})
           </TabsTrigger>
           <TabsTrigger value="generator" className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Lead Generator
+            <Search className="h-4 w-4" /> Lead Generator
           </TabsTrigger>
         </TabsList>
 
@@ -853,338 +721,96 @@ const TILE_ATTRIBUTION =
               <Card className="border-0 shadow-lg">
                 <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Karte
-                    </CardTitle>
-                          <div className="flex flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <Input
-                                value={cityInput}
-                                onChange={(e) => setCityInput(e.target.value)}
-                                placeholder="Stadt suchen..."
-                                className="w-48 bg-white text-slate-900"
-                                onKeyDown={(e) => e.key === "Enter" && geocodeCity()}
-                              />
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={geocodeCity}
-                                disabled={isGeocoding}
-                              >
-                                {isGeocoding ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Search className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                            
-                            <Button
-                              variant={isDrawing ? "default" : "secondary"}
-                              size="sm"
-                              onClick={() => setIsDrawing(!isDrawing)}
-                              className={isDrawing ? "bg-purple-600 hover:bg-purple-700" : ""}
-                            >
-                              <Crosshair className="h-4 w-4 mr-1" />
-                              {isDrawing ? "Zeichnen aktiv..." : "Bereich zeichnen"}
+                    <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Karte</CardTitle>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <Input value={cityInput} onChange={(e) => setCityInput(e.target.value)} placeholder="Stadt suchen..." className="w-48 bg-white text-slate-900" onKeyDown={(e) => e.key === "Enter" && geocodeCity()} />
+                        <Button variant="secondary" size="sm" onClick={geocodeCity} disabled={isGeocoding}>
+                          {isGeocoding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Button variant={isDrawing ? "default" : "secondary"} size="sm" onClick={() => setIsDrawing(!isDrawing)} className={isDrawing ? "bg-purple-600 hover:bg-purple-700" : ""}>
+                        <Crosshair className="h-4 w-4 mr-1" /> {isDrawing ? "Zeichnen aktiv..." : "Bereich zeichnen"}
+                      </Button>
+                      {cityInput && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="secondary" size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
+                              <Download className="h-4 w-4 mr-1" /> OSM Daten
                             </Button>
-
-                            {cityInput && (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="secondary" size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
-                                    <Download className="h-4 w-4 mr-1" />
-                                    OSM Daten
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>OSM Daten für {cityInput}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4 py-4">
-                                    {currentCityImportStatus ? (
-                                      <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                                        <div className="flex items-center gap-2 text-green-800 font-semibold mb-1">
-                                          <Badge className="bg-green-600">Bereits geladen</Badge>
-                                          <span>Letzter Import:</span>
-                                        </div>
-                                        <p className="text-sm text-green-700">
-                                          {format(new Date(currentCityImportStatus.last_import_at), "PPP 'um' p", { locale: de })}
-                                        </p>
-                                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                                          <AlertCircle className="h-3 w-3" />
-                                          OSM Daten werden häufig aktualisiert. Sie können die Daten jederzeit auffrischen.
-                                        </p>
-                                      </div>
-                                    ) : (
-                                      <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg">
-                                        <p className="text-sm text-slate-600">
-                                          Noch keine OSM-Daten für <strong>{cityInput}</strong> in der Datenbank vorhanden.
-                                        </p>
-                                        <p className="text-xs text-slate-500 mt-2">
-                                          Durch das Laden von OSM-Daten werden Adress-Koordinaten lokal gespeichert, was die Lead-Generierung erheblich beschleunigt.
-                                        </p>
-                                      </div>
-                                    )}
-
-                                    {isImporting && (
-                                      <div className="space-y-2">
-                                        <div className="flex justify-between text-xs font-medium">
-                                          <span>{importProgress.message}</span>
-                                          {importProgress.total > 0 && (
-                                            <span>{Math.round((importProgress.current / importProgress.total) * 100)}%</span>
-                                          )}
-                                        </div>
-                                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                          <div 
-                                            className="h-full bg-blue-600 transition-all duration-300" 
-                                            style={{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader><DialogTitle>OSM Daten für {cityInput}</DialogTitle></DialogHeader>
+                            <div className="space-y-4 py-4">
+                              {currentCityImportStatus ? (
+                                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                                  <div className="flex items-center gap-2 text-green-800 font-semibold mb-1">
+                                    <Badge className="bg-green-600">Bereits geladen</Badge>
+                                    <span>Letzter Import: {format(new Date(currentCityImportStatus.last_import_at), "PPP 'um' p", { locale: de })}</span>
                                   </div>
-                                  <DialogFooter>
-                                    <Button 
-                                      className="w-full bg-orange-500 hover:bg-orange-600" 
-                                      onClick={() => importCityData(cityInput)}
-                                      disabled={isImporting}
-                                    >
-                                      {isImporting ? (
-                                        <>
-                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                          Import läuft...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <RefreshCw className="h-4 w-4 mr-2" />
-                                          {currentCityImportStatus ? "Daten aktualisieren" : "OSM Daten importieren"}
-                                        </>
-                                      )}
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                          </div>
-
+                                </div>
+                              ) : <p className="text-sm text-slate-600">Noch keine Daten vorhanden.</p>}
+                              {isImporting && (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-xs font-medium"><span>{importProgress.message}</span></div>
+                                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <DialogFooter>
+                              <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={() => importCityData(cityInput)} disabled={isImporting}>
+                                {isImporting ? "Import läuft..." : "Importieren"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="h-[calc(100vh-220px)] w-full">
-                    <MapContainer
-                      center={mapCenter}
-                      zoom={mapZoom}
-                      style={{ height: "100%", width: "100%" }}
-                      className="z-0"
-                    >
-                      <TileLayer
-                        url={TILE_URL}
-                        attribution={TILE_ATTRIBUTION}
-                      />
+                    <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: "100%", width: "100%" }} className="z-0">
+                      <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
                       <MapController center={mapCenter} zoom={mapZoom} />
-
-                      {isDrawing && (
-                        <DrawingHandler
-                          isDrawing={isDrawing}
-                          onDrawComplete={handleDrawComplete}
-                        />
-                      )}
-
+                      {isDrawing && <DrawingHandler isDrawing={isDrawing} onDrawComplete={handleDrawComplete} />}
                       {savedAreas.map((area) => {
-                        const bounds =
-                          typeof area.bounds === "string"
-                            ? JSON.parse(area.bounds)
-                            : area.bounds;
-                        const isSelected = area.id === selectedAreaId;
+                        const bounds = typeof area.bounds === "string" ? JSON.parse(area.bounds) : area.bounds;
                         return (
-                          <Rectangle
-                            key={area.id}
-                            bounds={[
-                              [bounds.south, bounds.west],
-                              [bounds.north, bounds.east],
-                            ]}
-                            pathOptions={{
-                              color: isSelected ? "#2563eb" : "#94a3b8",
-                              weight: isSelected ? 3 : 2,
-                              fillOpacity: isSelected ? 0.15 : 0.08,
-                            }}
-                            eventHandlers={{
-                              click: () => handleAreaSelect(area.id),
-                            }}
-                          >
-                            <Popup>
-                              <div className="p-2">
-                                <h3 className="font-bold text-slate-900">
-                                  {area.name}
-                                </h3>
-                                <p className="text-sm text-slate-600">
-                                  {area.city}
-                                </p>
-                              </div>
-                            </Popup>
+                          <Rectangle key={area.id} bounds={[[bounds.south, bounds.west], [bounds.north, bounds.east]]} pathOptions={{ color: area.id === selectedAreaId ? "#2563eb" : "#94a3b8", weight: area.id === selectedAreaId ? 3 : 2, fillOpacity: 0.1 }} eventHandlers={{ click: () => handleAreaSelect(area.id) }}>
+                            <Popup><div className="p-2"><h3 className="font-bold">{area.name}</h3><p className="text-sm">{area.city}</p></div></Popup>
                           </Rectangle>
                         );
                       })}
-
-                      {leadsWithCoordinates.map((lead) => {
-                        const lat = parseFloat(lead.latitude);
-                        const lng = parseFloat(lead.longitude);
-                        const isPool = lead.pool_status === "im_pool";
-                        
-                        return (
-                          <Marker
-                            key={lead.id}
-                            position={[lat, lng]}
-                            icon={createCustomIcon(isPool ? "#3b82f6" : "#22c55e")}
-                          >
-                            <Popup>
-                              <div className="p-3">
-                                <h3 className="font-bold text-slate-900 mb-2">
-                                  {lead.firma || "Unbekannt"}
-                                </h3>
-                                {lead.ansprechpartner && (
-                                  <p className="text-sm text-slate-700 font-medium">
-                                    {lead.ansprechpartner}
-                                  </p>
-                                )}
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {lead.strasse_hausnummer}
-                                  {lead.postleitzahl &&
-                                    `, ${lead.postleitzahl}`}
-                                  {lead.stadt && ` ${lead.stadt}`}
-                                </p>
-                                {lead.telefon && (
-                                  <p className="text-sm text-blue-600 flex items-center gap-1 mt-2">
-                                    <Phone className="h-3 w-3" /> {lead.telefon}
-                                  </p>
-                                )}
-                                {lead.email && (
-                                  <p className="text-sm text-blue-600 flex items-center gap-1 mt-1">
-                                    <Mail className="h-3 w-3" /> {lead.email}
-                                  </p>
-                                )}
-                                <Badge className={`mt-2 ${isPool ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                                  {isPool ? "Im Pool" : lead.status || "Zugeordnet"}
-                                </Badge>
-                              </div>
-                            </Popup>
-                          </Marker>
-                        );
-                      })}
-
+                      {leadsWithCoordinates.map((lead) => (
+                        <Marker key={lead.id} position={[parseFloat(lead.latitude), parseFloat(lead.longitude)]} icon={createCustomIcon(lead.pool_status === "im_pool" ? "#3b82f6" : "#22c55e")}>
+                          <Popup><div className="p-3"><h3 className="font-bold mb-2">{lead.firma}</h3><p className="text-sm">{lead.strasse_hausnummer}</p><Badge className="mt-2">{lead.pool_status === "im_pool" ? "Pool" : lead.status}</Badge></div></Popup>
+                        </Marker>
+                      ))}
                     </MapContainer>
                   </div>
                 </CardContent>
               </Card>
             </div>
-
             <div className="xl:col-span-1">
               <Card className="border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800 text-white pb-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <MapIcon className="h-4 w-4" />
-                    Bereiche
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800 text-white pb-4"><CardTitle className="text-base flex items-center gap-2"><MapIcon className="h-4 w-4" /> Bereiche</CardTitle></CardHeader>
                 <CardContent className="p-4">
-                  {savedAreas.length === 0 ? (
-                    <div className="text-center py-8">
-                      <MapPin className="h-12 w-12 mx-auto text-slate-300 mb-2" />
-                      <p className="text-sm text-slate-500">Keine Bereiche</p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Zeichnen Sie einen Bereich auf der Karte
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-                      {savedAreas.map((area) => {
-                        const streets =
-                          typeof area.streets === "string"
-                            ? JSON.parse(area.streets)
-                            : area.streets || [];
-                        const isSelected = area.id === selectedAreaId;
-                        const areaLeads = allLeads.filter((lead) =>
-                          getAreaLeadMatch(lead, area),
-                        );
-                        return (
-                          <div
-                            key={area.id}
-                            className={`group p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                              isSelected
-                                ? "border-blue-500 bg-blue-50 shadow-md"
-                                : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm"
-                            }`}
-                            onClick={() => handleAreaSelect(area.id)}
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <h4 className="font-semibold text-slate-900 text-sm">
-                                {area.name}
-                              </h4>
-                              {isSelected && (
-                                <Badge className="bg-blue-600 text-white text-xs">
-                                  Aktiv
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-600 mb-2">
-                              <span className="font-medium">{area.city}</span>
-                            </p>
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <MapPin className="h-3 w-3" />
-                                <span>{streets.length} Straßen</span>
-                              </div>
-                              <div
-                                className="flex items-center gap-2 text-xs text-blue-600 font-medium cursor-pointer hover:underline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFilterCity(area.city || "");
-                                  setFilterAreaId(area.id);
-                                  setActiveSection("leads");
-                                }}
-                              >
-                                <Building2 className="h-3 w-3" />
-                                <span>{areaLeads.length} Leads</span>
-                              </div>
-                            </div>
-                            {areaLeads.length > 0 && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full mt-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFilterCity(area.city || "");
-                                  setFilterAreaId(area.id);
-                                  setActiveSection("leads");
-                                }}
-                              >
-                                <List className="h-3 w-3 mr-1" />
-                                Leads ansehen
-                              </Button>
-                            )}
-                            {isSelected && (
-                              <Button
-                                size="sm"
-                                className="w-full mt-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setGenAreaId(area.id);
-                                  setCityInput(area.city || "");
-                                  setActiveSection("generator");
-                                }}
-                              >
-                                <Zap className="h-3 w-3 mr-1" />
-                                Leads generieren
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+                    {savedAreas.map((area) => (
+                      <div key={area.id} className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${area.id === selectedAreaId ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-300"}`} onClick={() => handleAreaSelect(area.id)}>
+                        <h4 className="font-semibold text-sm">{area.name}</h4>
+                        <p className="text-xs text-slate-600 mb-2">{area.city}</p>
+                        {area.id === selectedAreaId && (
+                          <Button size="sm" className="w-full mt-2 bg-blue-600" onClick={(e) => { e.stopPropagation(); setGenAreaId(area.id); setActiveSection("generator"); }}>
+                            <Zap className="h-3 w-3 mr-1" /> Leads generieren
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1195,217 +821,39 @@ const TILE_ATTRIBUTION =
           <Card className="border-0 shadow-lg">
             <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Leads Liste ({filteredLeads.length})
-                  </CardTitle>
-                    <div className="flex flex-wrap gap-2">
-                      <div className="flex flex-col gap-1">
-
-
-                    <Label className="text-[10px] text-white/70 ml-1">
-                      Stadt
-                    </Label>
-                    <Input
-                      value={filterCity}
-                      onChange={(e) => setFilterCity(e.target.value)}
-                      className="w-48 bg-white text-slate-900"
-                      placeholder="Stadt eingeben..."
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Label className="text-[10px] text-white/70 ml-1">
-                      Bereich
-                    </Label>
-                    <Select
-                      value={filterAreaId}
-                      onValueChange={setFilterAreaId}
-                    >
-                      <SelectTrigger className="w-48 bg-white text-slate-900">
-                        <SelectValue placeholder="Bereich wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Alle Bereiche</SelectItem>
-                        {savedAreas
-                          .filter(
-                            (a) =>
-                              !filterCity ||
-                              a.city?.toLowerCase() ===
-                                filterCity.toLowerCase(),
-                          )
-                          .map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={navigateToMap}
-                    >
-                      <MapIcon className="h-4 w-4 mr-1" />
-                      Zur Karte
-                    </Button>
-                  </div>
+                <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5" /> Leads Liste ({filteredLeads.length})</CardTitle>
+                <div className="flex flex-wrap gap-2">
+                  <Input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="w-48 bg-white text-slate-900" placeholder="Stadt filtern..." />
+                  <Select value={filterAreaId} onValueChange={setFilterAreaId}>
+                    <SelectTrigger className="w-48 bg-white text-slate-900"><SelectValue placeholder="Bereich" /></SelectTrigger>
+                    <SelectContent><SelectItem value="all">Alle</SelectItem>{savedAreas.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              {sortedLeads.length === 0 ? (
-                <div className="text-center py-16 text-slate-500">
-                  <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-lg font-medium">Keine Leads gefunden</p>
-                  <p className="text-sm mt-2">
-                    Filter anpassen oder Leads im Generator suchen
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left border-collapse">
-                    <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
-                      <tr>
-                        <th
-                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
-                          onClick={() => requestSort("firma")}
-                        >
-                          <div className="flex items-center gap-2">
-                            Firma
-                            {sortConfig.key === "firma" ? (
-                              sortConfig.direction === "asc" ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                            )}
-                          </div>
-                        </th>
-                        <th
-                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
-                          onClick={() => requestSort("strasse_hausnummer")}
-                        >
-                          <div className="flex items-center gap-2">
-                            Adresse
-                            {sortConfig.key === "strasse_hausnummer" ? (
-                              sortConfig.direction === "asc" ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                            )}
-                          </div>
-                        </th>
-                        <th
-                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
-                          onClick={() => requestSort("stadt")}
-                        >
-                          <div className="flex items-center gap-2">
-                            Stadt
-                            {sortConfig.key === "stadt" ? (
-                              sortConfig.direction === "asc" ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                            )}
-                          </div>
-                        </th>
-                        <th
-                          className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors"
-                          onClick={() => requestSort("status")}
-                        >
-                          <div className="flex items-center gap-2">
-                            Status
-                            {sortConfig.key === "status" ? (
-                              sortConfig.direction === "asc" ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                            )}
-                          </div>
-                        </th>
-                        <th className="px-6 py-4">Kontakt</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 border-b">
+                    <tr>
+                      <th className="px-6 py-4 cursor-pointer" onClick={() => requestSort("firma")}>Firma</th>
+                      <th className="px-6 py-4 cursor-pointer" onClick={() => requestSort("strasse_hausnummer")}>Adresse</th>
+                      <th className="px-6 py-4 cursor-pointer" onClick={() => requestSort("status")}>Status</th>
+                      <th className="px-6 py-4">Kontakt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {sortedLeads.map((lead) => (
+                      <tr key={lead.id} className="hover:bg-blue-50/50">
+                        <td className="px-6 py-4 font-bold">{lead.firma}</td>
+                        <td className="px-6 py-4">{lead.strasse_hausnummer}, {lead.stadt}</td>
+                        <td className="px-6 py-4"><Badge style={{ backgroundColor: statusColors[lead.status] || statusColors["Neu"], color: "white" }}>{lead.status}</Badge></td>
+                        <td className="px-6 py-4">{lead.telefon && <div className="text-xs">{lead.telefon}</div>}{lead.email && <div className="text-xs">{lead.email}</div>}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {sortedLeads.map((lead) => (
-                        <tr
-                          key={lead.id}
-                          className="hover:bg-blue-50/50 transition-colors group"
-                        >
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                              {lead.firma || "Unbekannt"}
-                            </div>
-                            {lead.ansprechpartner && (
-                              <div className="text-xs text-slate-500 mt-0.5">
-                                {lead.ansprechpartner}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600">
-                            {lead.strasse_hausnummer}
-                            {lead.postleitzahl && (
-                              <div className="text-xs opacity-70">
-                                {lead.postleitzahl}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600">
-                            {lead.stadt}
-                          </td>
-                          <td className="px-6 py-4">
-                            <Badge
-                              style={{
-                                backgroundColor:
-                                  statusColors[lead.status] ||
-                                  statusColors["Neu"],
-                                color: "white",
-                              }}
-                            >
-                              {lead.status}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col gap-1">
-                              {lead.telefon && (
-                                <a
-                                  href={`tel:${lead.telefon}`}
-                                  className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors"
-                                >
-                                  <Phone className="h-3 w-3" />
-                                  <span className="text-xs">{lead.telefon}</span>
-                                </a>
-                              )}
-                              {lead.email && (
-                                <a
-                                  href={`mailto:${lead.email}`}
-                                  className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors"
-                                >
-                                  <Mail className="h-3 w-3" />
-                                  <span className="text-xs">{lead.email}</span>
-                                </a>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1416,363 +864,46 @@ const TILE_ATTRIBUTION =
               <Card className="border-0 shadow-lg">
                 <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Zap className="h-5 w-5" />
-                        Lead Generator
-                      </CardTitle>
-                      {selectedArea && (
-                        <p className="text-sm text-blue-100 mt-1">
-                          {selectedArea.name} · {selectedArea.city}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={navigateToMap}
-                    >
-                      <MapIcon className="h-4 w-4 mr-1" />
-                      Zur Karte
-                    </Button>
+                    <CardTitle><Zap className="h-5 w-5 inline mr-2" /> Lead Generator</CardTitle>
+                    <Button variant="secondary" size="sm" onClick={navigateToMap}>Karte</Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                    <div className="space-y-2">
-                      <Label>Stadt (Textsuche)</Label>
-                      <Input
-                        value={cityInput}
-                        onChange={(e) => setCityInput(e.target.value)}
-                        className="w-full"
-                        placeholder="z.B. Berlin"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Bereich auswählen (Dropdown)</Label>
+                  <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>Stadt</Label><Input value={cityInput} onChange={(e) => setCityInput(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Bereich</Label>
                       <Select value={genAreaId} onValueChange={setGenAreaId}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Wählen Sie einen Bereich..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            Kein Bereich ausgewählt
-                          </SelectItem>
-                          {savedAreas
-                            .filter(
-                              (a) =>
-                                !cityInput ||
-                                a.city?.toLowerCase() ===
-                                  cityInput.toLowerCase(),
-                            )
-                            .map((area) => (
-                              <SelectItem key={area.id} value={area.id}>
-                                {area.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
+                        <SelectTrigger><SelectValue placeholder="Wählen..." /></SelectTrigger>
+                        <SelectContent><SelectItem value="all">Keiner</SelectItem>{savedAreas.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                   </div>
-
-                  {genAreaId === "all" && !selectedAreaId ? (
-                    <div className="text-center py-16">
-                      <MapPin className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-                      <p className="text-lg font-medium text-slate-700">
-                        Kein Bereich ausgewählt
-                      </p>
-                      <p className="text-sm text-slate-500 mt-2">
-                        Wählen Sie einen Bereich aus dem Dropdown oder auf der
-                        Karte
-                      </p>
-                      <Button
-                        variant="outline"
-                        className="mt-4"
-                        onClick={() => setActiveSection("map")}
-                      >
-                        <MapIcon className="h-4 w-4 mr-2" />
-                        Zur Karte
-                      </Button>
-                    </div>
-                  ) : (
+                  {selectedArea ? (
                     <div className="space-y-6">
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="rescan-mode"
-                                checked={rescanMode}
-                                onChange={(e) => setRescanMode(e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <Label
-                                htmlFor="rescan-mode"
-                                className="text-sm font-medium text-blue-900 cursor-pointer"
-                              >
-                                Bereits geladene Straßen erneut scannen
-                              </Label>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 h-8"
-                              onClick={async () => {
-                                if (!confirm("Sollen alle Leads ohne Bereichszuordnung räumlich auf diesen Bereich geprüft werden?")) return;
-                                const areaToUse = savedAreas.find(a => a.id === genAreaId) || selectedArea;
-                                if (!areaToUse) return;
-                                
-                                const leadsToReassign = allLeads.filter(lead => 
-                                  !lead.area_id && lead.latitude && lead.longitude && isPointInBounds(lead.latitude, lead.longitude, areaToUse.bounds)
-                                );
-                                
-                                if (leadsToReassign.length === 0) {
-                                  toast({ title: "Info", description: "Keine passenden Leads ohne Bereich gefunden." });
-                                  return;
-                                }
-                                
-                                for (const lead of leadsToReassign) {
-                                  await base44.entities.Lead.update(lead.id, { area_id: areaToUse.id });
-                                }
-                                await refetchAllLeads();
-                                toast({ title: "Erfolg", description: `${leadsToReassign.length} Leads dem Bereich zugeordnet.` });
-                              }}
-                            >
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                              Räumlich abgleichen
-                            </Button>
-                          </div>
-
-
-                          <Button
-                            onClick={generateLeadsForArea}
-
-                          disabled={
-                            generatingArea ===
-                            (genAreaId !== "all" ? genAreaId : selectedAreaId)
-                          }
-                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md"
-                          size="lg"
-                        >
-                          {generatingArea ? (
-                            <>
-                              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                              {generationProgress.street && (
-                                <span>
-                                  {generationProgress.current}/
-                                  {generationProgress.total}:{" "}
-                                  {generationProgress.street}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <PlayCircle className="h-5 w-5 mr-2" />
-                              Lead-Generierung starten
-                            </>
-                          )}
+                      <div className="p-6 bg-blue-50 rounded-xl border border-blue-200">
+                        <div className="flex items-center gap-2 mb-4">
+                          <input type="checkbox" id="rescan-mode" checked={rescanMode} onChange={(e) => setRescanMode(e.target.checked)} />
+                          <Label htmlFor="rescan-mode">Bereits geladene erneut scannen</Label>
+                        </div>
+                        <Button onClick={generateLeadsForArea} disabled={!!generatingArea} className="w-full bg-blue-600" size="lg">
+                          {generatingArea ? `Scanne: ${generationProgress.street} (${generationProgress.current}/${generationProgress.total})` : "Starten"}
                         </Button>
                       </div>
-
                       {foundCompanies.length > 0 && (
-                        <div className="bg-white rounded-xl border-2 border-green-200 p-6 shadow-sm">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                              <Building2 className="h-5 w-5 text-green-600" />
-                              Gefundene Unternehmen
-                              <Badge className="bg-green-600 text-white">
-                                {foundCompanies.length}
-                              </Badge>
-                            </h3>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={clearAllCompanies}
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Liste leeren
-                            </Button>
-                          </div>
-
-                          {selectedAreaLeads.length > 0 && (
-                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <p className="text-sm text-blue-800 font-bold">
-                                  {selectedAreaLeads.length} Leads bereits in
-                                  der Datenbank:
-                                </p>
-                                <Badge variant="outline" className="bg-white">
-                                  {selectedAreaLeads.length}
-                                </Badge>
-                              </div>
-                              <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
-                                {selectedAreaLeads.slice(0, 10).map((lead) => (
-                                  <div
-                                    key={lead.id}
-                                    className="text-xs p-2 bg-white rounded border border-blue-100 flex justify-between items-center"
-                                  >
-                                    <span className="font-medium truncate mr-2">
-                                      {lead.firma}
-                                    </span>
-                                    <span className="text-slate-500 flex-shrink-0">
-                                      {lead.strasse_hausnummer}
-                                    </span>
-                                  </div>
-                                ))}
-                                {selectedAreaLeads.length > 10 && (
-                                  <p className="text-[10px] text-center text-blue-600 font-medium">
-                                    + {selectedAreaLeads.length - 10} weitere
-                                    Leads (siehe Leads tab)
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-lg mb-4 border border-green-200">
-                            <Label className="text-green-900 font-semibold mb-2 block">
-                              Mitarbeiter zuweisen
-                            </Label>
-                            <Select
-                              value={assignEmployee}
-                              onValueChange={setAssignEmployee}
-                            >
-                              <SelectTrigger className="bg-white">
-                                <SelectValue placeholder="Mitarbeiter auswählen..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {employees.map((emp) => (
-                                  <SelectItem
-                                    key={emp.id}
-                                    value={emp.full_name}
-                                  >
-                                    {emp.full_name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
+                        <div className="space-y-4">
+                          <h3 className="font-bold text-lg">Gefunden: {foundCompanies.length}</h3>
+                          <div className="p-5 bg-green-50 rounded-lg border border-green-200">
+                            <Label>Zuweisen an:</Label>
+                            <Select value={assignEmployee} onValueChange={setAssignEmployee}>
+                              <SelectTrigger className="bg-white"><SelectValue placeholder="Mitarbeiter..." /></SelectTrigger>
+                              <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Button
-                              onClick={addCompaniesToLeads}
-                              disabled={!assignEmployee}
-                              className="w-full mt-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md"
-                              size="lg"
-                            >
-                              <UserPlus className="h-5 w-5 mr-2" />
-                              {foundCompanies.length} als Leads hinzufügen
-                            </Button>
-                          </div>
-
-                          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                            {foundCompanies.map((company) => (
-                              <div
-                                key={company.id}
-                                className="p-4 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-white hover:border-green-300 transition-all"
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h4 className="font-bold text-slate-900">
-                                        {company.firma || "Unbekannt"}
-                                      </h4>
-                                      {company.branche && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {company.branche}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="text-sm text-slate-600 space-y-1">
-                                      {company.strasse_hausnummer && (
-                                        <p className="flex items-center gap-1">
-                                          <MapPin className="h-3 w-3" />
-                                          {company.strasse_hausnummer},{" "}
-                                          {company.postleitzahl} {company.stadt}
-                                        </p>
-                                      )}
-                                      <div className="flex flex-wrap gap-3 pt-1">
-                                        {company.telefon && (
-                                          <span className="flex items-center gap-1 text-blue-600">
-                                            <Phone className="h-3 w-3" />{" "}
-                                            {company.telefon}
-                                          </span>
-                                        )}
-                                        {company.email && (
-                                          <span className="flex items-center gap-1 text-blue-600">
-                                            <Mail className="h-3 w-3" />{" "}
-                                            {company.email}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeCompany(company.id)}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                            <Button onClick={addCompaniesToLeads} disabled={!assignEmployee} className="w-full mt-3 bg-green-600">Hinzufügen</Button>
                           </div>
                         </div>
                       )}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="xl:col-span-1">
-              <Card className="border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800 text-white pb-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Progress Log
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  {generatingArea ? (
-                    <div className="space-y-3">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                          <span className="font-semibold text-blue-900">
-                            Generierung läuft...
-                          </span>
-                        </div>
-                        {generationProgress.street && (
-                          <div className="text-sm text-blue-800 space-y-1">
-                            <p>
-                              <span className="font-medium">Fortschritt:</span>{" "}
-                              {generationProgress.current}/
-                              {generationProgress.total}
-                            </p>
-                            <p className="text-xs truncate">
-                              <span className="font-medium">
-                                Aktuelle Straße:
-                              </span>{" "}
-                              {generationProgress.street}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Clock className="h-12 w-12 mx-auto text-slate-300 mb-2" />
-                      <p className="text-sm text-slate-500">
-                        Keine aktive Generierung
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Starten Sie eine Lead-Generierung
-                      </p>
-                    </div>
-                  )}
+                  ) : <div className="text-center py-16">Wählen Sie einen Bereich</div>}
                 </CardContent>
               </Card>
             </div>
@@ -1782,43 +913,12 @@ const TILE_ATTRIBUTION =
 
       <Dialog open={showAreaDialog} onOpenChange={setShowAreaDialog}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bereich speichern</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Bereich speichern</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Bereichsname *</Label>
-              <Input
-                value={newAreaName}
-                onChange={(e) => setNewAreaName(e.target.value)}
-                placeholder="z.B. Berlin Mitte"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Stadt *</Label>
-              <Input
-                value={cityInput}
-                onChange={(e) => setCityInput(e.target.value)}
-                placeholder="Berlin"
-                className="mt-1"
-              />
-            </div>
-            <p className="text-sm text-slate-500">
-              Die Straßennamen werden automatisch aus dem gewählten Bereich
-              extrahiert.
-            </p>
+            <div><Label>Name</Label><Input value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} /></div>
+            <div><Label>Stadt</Label><Input value={cityInput} onChange={(e) => setCityInput(e.target.value)} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAreaDialog(false)}>
-              <X className="h-4 w-4 mr-1" />
-              Abbrechen
-            </Button>
-            <Button onClick={saveArea} disabled={!newAreaName.trim()}>
-              <Save className="h-4 w-4 mr-1" />
-              Speichern
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button onClick={saveArea} disabled={!newAreaName.trim()}>Speichern</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
