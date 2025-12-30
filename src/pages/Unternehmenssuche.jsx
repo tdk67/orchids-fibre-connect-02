@@ -62,8 +62,14 @@ import {
   RefreshCw,
 } from "lucide-react";
 import {
-  fetchStreetLeads,
+  isPointInBounds,
   geocodeAddress,
+  getAreaLeadMatch,
+  findAreaForLead,
+  syncLeadsWithAreas,
+} from "@/utils/geoUtils";
+import {
+  fetchStreetLeads,
 } from "@/lib/scraping/das-oertliche-scraper";
 import { isDuplicateLead } from "@/utils/leadDeduplication";
 import { useOSMImport } from "@/hooks/useOSMImport";
@@ -198,58 +204,24 @@ const TILE_ATTRIBUTION =
     const [filterCity, setFilterCity] = useState("");
     const [filterAreaId, setFilterAreaId] = useState("all");
 
-    const isPointInBounds = useCallback((lat, lng, bounds) => {
-      if (!lat || !lng || !bounds) return false;
-      const b = typeof bounds === "string" ? JSON.parse(bounds) : bounds;
-      const latitude = parseFloat(lat);
-      const longitude = parseFloat(lng);
-      return (
-        latitude <= b.north &&
-        latitude >= b.south &&
-        longitude <= b.east &&
-        longitude >= b.west
-      );
-    }, []);
+      useEffect(() => {
+        const fetchStatus = async () => {
+          if (cityInput) {
+            const status = await getImportStatus(cityInput);
+            setCurrentCityImportStatus(status);
+          }
+        };
+        fetchStatus();
+      }, [cityInput, getImportStatus]);
 
-    const getAreaLeadMatch = useCallback((lead, area) => {
-      if (!lead || !area) return false;
-
-      // 1. Spatial check (most accurate)
-      if (lead.latitude && lead.longitude && area.bounds) {
-        return isPointInBounds(lead.latitude, lead.longitude, area.bounds);
-      }
-      
-      // 2. Fallback to street name matching if no coordinates
-      const leadCity = lead.stadt?.toLowerCase()?.trim() || "";
-      const areaCity = area.city?.toLowerCase()?.trim() || "";
-      
-      if (areaCity && leadCity !== areaCity) return false;
-      
-      const streets = typeof area.streets === "string" ? JSON.parse(area.streets) : area.streets || [];
-      const leadStreet = lead.strasse_hausnummer?.toLowerCase()?.trim() || "";
-      
-      return streets.some(s => {
-        const streetName = s.name?.toLowerCase()?.trim() || "";
-        return streetName && leadStreet.startsWith(streetName);
-      });
-    }, [isPointInBounds]);
-
-    useEffect(() => {
-      const fetchStatus = async () => {
-        if (cityInput) {
-          const status = await getImportStatus(cityInput);
-          setCurrentCityImportStatus(status);
-        }
-      };
-      fetchStatus();
-    }, [cityInput, getImportStatus]);
 
     useEffect(() => {
       base44.auth.me().then(setUser).catch(() => {});
       loadAreas();
     }, []);
-  const [genAreaId, setGenAreaId] = useState("all");
-  const [sortConfig, setSortConfig] = useState({ key: "firma", direction: "asc" });
+    const [genAreaId, setGenAreaId] = useState("all");
+    const [sortConfig, setSortConfig] = useState({ key: "firma", direction: "asc" });
+    const [isSyncing, setIsSyncing] = useState(false);
 
   const selectedArea = useMemo(() => {
     const areaId =
@@ -442,9 +414,29 @@ const TILE_ATTRIBUTION =
       });
 
       if (insertError) throw insertError;
-
-      await loadAreas();
-      setShowAreaDialog(false);
+  
+        await loadAreas();
+        
+        // Auto-assign leads to the new area
+        setIsSyncing(true);
+        try {
+          const { data: currentLeads } = await base44.client.from('leads').select('*');
+          if (currentLeads) {
+            const updatedCount = await syncLeadsWithAreas(currentLeads, [
+              { id: (await base44.client.from('areas').select('id').eq('name', areaData.name).single()).data?.id, ...areaData, bounds: newAreaBounds }
+            ]);
+            if (updatedCount > 0) {
+              await refetchAllLeads();
+              toast({ title: "Synchronisierung", description: `${updatedCount} Leads wurden dem neuen Bereich zugeordnet.` });
+            }
+          }
+        } catch (syncErr) {
+          console.error("Auto-sync error:", syncErr);
+        } finally {
+          setIsSyncing(false);
+        }
+  
+        setShowAreaDialog(false);
       setNewAreaName("");
       setNewAreaBounds(null);
       toast({
@@ -558,13 +550,13 @@ const TILE_ATTRIBUTION =
       }
 
       try {
-        const leads = await fetchStreetLeads(
-          streetName,
-          streetCity,
-          {
-            maxPages: 5,
-          },
-        );
+          const leads = await fetchStreetLeads(
+            streetName,
+            streetCity,
+            {
+              maxPages: 50,
+            },
+          );
 
           // Geocode each lead to get coordinates and save to DB
           const leadsToSave = [];
@@ -1516,9 +1508,38 @@ const TILE_ATTRIBUTION =
                               }}
                             >
                               <RefreshCw className="h-3 w-3 mr-1" />
-                              Räumlich abgleichen
-                            </Button>
-                          </div>
+                                  Räumlich abgleichen
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 h-8"
+                                disabled={isSyncing}
+                                onClick={async () => {
+                                  if (!confirm("Sollen ALLE Leads in der Datenbank neu synchronisiert werden? Dies kann einige Minuten dauern.")) return;
+                                  setIsSyncing(true);
+                                  try {
+                                    const { data: currentLeads } = await base44.client.from('leads').select('*');
+                                    if (currentLeads) {
+                                      const updatedCount = await syncLeadsWithAreas(currentLeads, savedAreas);
+                                      await refetchAllLeads();
+                                      toast({ 
+                                        title: "Globaler Sync abgeschlossen", 
+                                        description: `${updatedCount} Leads wurden aktualisiert/neu zugeordnet.` 
+                                      });
+                                    }
+                                  } catch (err) {
+                                    console.error("Global sync error:", err);
+                                    toast({ title: "Fehler", description: "Globaler Sync fehlgeschlagen.", variant: "destructive" });
+                                  } finally {
+                                    setIsSyncing(false);
+                                  }
+                                }}
+                              >
+                                {isSyncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                                Globaler Sync
+                              </Button>
+                            </div>
 
                           <Button
                             onClick={generateLeadsForArea}

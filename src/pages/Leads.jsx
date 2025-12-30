@@ -12,6 +12,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Pencil, Building2, Phone, Mail, Upload, Settings, Trash2, Calendar, Clock, FileText, Download, Eye, Zap } from 'lucide-react';
+import {
+  geocodeAddress,
+  findAreaForLead,
+} from "@/utils/geoUtils";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { isDuplicateLead } from '@/utils/leadDeduplication';
@@ -756,44 +760,41 @@ export default function Leads() {
         return;
       }
 
-      const geocodeAddress = async (street, number, city) => {
-        try {
-          const q = `${street} ${number}, ${city}`.trim();
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
-          );
-          const data = await res.json();
-          if (data && data[0]) {
-            return { lat: data[0].lat, lon: data[0].lon };
+        for (const newLead of parsedLeads) {
+          const duplicate = findDuplicateLead(newLead, existingLeads);
+  
+          // Try to geocode if address exists using centralized utility
+          let coords = null;
+          if (newLead.strasse_hausnummer && newLead.stadt) {
+            const match = newLead.strasse_hausnummer.match(/^(.*?)\s*(\d.*)?$/);
+            const street = match?.[1] || newLead.strasse_hausnummer;
+            const num = match?.[2] || "";
+            coords = await geocodeAddress(street, num, newLead.stadt, newLead.postleitzahl);
           }
-        } catch (e) {}
-        return null;
-      };
+  
+          const finalLeadData = {
+            ...newLead,
+            latitude: coords?.lat?.toString() || "",
+            longitude: coords?.lon?.toString() || "",
+          };
 
-      for (const newLead of parsedLeads) {
-        const duplicate = findDuplicateLead(newLead, existingLeads);
-
-        // Try to geocode if address exists
-        let coords = null;
-        if (newLead.strasse_hausnummer && newLead.stadt) {
-          coords = await geocodeAddress("", newLead.strasse_hausnummer, newLead.stadt);
+          // Auto-assign area
+          if (finalLeadData.latitude && finalLeadData.longitude) {
+            const area = findAreaForLead(finalLeadData, savedAreas);
+            if (area) {
+              finalLeadData.area_id = area.id;
+            }
+          }
+  
+          if (duplicate) {
+            const mergedData = mergeDuplicateData(duplicate, finalLeadData);
+            await base44.entities.Lead.update(duplicate.id, mergedData);
+            merged++;
+          } else {
+            await base44.entities.Lead.create(finalLeadData);
+            imported++;
+          }
         }
-
-        const finalLeadData = {
-          ...newLead,
-          latitude: coords?.lat?.toString() || "",
-          longitude: coords?.lon?.toString() || "",
-        };
-
-        if (duplicate) {
-          const mergedData = mergeDuplicateData(duplicate, finalLeadData);
-          await base44.entities.Lead.update(duplicate.id, mergedData);
-          merged++;
-        } else {
-          await base44.entities.Lead.create(finalLeadData);
-          imported++;
-        }
-      }
 
       queryClient.invalidateQueries(["leads"]);
       setIsImportDialogOpen(false);
