@@ -7,21 +7,29 @@ export function useOSMImport() {
   const [progress, setProgress] = useState({ current: 0, total: 0, message: "" });
   const { toast } = useToast();
 
-  const getImportStatus = useCallback(async (city) => {
-    try {
-      const { data, error } = await base44.client
-        .from("osm_imports")
-        .select("*")
-        .eq("city", city)
-        .single();
-      
-      if (error && error.code !== "PGRST116") throw error;
-      return data;
-    } catch (err) {
-      console.error("Error fetching import status:", err);
-      return null;
-    }
-  }, []);
+    const getImportStatus = useCallback(async (city) => {
+      try {
+        const { data, error } = await base44.client
+          .from("osm_imports")
+          .select("*")
+          .eq("city", city)
+          .maybeSingle(); // Use maybeSingle to avoid 406/PGRST116 errors if not found
+        
+        if (error) {
+          // Check if table exists error (42P01 in Postgres, often surfaced as 404/400 by PostgREST)
+          if (error.code === '42P01' || error.message?.includes('relation "osm_imports" does not exist')) {
+            console.warn("Table osm_imports does not exist yet. Please run the SQL migration.");
+            return null;
+          }
+          throw error;
+        }
+        return data;
+      } catch (err) {
+        const errorMessage = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        console.error("Error fetching import status:", errorMessage);
+        return null;
+      }
+    }, []);
 
   const importCityData = useCallback(async (city) => {
     if (!city) return;

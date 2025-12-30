@@ -224,20 +224,23 @@ export async function fetchStreetLeads(street, city, options = {}) {
   let page = 1;
   let hasMorePages = true;
   
-  while (hasMorePages && page <= maxPages) {
-    if (onProgress) {
-      onProgress({ street, city, page, status: 'fetching' });
-    }
-    
-    const { leads, hasNextPage } = await fetchSinglePage(street, city, page);
-    
-    if (leads.length === 0) {
-      hasMorePages = false;
-    } else {
-      allLeads.push(...leads);
-      
+    while (hasMorePages && page <= maxPages) {
       if (onProgress) {
-        onProgress({ street, city, page, status: 'found', count: leads.length });
+        onProgress({ street, city, page, status: 'fetching' });
+      }
+      
+      const { leads, hasNextPage } = await fetchSinglePage(street, city, page);
+      
+      if (leads.length > 0) {
+        allLeads.push(...leads);
+        
+        if (onProgress) {
+          onProgress({ street, city, page, status: 'found', count: leads.length });
+        }
+      } else {
+        if (onProgress) {
+          onProgress({ street, city, page, status: 'no_leads_on_page' });
+        }
       }
       
       if (hasNextPage) {
@@ -248,7 +251,6 @@ export async function fetchStreetLeads(street, city, options = {}) {
         hasMorePages = false;
       }
     }
-  }
   
   // Remove in-page duplicates
   const deduplicated = removeDuplicates(allLeads);

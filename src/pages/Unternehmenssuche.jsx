@@ -376,17 +376,30 @@ const TILE_ATTRIBUTION =
     if (!newAreaName.trim() || !newAreaBounds) return;
 
     try {
+      const query = `[out:json][timeout:60];
+        way["highway"]["name"](${newAreaBounds.south},${newAreaBounds.west},${newAreaBounds.north},${newAreaBounds.east});
+        out tags;`;
+
       const streetsResult = await fetch(
         "https://overpass-api.de/api/interpreter",
         {
           method: "POST",
-          body: `
-          [out:json][timeout:25];
-          way["highway"]["name"](${newAreaBounds.south},${newAreaBounds.west},${newAreaBounds.north},${newAreaBounds.east});
-          out tags;
-        `,
+          body: query,
         },
       );
+
+      if (!streetsResult.ok) {
+        const errorText = await streetsResult.text();
+        console.error("Overpass API Error:", errorText);
+        throw new Error(`Overpass API Fehler (${streetsResult.status}): ${streetsResult.statusText}`);
+      }
+
+      const contentType = streetsResult.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await streetsResult.text();
+        console.error("Non-JSON response from Overpass:", text);
+        throw new Error("Overpass API hat kein JSON zurückgegeben. Der Server ist eventuell überlastet.");
+      }
 
       const data = await streetsResult.json();
       const streetNames = Array.from(
@@ -411,30 +424,44 @@ const TILE_ATTRIBUTION =
         color: areaData.color,
       });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Supabase Insert Error:", insertError);
+        throw insertError;
+      }
   
-        await loadAreas();
+      await loadAreas();
+      
+      // Auto-assign leads to the new area
+      setIsSyncing(true);
+      try {
+        const { data: areasData } = await base44.client
+          .from('areas')
+          .select('id')
+          .eq('name', areaData.name)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        const areaId = areasData?.[0]?.id;
         
-        // Auto-assign leads to the new area
-        setIsSyncing(true);
-        try {
+        if (areaId) {
           const { data: currentLeads } = await base44.client.from('leads').select('*');
           if (currentLeads) {
             const updatedCount = await syncLeadsWithAreas(currentLeads, [
-              { id: (await base44.client.from('areas').select('id').eq('name', areaData.name).single()).data?.id, ...areaData, bounds: newAreaBounds }
+              { id: areaId, ...areaData, bounds: newAreaBounds }
             ]);
             if (updatedCount > 0) {
               await refetchAllLeads();
               toast({ title: "Synchronisierung", description: `${updatedCount} Leads wurden dem neuen Bereich zugeordnet.` });
             }
           }
-        } catch (syncErr) {
-          console.error("Auto-sync error:", syncErr);
-        } finally {
-          setIsSyncing(false);
         }
+      } catch (syncErr) {
+        console.error("Auto-sync error:", syncErr);
+      } finally {
+        setIsSyncing(false);
+      }
   
-        setShowAreaDialog(false);
+      setShowAreaDialog(false);
       setNewAreaName("");
       setNewAreaBounds(null);
       toast({
@@ -442,9 +469,10 @@ const TILE_ATTRIBUTION =
         description: `Bereich "${areaData.name}" mit ${streetNames.length} Straßen gespeichert!`,
       });
     } catch (err) {
+      console.error("Save Area Error:", err);
       toast({
         title: "Fehler",
-        description: "Fehler beim Speichern: " + err.message,
+        description: "Fehler beim Speichern: " + (err.message || "Unbekannter Fehler"),
         variant: "destructive",
       });
     }

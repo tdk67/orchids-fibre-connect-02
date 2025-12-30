@@ -136,15 +136,16 @@ export const LeadGenerator = {
           const lat = coords?.lat ? parseFloat(coords.lat) : (coords?.latitude ? parseFloat(coords.latitude) : null);
           const lon = coords?.lon ? parseFloat(coords.lon) : (coords?.longitude ? parseFloat(coords.longitude) : null);
 
-          if (lat && lon) {
-            const inCurrent = isPointInBounds(lat, lon, area.bounds);
+          // Validate coordinates as numbers before using them
+          const validLat = typeof lat === 'number' && !isNaN(lat) ? lat : null;
+          const validLon = typeof lon === 'number' && !isNaN(lon) ? lon : null;
+
+          if (validLat && validLon) {
+            const inCurrent = isPointInBounds(validLat, validLon, area.bounds);
             if (!inCurrent && allAreas.length > 0) {
-              const matchingArea = findAreaForLead({ ...leadData, latitude: lat, longitude: lon }, allAreas);
+              const matchingArea = findAreaForLead({ ...leadData, latitude: validLat, longitude: validLon }, allAreas);
               if (matchingArea) assignedAreaId = matchingArea.id;
             } else if (!inCurrent) {
-              // If not in current area and no other areas provided/matched, 
-              // we still keep it in this area's "found" list for the scraper run,
-              // but maybe we shouldn't? For now, we follow the user's intent.
               assignedAreaId = area.id;
             }
           }
@@ -156,8 +157,8 @@ export const LeadGenerator = {
             pool_status: "im_pool",
             benutzertyp: user?.benutzertyp || "Interner Mitarbeiter",
             sparte: "1&1 Versatel",
-            latitude: lat,
-            longitude: lon,
+            latitude: validLat,
+            longitude: validLon,
             area_id: assignedAreaId,
           };
 
