@@ -372,36 +372,71 @@ const TILE_ATTRIBUTION =
     }
   }
 
-  async function saveArea() {
-    if (!newAreaName.trim() || !newAreaBounds) return;
+    const OVERPASS_ENDPOINTS = [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.osm.ch/api/interpreter",
+    ];
 
-    try {
-      const query = `[out:json][timeout:60];
-        way["highway"]["name"](${newAreaBounds.south},${newAreaBounds.west},${newAreaBounds.north},${newAreaBounds.east});
-        out tags;`;
-
-      const streetsResult = await fetch(
-        "https://overpass-api.de/api/interpreter",
-        {
-          method: "POST",
-          body: query,
-        },
-      );
-
-      if (!streetsResult.ok) {
-        const errorText = await streetsResult.text();
-        console.error("Overpass API Error:", errorText);
-        throw new Error(`Overpass API Fehler (${streetsResult.status}): ${streetsResult.statusText}`);
+    async function fetchWithTimeout(url, options, timeout = 120000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+        });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
       }
+    }
 
-      const contentType = streetsResult.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await streetsResult.text();
-        console.error("Non-JSON response from Overpass:", text);
-        throw new Error("Overpass API hat kein JSON zurückgegeben. Der Server ist eventuell überlastet.");
-      }
+    async function saveArea() {
+      if (!newAreaName.trim() || !newAreaBounds) return;
 
-      const data = await streetsResult.json();
+      try {
+        const query = `[out:json][timeout:180];
+          way["highway"]["name"](${newAreaBounds.south},${newAreaBounds.west},${newAreaBounds.north},${newAreaBounds.east});
+          out tags;`;
+
+        let streetsResult;
+        let lastError;
+
+        for (const endpoint of OVERPASS_ENDPOINTS) {
+          try {
+            streetsResult = await fetchWithTimeout(
+              endpoint,
+              {
+                method: "POST",
+                body: query,
+              },
+              180000
+            );
+
+            if (streetsResult.ok) {
+              const contentType = streetsResult.headers.get("content-type");
+              if (contentType && contentType.includes("application/json")) {
+                break;
+              }
+            }
+            
+            const errorText = await streetsResult.text();
+            console.warn(`Overpass endpoint ${endpoint} failed:`, errorText);
+            lastError = new Error(`Overpass API Fehler (${streetsResult.status})`);
+          } catch (err) {
+            console.warn(`Overpass endpoint ${endpoint} error:`, err);
+            lastError = err;
+          }
+        }
+
+        if (!streetsResult || !streetsResult.ok) {
+          throw lastError || new Error("Alle Overpass API Server sind derzeit überlastet. Bitte versuchen Sie es in ein paar Minuten erneut.");
+        }
+
+        const data = await streetsResult.json();
       const streetNames = Array.from(
         new Set(
           (data.elements || []).map((el) => el.tags?.name).filter(Boolean),
@@ -1688,16 +1723,16 @@ const TILE_ATTRIBUTION =
               extrahiert.
             </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAreaDialog(false)}>
-              <X className="h-4 w-4 mr-1" />
-              Abbrechen
-            </Button>
-            <Button onClick={saveArea} disabled={!newAreaName.trim()}>
-              <Save className="h-4 w-4 mr-1" />
-              Speichern
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAreaDialog(false)}>
+                <X className="h-4 w-4 mr-1" />
+                Abbrechen
+              </Button>
+              <Button variant="outline" onClick={saveArea} disabled={!newAreaName.trim()}>
+                <Save className="h-4 w-4 mr-1" />
+                Speichern
+              </Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
